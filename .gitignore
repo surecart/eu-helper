@@ -1,0 +1,23 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Build artifacts
+/build
+/dist
+*.zip
+
+# Lock files (no Composer/npm build step in this plugin)
+/composer.lock
+/package-lock.json
+/yarn.lock
+
+# Environment & secrets
+.env
+.env.*
+
+# OS & editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode
