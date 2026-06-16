@@ -118,10 +118,13 @@ class WithdrawalController {
 			return new \WP_Error( 'sceu_no_selection', __( 'Please select at least one valid order.', 'surecart-eu-helper' ), array( 'status' => 400 ) );
 		}
 
-		// Verified identity: prefer the resolved customer; allow a confirmed email.
-		$resolved_email = $customer->customer_email();
+		// Confirmation delivery always goes to the verified account email — never a
+		// client-supplied address — so the request endpoint can't be abused to relay
+		// store-branded mail to arbitrary recipients. The submitted email is kept
+		// only as logged context (see $submitted_email below).
+		$email           = $customer->customer_email();
 		$submitted_email = sanitize_email( (string) $request->get_param( 'email' ) );
-		$email          = ( $submitted_email && is_email( $submitted_email ) ) ? $submitted_email : $resolved_email;
+		$submitted_email = ( $submitted_email && is_email( $submitted_email ) ) ? $submitted_email : '';
 
 		$resolved_name  = $customer->customer_name();
 		$submitted_name = sanitize_text_field( (string) $request->get_param( 'name' ) );
@@ -175,6 +178,9 @@ class WithdrawalController {
 					'reason'         => $reason,
 					'orders'         => $selected,
 					'merchant_to'    => $ctx['merchant_email'],
+					// Email the customer typed in the form, for support reference only.
+					// The confirmation was delivered to the verified account email above.
+					'contact_email_provided' => $submitted_email,
 					'customer_email_sent' => (bool) $customer_sent,
 					'merchant_email_sent' => (bool) $merchant_sent,
 				),

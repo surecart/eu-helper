@@ -56,11 +56,16 @@
 			id: config.uid + '-name',
 			value: config.customer.name || '',
 		} );
+		// Read-only: the confirmation is always sent to the verified account email,
+		// so editing it here has no effect. Shown pre-filled so the customer knows
+		// where the receipt will go.
 		var emailInput = h( 'input', {
 			type: 'email',
-			class: 'sceu-field__input',
+			class: 'sceu-field__input sceu-field__input--readonly',
 			id: config.uid + '-email',
 			value: config.customer.email || '',
+			readonly: 'readonly',
+			'aria-readonly': 'true',
 		} );
 
 		var checks = [];
