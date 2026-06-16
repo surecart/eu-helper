@@ -30,6 +30,12 @@ class CustomerEmail {
 
 		/* translators: %s: store name. */
 		$subject = sprintf( __( 'We received your withdrawal request — %s', 'surecart-eu-helper' ), $store );
+		/**
+		 * Filter the customer confirmation email subject.
+		 *
+		 * @param string               $subject Plain-text subject line.
+		 * @param array<string, mixed> $ctx     Request context passed to wp_mail().
+		 */
 		$subject = (string) apply_filters( 'sceu_customer_email_subject', $subject, $ctx );
 
 		$lines   = array();
@@ -48,6 +54,16 @@ class CustomerEmail {
 		}
 
 		$body = EmailRenderer::wrap( $subject, implode( "\n", $lines ) );
+		/**
+		 * Filter the customer confirmation email HTML body.
+		 *
+		 * The default body is built from escaped values; this filter runs after
+		 * that assembly and its return value is sent to wp_mail() without further
+		 * escaping. Hook authors must return safe HTML.
+		 *
+		 * @param string               $body Complete HTML email (header + body).
+		 * @param array<string, mixed> $ctx  Request context passed to wp_mail().
+		 */
 		$body = (string) apply_filters( 'sceu_customer_email_body', $body, $ctx );
 
 		return wp_mail( $to, $subject, $body, EmailRenderer::headers() );
