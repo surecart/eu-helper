@@ -20,9 +20,6 @@ defined( 'ABSPATH' ) || exit;
  */
 class Module implements ModuleInterface {
 
-	const EDITOR_HANDLE = 'sceu-row-editor';
-	const VIEW_HANDLE   = 'sceu-row-view';
-
 	/**
 	 * {@inheritDoc}
 	 */
@@ -214,35 +211,17 @@ class Module implements ModuleInterface {
 	}
 
 	/**
-	 * Register the block + its no-build editor/view scripts.
+	 * Register the block.
+	 *
+	 * All assets are declared in block.json with `file:./` paths and registered
+	 * by core from the block's directory: editor.js (+ editor.asset.php for its
+	 * wp-* deps and translations), editor.css (editor-only), view.css (front-end
+	 * + editor preview), and view.js (Interactivity API script module). Core
+	 * also auto-enqueues view.css only when the block actually renders content.
 	 *
 	 * @return void
 	 */
 	public function register_block(): void {
-		wp_register_script(
-			self::EDITOR_HANDLE,
-			SCEU_URL . 'assets/src/editor.js',
-			array( 'wp-blocks', 'wp-block-editor', 'wp-element', 'wp-components', 'wp-i18n' ),
-			SCEU_VERSION,
-			true
-		);
-		wp_set_script_translations( self::EDITOR_HANDLE, 'surecart-eu-helper' );
-
-		wp_register_script(
-			self::VIEW_HANDLE,
-			SCEU_URL . 'blocks/right-of-withdrawal/view.js',
-			array(),
-			SCEU_VERSION,
-			true
-		);
-
-		wp_register_style(
-			self::VIEW_HANDLE,
-			SCEU_URL . 'assets/src/view.css',
-			array(),
-			SCEU_VERSION
-		);
-
 		register_block_type( SCEU_DIR . 'blocks/right-of-withdrawal' );
 	}
 

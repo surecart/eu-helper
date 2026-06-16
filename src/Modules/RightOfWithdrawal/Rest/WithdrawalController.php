@@ -193,6 +193,20 @@ class WithdrawalController {
 				'success'    => true,
 				'request_id' => $request_id,
 				'timestamp'  => $timestamp,
+				// Display data so the client can render the new request row without
+				// a page reload (mirrors Withdrawals::requests_for_display()).
+				'request'    => array(
+					'id'          => $request_id,
+					'status'      => Withdrawals::STATUS_RECEIVED,
+					'statusLabel' => Withdrawals::status_label( Withdrawals::STATUS_RECEIVED ),
+					'date'        => $timestamp,
+					'orders'      => array_map(
+						static function ( $order ) {
+							return (string) ( $order['number'] ?: $order['id'] );
+						},
+						$selected
+					),
+				),
 			),
 			200
 		);

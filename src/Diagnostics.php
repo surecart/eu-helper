@@ -38,6 +38,10 @@ class Diagnostics {
 			return '<p><em>' . esc_html__( 'SureCart EU Helper debug: log in as the customer you want to test.', 'surecart-eu-helper' ) . '</em></p>';
 		}
 
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return '';
+		}
+
 		$customer = new CustomerContext();
 		$rows     = array();
 		foreach ( $customer->debug() as $key => $value ) {

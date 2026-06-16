@@ -55,17 +55,17 @@ $sceu_heading = ! empty( $attributes['heading'] )
 // heading style unpredictably. Allow-list guards the output tag.
 $sceu_heading_level = isset( $attributes['headingLevel'] ) ? strtolower( (string) $attributes['headingLevel'] ) : 'h3';
 if ( ! in_array( $sceu_heading_level, array( 'h2', 'h3', 'h4', 'h5', 'h6', 'p' ), true ) ) {
-	$sceu_heading_level = 'h3';
+	$sceu_heading_level = 'h4';
 }
 
 $sceu_intro = ! empty( $attributes['intro'] )
 	? $attributes['intro']
 	/* translators: default withdrawal explanation. */
-	: __( 'You have the right to withdraw from your purchase within 14 days of receiving your order. Click below to start the withdrawal process.', 'surecart-eu-helper' );
+	: __( 'You have the right to withdraw from your purchase within 14 days of receiving your order.', 'surecart-eu-helper' );
 
 $sceu_button = ! empty( $attributes['buttonLabel'] )
 	? $attributes['buttonLabel']
-	: __( 'Withdraw from contract here', 'surecart-eu-helper' );
+	: __( 'Withdraw from contract', 'surecart-eu-helper' );
 
 $sceu_modal_title = ! empty( $attributes['modalTitle'] )
 	? $attributes['modalTitle']
@@ -139,44 +139,75 @@ foreach ( $sceu_requests as $sceu_request ) {
 	);
 }
 
-$sceu_uid = wp_unique_id( 'sceu-row-' );
+$sceu_uid     = wp_unique_id( 'sceu-row-' );
+$sceu_ns      = 'surecart-eu-helper';
+$sceu_display = 'inline' === $sceu_display ? 'inline' : 'modal';
 
-$sceu_data = array(
-	'restUrl'      => esc_url_raw( rest_url( 'surecart-eu-helper/v1/withdrawal-request' ) ),
-	'nonce'        => wp_create_nonce( 'wp_rest' ),
-	'display'      => 'inline' === $sceu_display ? 'inline' : 'modal',
-	'scheme'       => $sceu_scheme,
-	'modalTitle'   => $sceu_modal_title,
-	'confirmation' => $sceu_confirmation,
-	'primaryColor' => $sceu_primary,
-	'primaryText'  => $sceu_primary_text,
-	'customer'     => array(
-		'name'  => $sceu_customer->customer_name(),
-		'email' => $sceu_customer->customer_email(),
-	),
-	'orders'       => $sceu_order_payload,
-	'requests'     => $sceu_request_payload,
-	'requestsTitle' => __( 'Your withdrawal requests', 'surecart-eu-helper' ),
-	'strings'      => array(
-		'name'        => __( 'Your name', 'surecart-eu-helper' ),
-		'email'       => __( 'Your email', 'surecart-eu-helper' ),
-		'orders'      => __( 'Select the orders you want to withdraw from', 'surecart-eu-helper' ),
-		'reason'      => __( 'Reason (optional)', 'surecart-eu-helper' ),
-		'submit'      => __( 'Submit request', 'surecart-eu-helper' ),
-		'cancel'      => __( 'Cancel', 'surecart-eu-helper' ),
-		'close'       => __( 'Close', 'surecart-eu-helper' ),
-		'selectOne'   => __( 'Please select at least one order.', 'surecart-eu-helper' ),
-		'sending'     => __( 'Sending…', 'surecart-eu-helper' ),
-		'error'       => __( 'Something went wrong. Please try again.', 'surecart-eu-helper' ),
-		'viewRequests' => __( 'View my requests', 'surecart-eu-helper' ),
-		'requestOrders' => __( 'Orders', 'surecart-eu-helper' ),
-		'requestDate' => __( 'Submitted', 'surecart-eu-helper' ),
-	),
+// Shared (per-page) Interactivity state: the endpoint, the REST nonce, and the
+// handful of strings the store needs at runtime. Printed once per page.
+wp_interactivity_state(
+	$sceu_ns,
+	array(
+		'restUrl' => esc_url_raw( rest_url( 'surecart-eu-helper/v1/withdrawal-request' ) ),
+		'nonce'   => wp_create_nonce( 'wp_rest' ),
+		'i18n'    => array(
+			'submit'           => __( 'Submit request', 'surecart-eu-helper' ),
+			'sending'          => __( 'Sending…', 'surecart-eu-helper' ),
+			'selectOne'        => __( 'Please select at least one order.', 'surecart-eu-helper' ),
+			'error'            => __( 'Something went wrong. Please try again.', 'surecart-eu-helper' ),
+			'notEligible'      => __( 'You are not eligible for this request. This feature is available to EU customers with recent orders.', 'surecart-eu-helper' ),
+			'invalidNonce'     => __( 'Your session has expired. Please refresh the page and try again.', 'surecart-eu-helper' ),
+			'moduleDisabled'   => __( 'This feature is not available.', 'surecart-eu-helper' ),
+			'tooMany'          => __( 'Please wait a moment before submitting another request.', 'surecart-eu-helper' ),
+			'noSelection'      => __( 'Please select at least one valid order.', 'surecart-eu-helper' ),
+			// Label words the client uses to build a newly-submitted request row.
+			'ordersLabel'      => __( 'Orders', 'surecart-eu-helper' ),
+			'submittedLabel'   => __( 'Submitted', 'surecart-eu-helper' ),
+		),
+	)
 );
 
-// Expose the brand colour as a CSS variable on the wrapper (for the trigger
-// button). The modal/inline form set it themselves from the JSON payload, since
-// the modal is appended to <body>, outside this wrapper.
+// Client-side requests payload: pre-rendered display strings + per-status
+// booleans so the data-wp-each list (and badge colours) render correctly
+// server-side without relying on JS state getters.
+$sceu_requests_client = array();
+foreach ( $sceu_request_payload as $sceu_request ) {
+	$sceu_req_orders = ! empty( $sceu_request['orders'] ) ? implode( ', ', $sceu_request['orders'] ) : '';
+	$sceu_requests_client[] = array(
+		'id'          => $sceu_request['id'],
+		'statusLabel' => $sceu_request['statusLabel'],
+		'ordersText'  => __( 'Orders', 'surecart-eu-helper' ) . ': ' . $sceu_req_orders,
+		'dateText'    => '' !== $sceu_request['date'] ? __( 'Submitted', 'surecart-eu-helper' ) . ': ' . $sceu_request['date'] : '',
+		'isReceived'  => 'received' === $sceu_request['status'],
+		'isResolved'  => 'resolved' === $sceu_request['status'],
+		'isRejected'  => 'rejected' === $sceu_request['status'],
+	);
+}
+
+// Per-instance local state for this block, hydrated into data-wp-context. The
+// email is the verified account email and is never edited (security fix #1); the
+// confirmation is always delivered to it server-side regardless of this value.
+$sceu_context = array(
+	'panel'        => 'none', // none | form | requests | confirmation.
+	'display'      => $sceu_display,
+	'submitting'   => false,
+	'submitLabel'  => __( 'Submit request', 'surecart-eu-helper' ),
+	'status'       => '',
+	'selectedIds'  => array(),
+	'name'         => $sceu_customer->customer_name(),
+	'email'        => $sceu_customer->customer_email(),
+	'reason'       => '',
+	'modalTitle'   => $sceu_modal_title,
+	'requestsTitle' => __( 'Your withdrawal requests', 'surecart-eu-helper' ),
+	// Reactive lists/flags so the UI updates after a submission without a reload.
+	'orders'       => $sceu_order_payload,
+	'requests'     => $sceu_requests_client,
+	'hasOrders'    => $sceu_has_withdrawable,
+	'hasRequests'  => ! empty( $sceu_requests_client ),
+);
+
+// Expose the brand colour as CSS variables on the wrapper. The modal now lives
+// inside the wrapper (not appended to <body>), so the vars inherit naturally.
 $sceu_inline_style = '';
 if ( '' !== $sceu_primary ) {
 	$sceu_inline_style = '--sceu-primary:' . $sceu_primary . ';';
@@ -203,41 +234,131 @@ $sceu_wrapper = get_block_wrapper_attributes(
 	)
 );
 
-// Load the front-end assets ONLY now — i.e. only on pages where the block
-// actually renders for an eligible customer. Nothing is enqueued elsewhere.
-wp_enqueue_script( 'sceu-row-view' );
-wp_enqueue_style( 'sceu-row-view' );
+// The front-end style (view.css) and the Interactivity API view module
+// (view.js) are declared in block.json ("style" / "viewScriptModule") and
+// enqueued by core when the block renders. Because every code path above
+// returns '' for ineligible visitors, core's empty-content handling keeps the
+// style off pages where the block produces no output.
+
+/**
+ * Build the form markup once so it can be placed inside either the modal dialog
+ * or the inline panel. Captured to a string via output buffering.
+ */
+ob_start();
+?>
+<form class="sceu-form" novalidate data-wp-on--submit="actions.submit">
+	<div class="sceu-field">
+		<label class="sceu-field__label" for="<?php echo esc_attr( $sceu_uid ); ?>-name"><?php echo esc_html__( 'Your name', 'surecart-eu-helper' ); ?></label>
+		<input type="text" class="sceu-field__input" id="<?php echo esc_attr( $sceu_uid ); ?>-name"
+			value="<?php echo esc_attr( $sceu_customer->customer_name() ); ?>"
+			data-wp-bind--value="context.name" data-wp-on--input="actions.setName" />
+	</div>
+	<div class="sceu-field">
+		<label class="sceu-field__label" for="<?php echo esc_attr( $sceu_uid ); ?>-email"><?php echo esc_html__( 'Your email', 'surecart-eu-helper' ); ?></label>
+		<input type="email" class="sceu-field__input sceu-field__input--readonly" id="<?php echo esc_attr( $sceu_uid ); ?>-email"
+			value="<?php echo esc_attr( $sceu_customer->customer_email() ); ?>" readonly aria-readonly="true" />
+	</div>
+	<div class="sceu-field">
+		<span class="sceu-field__label"><?php echo esc_html__( 'Select the orders you want to withdraw from', 'surecart-eu-helper' ); ?></span>
+		<div class="sceu-orders" role="group" aria-label="<?php echo esc_attr__( 'Select the orders you want to withdraw from', 'surecart-eu-helper' ); ?>">
+			<template data-wp-each--order="context.orders" data-wp-each-key="context.order.id">
+				<label class="sceu-orders__item">
+					<input type="checkbox" class="sceu-orders__cb"
+						data-wp-bind--value="context.order.id" data-wp-on--change="actions.toggleOrder" />
+					<span class="sceu-orders__text">
+						<span class="sceu-orders__label" data-wp-text="context.order.label"></span>
+						<span class="sceu-orders__summary" data-wp-bind--title="context.order.summary" data-wp-text="context.order.summary" data-wp-bind--hidden="!context.order.summary"></span>
+						<span class="sceu-orders__meta" data-wp-text="context.order.meta" data-wp-bind--hidden="!context.order.meta"></span>
+					</span>
+				</label>
+			</template>
+		</div>
+	</div>
+	<div class="sceu-field">
+		<label class="sceu-field__label" for="<?php echo esc_attr( $sceu_uid ); ?>-reason"><?php echo esc_html__( 'Reason (optional)', 'surecart-eu-helper' ); ?></label>
+		<textarea class="sceu-field__input" id="<?php echo esc_attr( $sceu_uid ); ?>-reason" rows="3" data-wp-on--input="actions.setReason"></textarea>
+	</div>
+	<p class="sceu-form__status" role="status" aria-live="polite" data-wp-text="context.status"></p>
+	<div class="sceu-form__actions">
+		<sc-button type="primary" submit data-wp-bind--disabled="context.submitting" data-wp-text="context.submitLabel"><?php echo esc_html__( 'Submit request', 'surecart-eu-helper' ); ?></sc-button>
+		<sc-button type="text" data-wp-on--click="actions.close"><?php echo esc_html__( 'Cancel', 'surecart-eu-helper' ); ?></sc-button>
+	</div>
+</form>
+<?php
+$sceu_form_html = ob_get_clean();
+
+/**
+ * Build the requests list once (read-only).
+ */
+ob_start();
+?>
+<div class="sceu-requests">
+	<template data-wp-each--request="context.requests" data-wp-each-key="context.request.id">
+		<div class="sceu-requests__item">
+			<div class="sceu-requests__head">
+				<span class="sceu-requests__orders" data-wp-text="context.request.ordersText"></span>
+				<span class="sceu-badge"
+					data-wp-class--sceu-badge--received="context.request.isReceived"
+					data-wp-class--sceu-badge--resolved="context.request.isResolved"
+					data-wp-class--sceu-badge--rejected="context.request.isRejected"
+					data-wp-text="context.request.statusLabel"></span>
+			</div>
+			<div class="sceu-requests__date" data-wp-text="context.request.dateText" data-wp-bind--hidden="!context.request.dateText"></div>
+		</div>
+	</template>
+</div>
+<?php
+$sceu_requests_html = ob_get_clean();
 
 // Output is captured by WordPress's block render (echo, do not return markup).
 ?>
 <div <?php echo $sceu_wrapper; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes is escaped. ?>
+	data-wp-interactive="<?php echo esc_attr( $sceu_ns ); ?>"
+	<?php echo wp_interactivity_data_wp_context( $sceu_context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- helper escapes. ?>
+	data-wp-watch="callbacks.onPanelChange"
 	data-sceu-uid="<?php echo esc_attr( $sceu_uid ); ?>"
-	data-sceu-display="<?php echo esc_attr( $sceu_data['display'] ); ?>">
+	data-sceu-display="<?php echo esc_attr( $sceu_display ); ?>">
 
 	<div class="sceu-row__notice">
 		<div class="sceu-row__text">
 			<<?php echo esc_html( $sceu_heading_level ); ?> class="sceu-row__heading"><?php echo esc_html( $sceu_heading ); ?></<?php echo esc_html( $sceu_heading_level ); ?>>
-			<p class="sceu-row__intro"><?php echo esc_html( $sceu_has_withdrawable ? $sceu_intro : $sceu_submitted_intro ); ?></p>
+			<p class="sceu-row__intro">
+				<span data-wp-bind--hidden="!context.hasOrders"><?php echo esc_html( $sceu_intro ); ?></span>
+				<span data-wp-bind--hidden="context.hasOrders"><?php echo esc_html( $sceu_submitted_intro ); ?></span>
+			</p>
 		</div>
 		<div class="sceu-row__actions">
 			<?php if ( ! $sceu_has_withdrawable && '' !== $sceu_summary_label ) : ?>
 				<span class="sceu-badge sceu-badge--<?php echo esc_attr( $sceu_summary_status ); ?>"><?php echo esc_html( $sceu_summary_label ); ?></span>
 			<?php endif; ?>
-			<?php if ( $sceu_has_withdrawable ) : ?>
-				<button type="button" class="sceu-row__trigger sceu-btn sceu-btn--primary wp-element-button">
-					<?php echo esc_html( $sceu_button ); ?>
-				</button>
-			<?php endif; ?>
-			<?php if ( ! empty( $sceu_request_payload ) ) : ?>
-				<button type="button" class="sceu-row__requests-trigger sceu-btn sceu-btn--secondary">
-					<?php echo esc_html__( 'View my requests', 'surecart-eu-helper' ); ?>
-				</button>
-			<?php endif; ?>
+			<sc-button type="primary" data-wp-on--click="actions.openForm" data-wp-bind--hidden="!context.hasOrders"><?php echo esc_html( $sceu_button ); ?></sc-button>
+			<sc-button type="default" data-wp-on--click="actions.openRequests" data-wp-bind--hidden="!context.hasRequests"><?php echo esc_html__( 'View my requests', 'surecart-eu-helper' ); ?></sc-button>
 		</div>
 	</div>
 
-	<script type="application/json" class="sceu-row__data">
-		<?php echo wp_json_encode( $sceu_data, JSON_HEX_TAG | JSON_HEX_AMP ); ?>
-	</script>
+	<?php if ( 'modal' === $sceu_display ) : ?>
+		<div class="sceu-modal" data-wp-bind--hidden="!state.isOpen" data-wp-on--click="actions.onOverlayClick" hidden>
+			<div class="sceu-modal__dialog sceu-modal--<?php echo esc_attr( $sceu_scheme ); ?>"
+				role="dialog" aria-modal="true" aria-labelledby="<?php echo esc_attr( $sceu_uid ); ?>-mtitle"
+				data-wp-on--keydown="actions.onDialogKeydown">
+				<div class="sceu-modal__head">
+					<h2 class="sceu-modal__title" id="<?php echo esc_attr( $sceu_uid ); ?>-mtitle" data-wp-text="state.heading"><?php echo esc_html( $sceu_modal_title ); ?></h2>
+					<button type="button" class="sceu-modal__close" aria-label="<?php echo esc_attr__( 'Close', 'surecart-eu-helper' ); ?>" data-wp-on--click="actions.close">&times;</button>
+				</div>
+				<div data-wp-bind--hidden="!state.isForm"><?php echo $sceu_form_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
+				<div data-wp-bind--hidden="!state.isRequests"><?php echo $sceu_requests_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
+				<div class="sceu-row__confirmation" role="status" aria-live="polite" data-wp-bind--hidden="!state.isConfirmation"><?php echo esc_html( $sceu_confirmation ); ?></div>
+			</div>
+		</div>
+	<?php else : ?>
+		<div class="sceu-row__panel" data-wp-bind--hidden="!state.isForm"><?php echo $sceu_form_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
+		<div class="sceu-row__panel" data-wp-bind--hidden="!state.isRequests">
+			<?php echo $sceu_requests_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?>
+			<div class="sceu-form__actions">
+				<button type="button" class="sceu-form__cancel" data-wp-on--click="actions.close"><?php echo esc_html__( 'Close', 'surecart-eu-helper' ); ?></button>
+			</div>
+		</div>
+		<div class="sceu-row__confirmation" role="status" aria-live="polite" data-wp-bind--hidden="!state.isConfirmation"><?php echo esc_html( $sceu_confirmation ); ?></div>
+	<?php endif; ?>
 </div>
 <?php

@@ -142,16 +142,19 @@ class CustomerContext {
 			if ( $user ) {
 				foreach ( array( 'getCustomerId', 'customerId' ) as $method ) {
 					if ( method_exists( $user, $method ) ) {
-						$id = $user->$method( $mode );
-						if ( is_string( $id ) && '' !== $id ) {
+						$id = (string) $user->$method( $mode );
+						if ( '' !== $id ) {
 							$this->customer_id = $id;
 							return $this->customer_id;
 						}
 					}
 				}
-				if ( isset( $user->customer_id ) && is_string( $user->customer_id ) && '' !== $user->customer_id ) {
-					$this->customer_id = $user->customer_id;
-					return $this->customer_id;
+				if ( isset( $user->customer_id ) ) {
+					$id = (string) $user->customer_id;
+					if ( '' !== $id ) {
+						$this->customer_id = $id;
+						return $this->customer_id;
+					}
 				}
 			}
 		}
@@ -161,9 +164,12 @@ class CustomerContext {
 		$map = is_string( $raw ) ? json_decode( $raw, true ) : $raw;
 		if ( is_array( $map ) ) {
 			foreach ( array( $mode, 'live', 'test' ) as $key ) {
-				if ( ! empty( $map[ $key ] ) && is_string( $map[ $key ] ) ) {
-					$this->customer_id = $map[ $key ];
-					return $this->customer_id;
+				if ( ! empty( $map[ $key ] ) ) {
+					$id = (string) $map[ $key ];
+					if ( '' !== $id ) {
+						$this->customer_id = $id;
+						return $this->customer_id;
+					}
 				}
 			}
 		}
