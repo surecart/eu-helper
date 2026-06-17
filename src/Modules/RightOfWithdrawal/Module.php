@@ -79,6 +79,14 @@ class Module implements ModuleInterface {
 				'help'    => __( 'Choosing the second option hides the notice from customers who have a VAT/tax number on file, since they are treated as businesses.', 'surecart-eu-helper' ),
 			),
 			array(
+				'key'            => 'include_unknown_country',
+				'type'           => 'toggle',
+				'label'          => __( 'Customers without a country', 'surecart-eu-helper' ),
+				'checkbox_label' => __( 'Show the notice to customers who have no country on file', 'surecart-eu-helper' ),
+				'default'        => true,
+				'help'           => __( 'Some checkout customers never have a country collected. When enabled, the notice is still shown to them. Customers with a known non-EU country are always excluded.', 'surecart-eu-helper' ),
+			),
+			array(
 				'key'     => 'merchant_email',
 				'type'    => 'email',
 				'label'   => __( 'Merchant notification email', 'surecart-eu-helper' ),

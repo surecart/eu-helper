@@ -38,10 +38,12 @@ function check( string $label, bool $actual, bool $expected ): void {
 }
 
 /**
- * Shorthand for the rule.
+ * Shorthand for the rule. The last two args default to the common case (a
+ * country is on file; the unknown-country toggle is on) so the pre-existing
+ * checks below read unchanged.
  */
-$rule = static function ( $is_customer, $is_eu, $orders, $has_vat, $apply_to ) {
-	return Eligibility::is_eligible( $is_customer, $is_eu, $orders, $has_vat, $apply_to );
+$rule = static function ( $is_customer, $is_eu, $orders, $has_vat, $apply_to, $has_country = true, $include_unknown = true ) {
+	return Eligibility::is_eligible( $is_customer, $is_eu, $has_country, $orders, $has_vat, $apply_to, $include_unknown );
 };
 
 echo "Right of Withdrawal — eligibility truth table\n";
@@ -66,6 +68,17 @@ check( 'EU business (VAT), apply_to=all → eligible', $rule( true, true, 2, tru
 // Combined negatives.
 check( 'Non-EU business, apply_to=non_vat → not eligible', $rule( true, false, 5, true, 'non_vat' ), false );
 check( 'EU business, 0 orders, apply_to=all → not eligible', $rule( true, true, 0, true, 'all' ), false );
+
+// No country on file — gated by the include_unknown_country toggle.
+// Signature: $rule( is_customer, is_eu, orders, has_vat, apply_to, has_country, include_unknown ).
+check( 'No country, toggle on, 1 order → eligible', $rule( true, false, 1, false, 'all', false, true ), true );
+check( 'No country, toggle off → not eligible', $rule( true, false, 1, false, 'all', false, false ), false );
+check( 'No country, toggle on, 0 orders → not eligible', $rule( true, false, 0, false, 'all', false, true ), false );
+check( 'No country, toggle on, VAT business, apply_to=non_vat → not eligible', $rule( true, false, 2, true, 'non_vat', false, true ), false );
+check( 'No country, toggle on, VAT business, apply_to=all → eligible', $rule( true, false, 2, true, 'all', false, true ), true );
+
+// A known non-EU country is never eligible, even with the toggle on.
+check( 'Known non-EU country, toggle on → not eligible', $rule( true, false, 2, false, 'all', true, true ), false );
 
 echo "\n";
 if ( 0 === $fail ) {

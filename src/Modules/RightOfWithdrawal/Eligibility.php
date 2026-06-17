@@ -18,15 +18,22 @@ class Eligibility {
 	/**
 	 * Decide whether the notice/form should be available.
 	 *
-	 * @param bool   $is_customer  Resolvable SureCart customer for this request.
-	 * @param bool   $is_eu        Billing country is in the EU.
-	 * @param int    $order_count  Number of orders inside the look-back window.
-	 * @param bool   $has_vat      Customer has a VAT/tax identifier (business).
-	 * @param string $apply_to     'all' or 'non_vat'.
+	 * @param bool   $is_customer             Resolvable SureCart customer for this request.
+	 * @param bool   $is_eu                   Billing country is in the EU.
+	 * @param bool   $has_country             Customer has any country on file.
+	 * @param int    $order_count             Number of orders inside the look-back window.
+	 * @param bool   $has_vat                 Customer has a VAT/tax identifier (business).
+	 * @param string $apply_to                'all' or 'non_vat'.
+	 * @param bool   $include_unknown_country Treat "no country on file" as eligible.
 	 * @return bool
 	 */
-	public static function is_eligible( bool $is_customer, bool $is_eu, int $order_count, bool $has_vat, string $apply_to ): bool {
-		if ( ! $is_customer || ! $is_eu ) {
+	public static function is_eligible( bool $is_customer, bool $is_eu, bool $has_country, int $order_count, bool $has_vat, string $apply_to, bool $include_unknown_country ): bool {
+		if ( ! $is_customer ) {
+			return false;
+		}
+		// Geography: an EU billing country, or — when enabled — no country on file
+		// at all. A known non-EU country is never eligible.
+		if ( ! $is_eu && ! ( $include_unknown_country && ! $has_country ) ) {
 			return false;
 		}
 		if ( $order_count < 1 ) {

@@ -86,9 +86,10 @@ class WithdrawalController {
 		 */
 		set_transient( $throttle_key, 1, (int) apply_filters( 'sceu_submission_cooldown', 20 ) );
 
-		$customer = new CustomerContext();
-		$lookback = (int) Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
-		$apply_to = (string) Settings::get( 'right_of_withdrawal', 'apply_to', 'all' );
+		$customer        = new CustomerContext();
+		$lookback        = (int) Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
+		$apply_to        = (string) Settings::get( 'right_of_withdrawal', 'apply_to', 'all' );
+		$include_unknown = (bool) Settings::get( 'right_of_withdrawal', 'include_unknown_country', true );
 
 		// Re-check eligibility on the server — never trust the client. The
 		// withdrawable set already excludes orders the customer has previously
@@ -97,9 +98,11 @@ class WithdrawalController {
 		$is_eligible     = Eligibility::is_eligible(
 			$customer->is_customer(),
 			$customer->is_eu(),
+			$customer->has_country(),
 			count( $eligible_orders ),
 			$customer->has_vat(),
-			$apply_to
+			$apply_to,
+			$include_unknown
 		);
 		if ( ! $is_eligible ) {
 			return new \WP_Error( 'sceu_not_eligible', __( 'You are not eligible for this request, or you have already requested these orders.', 'surecart-eu-helper' ), array( 'status' => 403 ) );

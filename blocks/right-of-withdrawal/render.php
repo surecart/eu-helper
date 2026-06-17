@@ -24,10 +24,15 @@ $sceu_customer = new \SureCartEuHelper\Customer\CustomerContext();
 // Base eligibility: a logged-in resolvable customer, in the EU, passing the VAT
 // rule. (The order requirement is handled below — the block also shows when the
 // customer has no withdrawable orders left but has already-submitted requests.)
-$sceu_apply_to = (string) \SureCartEuHelper\Settings::get( 'right_of_withdrawal', 'apply_to', 'all' );
-$sceu_lookback = (int) \SureCartEuHelper\Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
+$sceu_apply_to        = (string) \SureCartEuHelper\Settings::get( 'right_of_withdrawal', 'apply_to', 'all' );
+$sceu_lookback        = (int) \SureCartEuHelper\Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
+$sceu_include_unknown = (bool) \SureCartEuHelper\Settings::get( 'right_of_withdrawal', 'include_unknown_country', true );
 
-if ( ! $sceu_customer->is_customer() || ! $sceu_customer->is_eu() ) {
+if ( ! $sceu_customer->is_customer() ) {
+	return '';
+}
+// Geography: EU country, or (when enabled) no country on file. Known non-EU is excluded.
+if ( ! $sceu_customer->is_eu() && ! ( $sceu_include_unknown && ! $sceu_customer->has_country() ) ) {
 	return '';
 }
 if ( 'non_vat' === $sceu_apply_to && $sceu_customer->has_vat() ) {

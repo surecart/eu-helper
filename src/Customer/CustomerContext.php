@@ -359,6 +359,15 @@ class CustomerContext {
 	}
 
 	/**
+	 * Whether the customer has any billing/shipping country on file.
+	 *
+	 * @return bool
+	 */
+	public function has_country(): bool {
+		return '' !== $this->country_code();
+	}
+
+	/**
 	 * Whether the customer's country is in the EU list.
 	 *
 	 * @return bool
