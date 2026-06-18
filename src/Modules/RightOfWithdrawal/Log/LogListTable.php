@@ -42,6 +42,7 @@ class LogListTable extends \WP_List_Table {
 			'customer_name'  => __( 'Customer', 'surecart-eu-helper' ),
 			'customer_email' => __( 'Email', 'surecart-eu-helper' ),
 			'order_ids'      => __( 'Orders', 'surecart-eu-helper' ),
+			'reason'         => __( 'Reason', 'surecart-eu-helper' ),
 			'emails'         => __( 'Emails sent', 'surecart-eu-helper' ),
 			'ip_address'     => __( 'IP address', 'surecart-eu-helper' ),
 			'status'         => __( 'Status', 'surecart-eu-helper' ),
@@ -98,6 +99,23 @@ class LogListTable extends \WP_List_Table {
 					return '<span style="color:' . $col . ';">' . $icon . '</span> ' . esc_html( $label );
 				};
 				return $mark( $cust, __( 'Customer', 'surecart-eu-helper' ) ) . '<br />' . $mark( $merch, __( 'Merchant', 'surecart-eu-helper' ) );
+			case 'reason':
+				$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
+				$reason  = is_array( $payload ) ? trim( (string) ( $payload['reason'] ?? '' ) ) : '';
+				if ( '' === $reason ) {
+					return '&mdash;';
+				}
+				$limit = 80;
+				// Short reason: show inline.
+				if ( mb_strlen( $reason ) <= $limit ) {
+					return nl2br( esc_html( $reason ) );
+				}
+				// Long reason: truncated summary that expands to the full text on click.
+				$summary = mb_substr( $reason, 0, $limit );
+				return '<details class="sceu-reason"><summary style="cursor:pointer;">'
+					. esc_html( $summary ) . '&hellip;</summary>'
+					. '<div style="margin-top:4px;">' . nl2br( esc_html( $reason ) ) . '</div>'
+					. '</details>';
 			case 'status':
 				return $this->status_cell( $item );
 			case 'order_ids':

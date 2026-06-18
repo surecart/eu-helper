@@ -251,8 +251,10 @@ class Module implements ModuleInterface {
 		header( 'Content-Disposition: attachment; filename=withdrawal-requests-' . gmdate( 'Ymd-His' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'status' ) );
+		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'reason', 'status' ) );
 		foreach ( $rows as $row ) {
+			$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+			$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
 			fputcsv(
 				$out,
 				array_map(
@@ -266,6 +268,7 @@ class Module implements ModuleInterface {
 						$row['customer_email'] ?? '',
 						$row['ip_address'] ?? '',
 						$row['order_ids'] ?? '',
+						$reason,
 						$row['status'] ?? '',
 					)
 				)
