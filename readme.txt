@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,7 +91,14 @@ the module is enabled.
 
 == Changelog ==
 
-= 1.5.0 =
+= 1.0.3 =
+* Show declined requests on customer dashboard.
+
+= 1.0.2 =
+* Make the withdrawal 2-step.
+* Show the reason in the table and csv export.
+
+= 1.0.1 =
 * Right of Withdrawal: the withdrawal form is now a two-step process to meet the
   German "Widerrufsbutton" requirement (§ 356a BGB). Step 1 collects the
   declaration (name, orders, optional reason); step 2 shows a review of the
