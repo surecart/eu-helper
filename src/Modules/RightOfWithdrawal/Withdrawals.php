@@ -69,14 +69,16 @@ class Withdrawals {
 	}
 
 	/**
-	 * The customer's requests to surface on the dashboard (pending + resolved),
-	 * normalised for display.
+	 * The customer's requests to surface on the dashboard (pending, resolved, and
+	 * declined), normalised for display. Declined requests are included so the
+	 * customer can see the outcome of a request they submitted, rather than the
+	 * dashboard silently reverting to its initial state.
 	 *
 	 * @param int $user_id WordPress user id.
 	 * @return array<int, array<string, mixed>>
 	 */
 	public static function requests_for_display( int $user_id ): array {
-		$rows = LogTable::rows_for_user( $user_id, array( self::STATUS_RECEIVED, self::STATUS_RESOLVED ) );
+		$rows = LogTable::rows_for_user( $user_id, array( self::STATUS_RECEIVED, self::STATUS_RESOLVED, self::STATUS_REJECTED ) );
 
 		$out = array();
 		foreach ( $rows as $row ) {
