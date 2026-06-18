@@ -1,0 +1,31 @@
+name: Build release ZIP
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write # required to upload the release asset
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage plugin into slug-named folder
+        run: |
+          mkdir -p build/surecart-eu-helper
+          rsync -a --exclude-from='.distignore' \
+            --exclude 'build' \
+            ./ build/surecart-eu-helper/
+
+      - name: Create eu-helper.zip
+        run: |
+          cd build
+          zip -r ../eu-helper.zip surecart-eu-helper
+
+      - name: Attach ZIP to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" eu-helper.zip --clobber

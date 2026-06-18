@@ -1,0 +1,9 @@
+/.git
+/.github
+/.gitignore
+/.distignore
+/tests
+.DS_Store
+/.idea
+/.vscode
+*.zip
