@@ -31,9 +31,10 @@
     "intro": { "type": "string", "default": "" },
     "buttonLabel": { "type": "string", "default": "" },
     "modalTitle": { "type": "string", "default": "" },
+    "confirmButtonLabel": { "type": "string", "default": "" },
     "confirmationMessage": { "type": "string", "default": "" }
   },
-  "version": "1.4.0",
+  "version": "1.0.2",
   "editorScript": "file:./editor.js",
   "editorStyle": "file:./editor.css",
   "style": "file:./view.css",

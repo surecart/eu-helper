@@ -29,6 +29,7 @@
     ),
     buttonLabel: __("Withdraw from contract", "surecart-eu-helper"),
     modalTitle: __("Request a withdrawal", "surecart-eu-helper"),
+    confirmButtonLabel: __("Confirm withdrawal", "surecart-eu-helper"),
     confirmationMessage: __(
       "Thank you. Your withdrawal request has been received and a confirmation has been emailed to you.",
       "surecart-eu-helper",
@@ -121,6 +122,10 @@
             field("intro", __("Explanation", "surecart-eu-helper"), true),
             field("buttonLabel", __("Button label", "surecart-eu-helper")),
             field("modalTitle", __("Form title", "surecart-eu-helper")),
+            field(
+              "confirmButtonLabel",
+              __("Confirm button label", "surecart-eu-helper"),
+            ),
             field(
               "confirmationMessage",
               __("Confirmation message", "surecart-eu-helper"),

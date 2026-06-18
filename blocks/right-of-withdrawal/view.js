@@ -58,11 +58,17 @@ const { state, actions } = store( 'surecart-eu-helper', {
 		get isRequests() {
 			return getContext().panel === 'requests';
 		},
+		get isReview() {
+			return getContext().panel === 'review';
+		},
 		get isConfirmation() {
 			return getContext().panel === 'confirmation';
 		},
 		get heading() {
 			const ctx = getContext();
+			if ( 'review' === ctx.panel ) {
+				return ctx.reviewTitle;
+			}
 			return 'requests' === ctx.panel ? ctx.requestsTitle : ctx.modalTitle;
 		},
 	},
@@ -129,6 +135,27 @@ const { state, actions } = store( 'surecart-eu-helper', {
 		},
 		setReason( event ) {
 			getContext().reason = event.target.value;
+		},
+		review( event ) {
+			event.preventDefault();
+			const ctx = getContext();
+			if ( ! ctx.selectedIds.length ) {
+				ctx.status = state.i18n.selectOne;
+				return;
+			}
+			// Snapshot the chosen orders so the review step can reproduce the
+			// declaration the consumer is about to confirm.
+			const selected = new Set( ctx.selectedIds );
+			ctx.reviewOrders = ctx.orders.filter( function ( o ) {
+				return selected.has( o.id );
+			} );
+			ctx.status = '';
+			ctx.panel = 'review';
+		},
+		back() {
+			const ctx = getContext();
+			ctx.status = '';
+			ctx.panel = 'form';
 		},
 		*submit( event ) {
 			event.preventDefault();

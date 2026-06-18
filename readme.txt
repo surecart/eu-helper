@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,8 +64,8 @@ prevention and the customer's on-dashboard request status.
 All visible strings ship as translatable defaults (text domain
 `surecart-eu-helper`), so WPML, Polylang, or Loco Translate can localise the
 heading, explanation, button, form, and emails per country. You can also
-override the heading, explanation, button label, form title, and confirmation
-message per block instance in the editor.
+override the heading, explanation, button label, form title, confirm button
+label, and confirmation message per block instance in the editor.
 
 = Troubleshooting =
 
@@ -90,6 +90,14 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.5.0 =
+* Right of Withdrawal: the withdrawal form is now a two-step process to meet the
+  German "Widerrufsbutton" requirement (§ 356a BGB). Step 1 collects the
+  declaration (name, orders, optional reason); step 2 shows a review of the
+  declaration and a separate confirmation button before anything is submitted.
+* Added a merchant-configurable "Confirm button label" block attribute
+  (default "Confirm withdrawal").
 
 = 1.0.0 =
 Initial release: modular EU compliance helper with the Right of Withdrawal module.

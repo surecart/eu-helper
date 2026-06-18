@@ -76,6 +76,12 @@ $sceu_modal_title = ! empty( $attributes['modalTitle'] )
 	? $attributes['modalTitle']
 	: __( 'Request a withdrawal', 'surecart-eu-helper' );
 
+// Step-2 confirmation button label (the legally-required separate confirmation
+// function). Merchant-configurable; defaults to a translatable string.
+$sceu_confirm = ! empty( $attributes['confirmButtonLabel'] )
+	? $attributes['confirmButtonLabel']
+	: __( 'Confirm withdrawal', 'surecart-eu-helper' );
+
 $sceu_confirmation = ! empty( $attributes['confirmationMessage'] )
 	? $attributes['confirmationMessage']
 	: __( 'Thank you. Your withdrawal request has been received and a confirmation has been emailed to you.', 'surecart-eu-helper' );
@@ -156,7 +162,8 @@ wp_interactivity_state(
 		'restUrl' => esc_url_raw( rest_url( 'surecart-eu-helper/v1/withdrawal-request' ) ),
 		'nonce'   => wp_create_nonce( 'wp_rest' ),
 		'i18n'    => array(
-			'submit'           => __( 'Submit request', 'surecart-eu-helper' ),
+			// Reset value for the confirm button (matches $sceu_confirm).
+			'submit'           => $sceu_confirm,
 			'sending'          => __( 'Sending…', 'surecart-eu-helper' ),
 			'selectOne'        => __( 'Please select at least one order.', 'surecart-eu-helper' ),
 			'error'            => __( 'Something went wrong. Please try again.', 'surecart-eu-helper' ),
@@ -193,16 +200,18 @@ foreach ( $sceu_request_payload as $sceu_request ) {
 // email is the verified account email and is never edited (security fix #1); the
 // confirmation is always delivered to it server-side regardless of this value.
 $sceu_context = array(
-	'panel'        => 'none', // none | form | requests | confirmation.
+	'panel'        => 'none', // none | form | review | requests | confirmation.
 	'display'      => $sceu_display,
 	'submitting'   => false,
-	'submitLabel'  => __( 'Submit request', 'surecart-eu-helper' ),
+	'submitLabel'  => $sceu_confirm,
 	'status'       => '',
 	'selectedIds'  => array(),
 	'name'         => $sceu_customer->customer_name(),
 	'email'        => $sceu_customer->customer_email(),
 	'reason'       => '',
 	'modalTitle'   => $sceu_modal_title,
+	'reviewTitle'  => __( 'Confirm your withdrawal', 'surecart-eu-helper' ),
+	'reviewOrders' => array(),
 	'requestsTitle' => __( 'Your withdrawal requests', 'surecart-eu-helper' ),
 	// Reactive lists/flags so the UI updates after a submission without a reload.
 	'orders'       => $sceu_order_payload,
@@ -251,7 +260,7 @@ $sceu_wrapper = get_block_wrapper_attributes(
  */
 ob_start();
 ?>
-<form class="sceu-form" novalidate data-wp-on--submit="actions.submit">
+<form class="sceu-form" novalidate data-wp-on--submit="actions.review">
 	<div class="sceu-field">
 		<label class="sceu-field__label" for="<?php echo esc_attr( $sceu_uid ); ?>-name"><?php echo esc_html__( 'Your name', 'surecart-eu-helper' ); ?></label>
 		<input type="text" class="sceu-field__input" id="<?php echo esc_attr( $sceu_uid ); ?>-name"
@@ -285,7 +294,7 @@ ob_start();
 	</div>
 	<p class="sceu-form__status" role="status" aria-live="polite" data-wp-text="context.status"></p>
 	<div class="sceu-form__actions">
-		<sc-button type="primary" submit data-wp-bind--disabled="context.submitting" data-wp-text="context.submitLabel"><?php echo esc_html__( 'Submit request', 'surecart-eu-helper' ); ?></sc-button>
+		<sc-button type="primary" submit><?php echo esc_html__( 'Continue', 'surecart-eu-helper' ); ?></sc-button>
 		<sc-button type="text" data-wp-on--click="actions.close"><?php echo esc_html__( 'Cancel', 'surecart-eu-helper' ); ?></sc-button>
 	</div>
 </form>
@@ -314,6 +323,46 @@ ob_start();
 </div>
 <?php
 $sceu_requests_html = ob_get_clean();
+
+/**
+ * Build the review/confirmation step (step 2). It reproduces the declaration the
+ * consumer entered (name, email, selected orders, optional reason) and carries
+ * the separate confirmation function required by § 356a — the actual submission
+ * only happens here, on the dedicated confirm button.
+ */
+ob_start();
+?>
+<div class="sceu-review">
+	<p class="sceu-review__lead"><?php echo esc_html__( 'Please review your withdrawal declaration before confirming.', 'surecart-eu-helper' ); ?></p>
+	<dl class="sceu-review__summary">
+		<dt class="sceu-review__term"><?php echo esc_html__( 'Your name', 'surecart-eu-helper' ); ?></dt>
+		<dd class="sceu-review__detail" data-wp-text="context.name"></dd>
+		<dt class="sceu-review__term"><?php echo esc_html__( 'Your email', 'surecart-eu-helper' ); ?></dt>
+		<dd class="sceu-review__detail" data-wp-text="context.email"></dd>
+		<dt class="sceu-review__term"><?php echo esc_html__( 'Orders', 'surecart-eu-helper' ); ?></dt>
+		<dd class="sceu-review__detail">
+			<ul class="sceu-review__orders">
+				<template data-wp-each--order="context.reviewOrders" data-wp-each-key="context.order.id">
+					<li class="sceu-review__order">
+						<span class="sceu-review__order-label" data-wp-text="context.order.label"></span>
+						<span class="sceu-review__order-meta" data-wp-text="context.order.meta" data-wp-bind--hidden="!context.order.meta"></span>
+					</li>
+				</template>
+			</ul>
+		</dd>
+		<div data-wp-bind--hidden="!context.reason">
+			<dt class="sceu-review__term"><?php echo esc_html__( 'Reason (optional)', 'surecart-eu-helper' ); ?></dt>
+			<dd class="sceu-review__detail" data-wp-text="context.reason"></dd>
+		</div>
+	</dl>
+	<p class="sceu-form__status" role="status" aria-live="polite" data-wp-text="context.status"></p>
+	<div class="sceu-form__actions">
+		<sc-button type="primary" data-wp-on--click="actions.submit" data-wp-bind--disabled="context.submitting" data-wp-text="context.submitLabel"><?php echo esc_html( $sceu_confirm ); ?></sc-button>
+		<sc-button type="default" data-wp-on--click="actions.back" data-wp-bind--disabled="context.submitting"><?php echo esc_html__( 'Back', 'surecart-eu-helper' ); ?></sc-button>
+	</div>
+</div>
+<?php
+$sceu_review_html = ob_get_clean();
 
 // Output is captured by WordPress's block render (echo, do not return markup).
 ?>
@@ -351,12 +400,14 @@ $sceu_requests_html = ob_get_clean();
 					<button type="button" class="sceu-modal__close" aria-label="<?php echo esc_attr__( 'Close', 'surecart-eu-helper' ); ?>" data-wp-on--click="actions.close">&times;</button>
 				</div>
 				<div data-wp-bind--hidden="!state.isForm"><?php echo $sceu_form_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
+				<div data-wp-bind--hidden="!state.isReview"><?php echo $sceu_review_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
 				<div data-wp-bind--hidden="!state.isRequests"><?php echo $sceu_requests_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
 				<div class="sceu-row__confirmation" role="status" aria-live="polite" data-wp-bind--hidden="!state.isConfirmation"><?php echo esc_html( $sceu_confirmation ); ?></div>
 			</div>
 		</div>
 	<?php else : ?>
 		<div class="sceu-row__panel" data-wp-bind--hidden="!state.isForm"><?php echo $sceu_form_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
+		<div class="sceu-row__panel" data-wp-bind--hidden="!state.isReview"><?php echo $sceu_review_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>
 		<div class="sceu-row__panel" data-wp-bind--hidden="!state.isRequests">
 			<?php echo $sceu_requests_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?>
 			<div class="sceu-form__actions">
