@@ -186,27 +186,6 @@ class LogTable {
 	}
 
 	/**
-	 * Order ids a user has already submitted requests for, in the given
-	 * statuses (defaults to the "blocks re-requesting" set).
-	 *
-	 * @param int      $user_id  User id.
-	 * @param string[] $statuses Statuses that count as "already requested".
-	 * @return string[] Flat list of order ids.
-	 */
-	public static function requested_order_ids( int $user_id, array $statuses = array( 'received', 'resolved' ) ): array {
-		$ids = array();
-		foreach ( self::rows_for_user( $user_id, $statuses ) as $row ) {
-			$decoded = json_decode( (string) ( $row['order_ids'] ?? '[]' ), true );
-			if ( is_array( $decoded ) ) {
-				foreach ( $decoded as $id ) {
-					$ids[] = (string) $id;
-				}
-			}
-		}
-		return array_values( array_unique( $ids ) );
-	}
-
-	/**
 	 * All rows with a given status (across users), newest first.
 	 *
 	 * @param string $status Status.
@@ -234,5 +213,18 @@ class LogTable {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		return (bool) $wpdb->update( self::table_name(), array( 'status' => $status ), array( 'id' => $id ) );
+	}
+
+	/**
+	 * Permanently delete a row (for GDPR erasure / test cleanup). The log is
+	 * otherwise append-only; this is not part of the normal workflow.
+	 *
+	 * @param int $id Row id.
+	 * @return bool
+	 */
+	public static function delete( int $id ): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (bool) $wpdb->delete( self::table_name(), array( 'id' => $id ), array( '%d' ) );
 	}
 }

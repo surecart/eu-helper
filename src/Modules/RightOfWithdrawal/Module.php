@@ -126,6 +126,30 @@ class Module implements ModuleInterface {
 		add_action( 'admin_post_sceu_export_log', array( $this, 'export_csv' ) );
 		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
+		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
+	}
+
+	/**
+	 * Admin action: permanently delete a log row (GDPR erasure / test cleanup).
+	 *
+	 * The log is append-only for normal use; deletion is deliberate, gated to
+	 * admins + nonce, and frees the order to be requested again.
+	 *
+	 * @return void
+	 */
+	public function delete_log(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0;
+		check_admin_referer( 'sceu_delete_log_' . $id );
+
+		if ( $id ) {
+			LogTable::delete( $id );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&deleted=1' ) );
+		exit;
 	}
 
 	/**
@@ -251,10 +275,23 @@ class Module implements ModuleInterface {
 		header( 'Content-Disposition: attachment; filename=withdrawal-requests-' . gmdate( 'Ymd-His' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'reason', 'status' ) );
+		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'withdrawing', 'reason', 'status' ) );
 		foreach ( $rows as $row ) {
 			$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
 			$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
+
+			// Explicit per-order item detail (mirrors the admin table).
+			$detail = '';
+			if ( is_array( $payload ) && ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) ) {
+				$parts = array();
+				foreach ( $payload['orders'] as $order ) {
+					$ref     = (string) ( $order['number'] ?? $order['id'] ?? '' );
+					$summary = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::merchant_items_summary( $order );
+					$parts[] = 'Order ' . $ref . ': ' . $summary;
+				}
+				$detail = implode( ' | ', $parts );
+			}
+
 			fputcsv(
 				$out,
 				array_map(
@@ -268,6 +305,7 @@ class Module implements ModuleInterface {
 						$row['customer_email'] ?? '',
 						$row['ip_address'] ?? '',
 						$row['order_ids'] ?? '',
+						$detail,
 						$reason,
 						$row['status'] ?? '',
 					)

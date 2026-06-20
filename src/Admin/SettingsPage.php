@@ -321,6 +321,9 @@ class SettingsPage {
 			<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['deleted'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Request permanently deleted from the log.', 'surecart-eu-helper' ); ?></p></div>
+			<?php endif; ?>
 			<?php if ( isset( $_GET['synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 				<div class="notice notice-info is-dismissible"><p>
 					<?php
