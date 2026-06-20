@@ -606,10 +606,16 @@ class CustomerContext {
 				$unit = ( is_numeric( $line_total ) && $qty > 0 ) ? ( (float) $line_total / $qty ) : null;
 			}
 
-			$image = $this->extract_product_image( $this->prop( $price, 'product' ) );
+			$product = $this->prop( $price, 'product' );
+			$image   = $this->extract_product_image( $product );
+
+			// Product id rides along on the expand we already do (price.product);
+			// captured here so product-level exclusions cost no extra API calls.
+			$product_id = (string) ( $this->prop( $product, 'id' ) ?? '' );
 
 			$out[] = array(
 				'id'           => $id,
+				'product_id'   => $product_id,
 				'name'         => $name,
 				'quantity'     => $qty,
 				'unit_display' => ( null !== $unit ) ? $this->format_money( $unit, $currency ) : '',

@@ -101,6 +101,10 @@ class Withdrawals {
 
 		$requested = self::requested_quantities( get_current_user_id() );
 
+		// Precomputed set of product ids excluded from withdrawal (e.g. perishable
+		// or made-to-order goods). In-memory lookup — no SureCart API calls here.
+		$excluded = Exclusions::excluded_set();
+
 		$out = array();
 		foreach ( $orders as $order ) {
 			if ( ! empty( $order['refunded'] ) ) {
@@ -125,6 +129,12 @@ class Withdrawals {
 
 			$remaining_lines = array();
 			foreach ( $lines as $line ) {
+				// Skip products the merchant has excluded from withdrawal. The
+				// rest of the order stays withdrawable; an order whose items are
+				// all excluded ends up with no remaining lines and is dropped.
+				if ( $excluded && Exclusions::is_excluded( (string) ( $line['product_id'] ?? '' ), $excluded ) ) {
+					continue;
+				}
 				$purchased = (int) ( $line['quantity'] ?? 1 );
 				$already    = (int) ( $requested['items'][ (string) ( $line['id'] ?? '' ) ] ?? 0 );
 				$remaining  = max( 0, $purchased - $already );

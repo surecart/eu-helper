@@ -1,0 +1,72 @@
+/* Product-exclusion picker (EU Helper settings page). */
+
+.sceu-excl {
+	position: relative;
+	max-width: 32em;
+}
+
+.sceu-excl__results {
+	position: absolute;
+	z-index: 10;
+	left: 0;
+	right: 0;
+	margin: 2px 0 0;
+	padding: 0;
+	list-style: none;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	box-shadow: 0 2px 6px rgba( 0, 0, 0, 0.12 );
+	max-height: 240px;
+	overflow: auto;
+}
+
+.sceu-excl__result {
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+.sceu-excl__result:hover,
+.sceu-excl__result:focus {
+	background: #f0f6fc;
+	outline: none;
+}
+
+.sceu-excl__result.is-empty {
+	color: #777;
+	cursor: default;
+}
+
+.sceu-excl__chips {
+	list-style: none;
+	margin: 8px 0 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.sceu-excl__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: #f0f0f1;
+	border: 1px solid #c3c4c7;
+	border-radius: 999px;
+	padding: 3px 6px 3px 12px;
+	font-size: 13px;
+}
+
+.sceu-excl__remove {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	font-size: 16px;
+	line-height: 1;
+	color: #646970;
+	padding: 0 2px;
+}
+
+.sceu-excl__remove:hover {
+	color: #a50e0e;
+}

@@ -12,6 +12,7 @@ use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\ModuleInterface;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\WithdrawalController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Email\CustomerEmail;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Email\MerchantEmail;
@@ -113,6 +114,18 @@ class Module implements ModuleInterface {
 					),
 				),
 			),
+			array(
+				'key'   => 'excluded_collection_ids',
+				'type'  => 'collection_exclusions',
+				'label' => __( 'Excluded collections', 'surecart-eu-helper' ),
+				'help'  => __( 'Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a "Digital downloads" or "Perishables" collection).', 'surecart-eu-helper' ),
+			),
+			array(
+				'key'   => 'excluded_product_ids',
+				'type'  => 'product_exclusions',
+				'label' => __( 'Excluded products', 'surecart-eu-helper' ),
+				'help'  => __( 'Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections.', 'surecart-eu-helper' ),
+			),
 		);
 	}
 
@@ -125,13 +138,106 @@ class Module implements ModuleInterface {
 			'rest_api_init',
 			function () {
 				( new WithdrawalController() )->register_routes();
+				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController() )->register_routes();
 			}
 		);
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
+		// When the excluded-collection set changes, rebuild the cached membership.
+		add_action( 'update_option_' . Settings::OPTION, array( $this, 'on_settings_updated' ), 10, 2 );
 		add_action( 'admin_post_sceu_export_log', array( $this, 'export_csv' ) );
 		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
 		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
 		add_action( 'admin_post_sceu_resend_emails', array( $this, 'resend_emails' ) );
+		add_action( 'admin_post_sceu_refresh_exclusions', array( $this, 'refresh_exclusions' ) );
+		// Background rebuild of the collection→product-id exclusion cache, so the
+		// customer-facing path never resolves collections inline.
+		add_action( Exclusions::CRON_HOOK, array( Exclusions::class, 'rebuild_cache' ) );
+	}
+
+	/**
+	 * Admin action: rebuild the product-exclusion cache now (resolve excluded
+	 * collections to their member products against SureCart).
+	 *
+	 * @return void
+	 */
+	public function refresh_exclusions(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		check_admin_referer( 'sceu_refresh_exclusions' );
+
+		$count = count( Exclusions::rebuild_cache() );
+
+		wp_safe_redirect( add_query_arg(
+			array(
+				'page'              => 'sceu-settings',
+				'exclusions_synced' => $count,
+			),
+			admin_url( 'admin.php' )
+		) );
+		exit;
+	}
+
+	/**
+	 * Enqueue the product-exclusion picker assets, only on our settings page.
+	 *
+	 * @param string $hook Current admin page hook.
+	 * @return void
+	 */
+	public function enqueue_admin_assets( string $hook ): void {
+		// The top-level menu slug is sceu-settings; its hook ends in the slug.
+		if ( false === strpos( $hook, 'sceu-settings' ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'sceu-admin-exclusions',
+			SCEU_URL . 'assets/admin-exclusions.css',
+			array(),
+			SCEU_VERSION
+		);
+		wp_enqueue_script(
+			'sceu-admin-exclusions',
+			SCEU_URL . 'assets/admin-exclusions.js',
+			array(),
+			SCEU_VERSION,
+			true
+		);
+		wp_localize_script(
+			'sceu-admin-exclusions',
+			'sceuExclusions',
+			array(
+				'searchUrl' => rest_url( \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController::NAMESPACE . \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController::ROUTE ),
+				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				'i18n'      => array(
+					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Rebuild the exclusion cache when the excluded-collection set changes.
+	 *
+	 * @param mixed $old Old option value.
+	 * @param mixed $new New option value.
+	 * @return void
+	 */
+	public function on_settings_updated( $old, $new ): void {
+		$extract = static function ( $value ): array {
+			$ids = ( is_array( $value ) && isset( $value['right_of_withdrawal']['excluded_collection_ids'] ) )
+				? (array) $value['right_of_withdrawal']['excluded_collection_ids']
+				: array();
+			$ids = array_map( 'strval', $ids );
+			sort( $ids );
+			return $ids;
+		};
+
+		if ( $extract( $old ) !== $extract( $new ) ) {
+			Exclusions::flush_cache();
+			Exclusions::rebuild_cache();
+		}
 	}
 
 	/**

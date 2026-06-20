@@ -10,6 +10,7 @@ namespace SureCartEuHelper\Admin;
 use SureCartEuHelper\Settings;
 use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\ModuleRegistry;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogListTable;
 
 defined( 'ABSPATH' ) || exit;
@@ -152,9 +153,45 @@ class SettingsPage {
 						);
 						$clean[ $key ] = in_array( $raw, $allowed, true ) ? $raw : ( $field['default'] ?? '' );
 						break;
+					case 'product_exclusions':
+					case 'collection_exclusions':
+						// A list of SureCart ids (UUID-shaped). Strip anything else.
+						$ids           = is_array( $raw ) ? $raw : array();
+						$clean[ $key ] = array_values(
+							array_unique(
+								array_filter(
+									array_map(
+										static function ( $v ) {
+											return preg_replace( '/[^A-Za-z0-9\-]/', '', (string) $v );
+										},
+										$ids
+									)
+								)
+							)
+						);
+						break;
 					default:
 						$clean[ $key ] = sanitize_text_field( (string) $raw );
 				}
+			}
+
+			// Display-only labels for the excluded-product picker, posted alongside
+			// it so the admin UI needn't re-fetch product names. Kept only for ids
+			// still selected.
+			if ( isset( $values['excluded_product_labels'] ) && is_array( $values['excluded_product_labels'] ) ) {
+				$labels = array();
+				foreach ( $values['excluded_product_labels'] as $pid => $pname ) {
+					$pid = preg_replace( '/[^A-Za-z0-9\-]/', '', (string) $pid );
+					if ( '' !== $pid ) {
+						$labels[ $pid ] = sanitize_text_field( (string) $pname );
+					}
+				}
+				if ( ! empty( $clean['excluded_product_ids'] ) ) {
+					$labels = array_intersect_key( $labels, array_flip( $clean['excluded_product_ids'] ) );
+				} else {
+					$labels = array();
+				}
+				$clean['excluded_product_labels'] = $labels;
 			}
 
 			$out[ $id ] = $clean;
@@ -176,6 +213,25 @@ class SettingsPage {
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></h1>
 			<p><?php echo esc_html__( 'Enable the EU-compliance modules you need and configure each one below.', 'surecart-eu-helper' ); ?></p>
+
+			<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-success is-dismissible"><p>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %d: number of products resolved from excluded collections. */
+							_n(
+								'Excluded-product list refreshed: %d product is currently in your excluded collections.',
+								'Excluded-product list refreshed: %d products are currently in your excluded collections.',
+								(int) $_GET['exclusions_synced'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+								'surecart-eu-helper'
+							),
+							(int) $_GET['exclusions_synced'] // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+						)
+					);
+					?>
+				</p></div>
+			<?php endif; ?>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( self::GROUP ); ?>
@@ -287,6 +343,78 @@ class SettingsPage {
 						value="<?php echo esc_attr( (string) $value ); ?>"
 						placeholder="<?php echo esc_attr( $placeholder ); ?>"
 						class="regular-text" />
+
+				<?php elseif ( 'collection_exclusions' === $type ) : ?>
+					<?php
+					$selected_cols = is_array( $value ) ? array_map( 'strval', $value ) : array();
+					$collections   = Exclusions::all_collections();
+					?>
+					<?php if ( empty( $collections ) ) : ?>
+						<p class="description"><?php echo esc_html__( 'No product collections found (or SureCart is unavailable). Create collections in SureCart to exclude products in bulk.', 'surecart-eu-helper' ); ?></p>
+					<?php else : ?>
+						<fieldset>
+							<?php foreach ( $collections as $col ) : ?>
+								<label style="display:block;margin-bottom:4px;">
+									<input type="checkbox"
+										name="<?php echo esc_attr( $name ); ?>[]"
+										value="<?php echo esc_attr( $col['id'] ); ?>"
+										<?php checked( in_array( $col['id'], $selected_cols, true ) ); ?> />
+									<?php echo esc_html( $col['name'] ); ?>
+									<span class="description">
+										<?php
+										echo esc_html(
+											sprintf(
+												/* translators: %d: number of products in the collection. */
+												_n( '(%d product)', '(%d products)', (int) $col['products_count'], 'surecart-eu-helper' ),
+												(int) $col['products_count']
+											)
+										);
+										?>
+									</span>
+								</label>
+							<?php endforeach; ?>
+						</fieldset>
+						<p style="margin-top:8px;">
+							<a class="button button-secondary"
+								href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_refresh_exclusions' ), 'sceu_refresh_exclusions' ) ); ?>">
+								<?php echo esc_html__( 'Refresh excluded product list', 'surecart-eu-helper' ); ?>
+							</a>
+							<span class="description" style="margin-left:8px;">
+								<?php echo esc_html__( "Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and after you add products to a collection.", 'surecart-eu-helper' ); ?>
+							</span>
+						</p>
+					<?php endif; ?>
+
+				<?php elseif ( 'product_exclusions' === $type ) : ?>
+					<?php
+					$selected_ids = is_array( $value ) ? array_map( 'strval', $value ) : array();
+					$labels       = Exclusions::product_labels();
+					?>
+					<div class="sceu-excl" data-sceu-excl>
+						<input type="search" class="sceu-excl__search regular-text"
+							placeholder="<?php echo esc_attr__( 'Search products by name…', 'surecart-eu-helper' ); ?>"
+							autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>" />
+						<ul class="sceu-excl__results" hidden></ul>
+						<ul class="sceu-excl__chips">
+							<?php foreach ( $selected_ids as $pid ) : ?>
+								<?php $pname = $labels[ $pid ] ?? $pid; ?>
+								<li class="sceu-excl__chip" data-id="<?php echo esc_attr( $pid ); ?>">
+									<span class="sceu-excl__chip-label"><?php echo esc_html( $pname ); ?></span>
+									<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr__( 'Remove', 'surecart-eu-helper' ); ?>">&times;</button>
+									<input type="hidden" name="<?php echo esc_attr( $name ); ?>[]" value="<?php echo esc_attr( $pid ); ?>" />
+									<input type="hidden" name="<?php echo esc_attr( Settings::OPTION . '[' . $module_id . '][excluded_product_labels][' . $pid . ']' ); ?>" value="<?php echo esc_attr( $pname ); ?>" />
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<template class="sceu-excl__template">
+							<li class="sceu-excl__chip" data-id="">
+								<span class="sceu-excl__chip-label"></span>
+								<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr__( 'Remove', 'surecart-eu-helper' ); ?>">&times;</button>
+								<input type="hidden" data-name-ids="<?php echo esc_attr( $name ); ?>[]" value="" />
+								<input type="hidden" data-name-labels="<?php echo esc_attr( Settings::OPTION . '[' . $module_id . '][excluded_product_labels]' ); ?>" value="" />
+							</li>
+						</template>
+					</div>
 
 				<?php else : ?>
 					<input type="text" id="<?php echo esc_attr( $id_attr ); ?>"

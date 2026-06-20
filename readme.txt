@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,11 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.2.0 =
+* **Excluded products & collections.** Some goods are excluded from the statutory right of withdrawal (e.g. perishable, made-to-order, sealed hygiene, or digital items). Under **EU Helper → Settings** you can now exclude whole **product collections** (the scalable way to exclude many products at once) and/or search and add **individual products**. Excluded items never appear in the withdrawal form; the rest of an order stays withdrawable, and an order whose items are all excluded disappears. Enforced on the server too, never trusting the browser.
+* Performance: the customer-facing form does **no** extra SureCart API calls for exclusions — the excluded set is precomputed and cached. Collections are resolved to their member products in the background (on save, on a schedule, and via a manual "Refresh excluded product list" button), never during a customer page load.
+* This remains a merchant-configured policy tool: some legal exclusions are conditional (e.g. sealed goods only once unsealed), which the plugin cannot detect — you decide which products/collections are never offered for withdrawal.
 
 = 1.1.0 =
 * **Partial withdrawal.** Customers can now withdraw specific items — and specific quantities — from an order, instead of only whole orders. Selecting an order reveals its line items, each with a quantity stepper and a product thumbnail so items are easy to tell apart. Orders without retrievable line-item detail continue to work as a whole-order withdrawal.
