@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,15 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.1.0 =
+* **Partial withdrawal.** Customers can now withdraw specific items — and specific quantities — from an order, instead of only whole orders. Selecting an order reveals its line items, each with a quantity stepper and a product thumbnail so items are easy to tell apart. Orders without retrievable line-item detail continue to work as a whole-order withdrawal.
+* **Per-item remaining tracking.** Once items/quantities have been requested, only the not-yet-requested quantities remain selectable; an order keeps appearing until nothing is left to withdraw.
+* **Itemised throughout.** The review step, the customer confirmation email, the merchant notification, the on-dashboard request history, and the admin Withdrawal Log all show the exact items and quantities. The log's "Withdrawing" column shows each item as "2 of 3 × Product" with a Partial / Full order badge, and the CSV export gains a matching column.
+* **Accessibility.** Quantity steppers carry product-specific labels, disable at the available minimum/maximum, and announce each change to screen readers.
+* **Durable log + GDPR delete.** The log is append-only for normal use (status changes manage workflow); an admin-only "Delete permanently" action is available for GDPR erasure / test cleanup, which also re-enables re-requesting of the affected order(s).
+* **Customer request list.** "Your withdrawal requests" is consistently newest-first, and finished requests age off the dashboard after a grace period (default 30 days, filter `sceu_request_history_days`); pending requests stay until handled.
+* **Clearer "Emails sent" log column.** Each email now reads "Customer: Sent" / "Customer: Not sent" with an explanatory tooltip, so a staging site with no working mail setup is not mistaken for a failure of the request itself.
 
 = 1.0.4 =
 * Publish a downloadable release ZIP via GitHub Actions on each GitHub Release.

@@ -224,16 +224,154 @@
 }
 
 .sceu-orders__item {
-	display: flex;
-	align-items: flex-start;
-	gap: 0.6em;
 	padding: 0.65em 0.8em;
 	border: 1px solid var( --sceu-border );
 	border-radius: 6px;
+}
+
+.sceu-orders__head {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.6em;
 	cursor: pointer;
 }
 
 .sceu-orders__cb {
+	margin-top: 0.2em;
+}
+
+.sceu-items {
+	margin: 0.75em 0 0.25em;
+	padding-top: 0.6em;
+	border-top: 1px solid var( --sceu-border );
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+}
+
+.sceu-items__hint {
+	margin: 0;
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+.sceu-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75em;
+}
+
+.sceu-item__img {
+	width: 40px;
+	height: 40px;
+	flex: none;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var( --sceu-border );
+}
+
+.sceu-item__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.sceu-item__name {
+	font-weight: 500;
+}
+
+.sceu-item__avail {
+	font-size: 0.82em;
+	opacity: 0.7;
+}
+
+.sceu-item__qty {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: none;
+}
+
+.sceu-step {
+	width: 30px;
+	height: 30px;
+	border: 1px solid var( --sceu-field-border );
+	border-radius: 6px;
+	background: transparent;
+	color: var( --sceu-text );
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.sceu-step:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* Visually hidden, still read by screen readers (for the qty live region). */
+.sceu-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect( 0 0 0 0 );
+	white-space: nowrap;
+}
+
+.sceu-confirmation__summary {
+	margin-top: 0.75em;
+}
+
+.sceu-confirmation__heading {
+	margin: 0 0 0.25em;
+	font-weight: 500;
+}
+
+.sceu-confirmation__items {
+	margin: 0;
+	padding-left: 1.2em;
+}
+
+.sceu-item__input {
+	width: 3em;
+	height: 30px;
+	box-sizing: border-box;
+	text-align: center;
+	padding: 0 0.25em;
+	border: 1px solid var( --sceu-field-border );
+	border-radius: 6px;
+	font: inherit;
+	line-height: normal;
+	color: inherit;
+	background: transparent;
+	/* Hide the browser's native number spinners — the +/- buttons control it,
+	   and the injected arrows broke the horizontal centering on hover. */
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.sceu-item__input::-webkit-outer-spin-button,
+.sceu-item__input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.sceu-review__orders {
+	white-space: pre-line;
+}
+
+.sceu-requests__items {
+	font-size: 0.9em;
+	opacity: 0.85;
 	margin-top: 0.2em;
 }
 
@@ -330,21 +468,6 @@
 
 .sceu-review__detail {
 	margin: 0;
-}
-
-.sceu-review__orders {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 0.3em;
-}
-
-.sceu-review__order-meta {
-	font-size: 0.85em;
-	opacity: 0.7;
-	margin-left: 0.5em;
 }
 
 /* ---- Modal ---- */
