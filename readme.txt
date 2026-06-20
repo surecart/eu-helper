@@ -99,6 +99,7 @@ the module is enabled.
 * **Durable log + GDPR delete.** The log is append-only for normal use (status changes manage workflow); an admin-only "Delete permanently" action is available for GDPR erasure / test cleanup, which also re-enables re-requesting of the affected order(s).
 * **Customer request list.** "Your withdrawal requests" is consistently newest-first, and finished requests age off the dashboard after a grace period (default 30 days, filter `sceu_request_history_days`); pending requests stay until handled.
 * **Clearer "Emails sent" log column.** Each email now reads "Customer: Sent" / "Customer: Not sent" with an explanatory tooltip, so a staging site with no working mail setup is not mistaken for a failure of the request itself.
+* **Resend notifications.** Each log entry has a per-recipient "Resend" / "Try again" link for the customer and merchant emails. The re-sent email is rebuilt from the stored request, so its "Received at" timestamp still reflects when the withdrawal was originally requested; the log updates to show the new delivery result.
 
 = 1.0.4 =
 * Publish a downloadable release ZIP via GitHub Actions on each GitHub Release.

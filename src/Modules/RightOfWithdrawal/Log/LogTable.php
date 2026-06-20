@@ -216,6 +216,27 @@ class LogTable {
 	}
 
 	/**
+	 * Replace a row's JSON payload (e.g. to record the outcome of re-sending
+	 * notification emails). The caller is responsible for passing the complete,
+	 * merged payload.
+	 *
+	 * @param int                  $id      Row id.
+	 * @param array<string, mixed> $payload Full payload to store.
+	 * @return bool
+	 */
+	public static function update_payload( int $id, array $payload ): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (bool) $wpdb->update(
+			self::table_name(),
+			array( 'payload' => wp_json_encode( $payload ) ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
 	 * Permanently delete a row (for GDPR erasure / test cleanup). The log is
 	 * otherwise append-only; this is not part of the normal workflow.
 	 *

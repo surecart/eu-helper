@@ -7,10 +7,14 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal;
 
+use SureCartEuHelper\Settings;
+use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\ModuleInterface;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\WithdrawalController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Email\CustomerEmail;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Email\MerchantEmail;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -127,6 +131,114 @@ class Module implements ModuleInterface {
 		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
 		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
+		add_action( 'admin_post_sceu_resend_emails', array( $this, 'resend_emails' ) );
+	}
+
+	/**
+	 * Admin action: re-send the customer and/or merchant notification email for
+	 * a logged request.
+	 *
+	 * The email is rebuilt from the stored log row, so the "Received at:"
+	 * timestamp reflects when the withdrawal was originally requested — not the
+	 * moment it was re-sent. The per-recipient sent flags are updated with the
+	 * new outcome so the log reflects reality.
+	 *
+	 * @return void
+	 */
+	public function resend_emails(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0;
+		check_admin_referer( 'sceu_resend_emails_' . $id );
+
+		$which = isset( $_GET['which'] ) ? sanitize_key( wp_unslash( $_GET['which'] ) ) : 'both';
+		if ( ! in_array( $which, array( 'both', 'customer', 'merchant' ), true ) ) {
+			$which = 'both';
+		}
+
+		$row = $id ? LogTable::find( $id ) : null;
+		if ( ! $row ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log' ) );
+			exit;
+		}
+
+		$ctx     = $this->ctx_from_row( $row );
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		$results = array();
+		if ( 'merchant' !== $which ) {
+			$ok                              = CustomerEmail::send( $ctx );
+			$payload['customer_email_sent']  = (bool) $ok;
+			$results[]                       = (bool) $ok;
+		}
+		if ( 'customer' !== $which ) {
+			$ok                              = MerchantEmail::send( $ctx );
+			$payload['merchant_email_sent']  = (bool) $ok;
+			$results[]                       = (bool) $ok;
+		}
+
+		LogTable::update_payload( $id, $payload );
+
+		$all_ok = ! empty( $results ) && ! in_array( false, $results, true );
+		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&resent=' . ( $all_ok ? 'ok' : 'fail' ) ) );
+		exit;
+	}
+
+	/**
+	 * Rebuild the email context array from a stored log row, so a notification
+	 * can be re-sent exactly as it first went out.
+	 *
+	 * The "Received at:" timestamp is derived from the row's original
+	 * `created_at`, formatted in the site's date/time format — so a re-sent
+	 * email remains a faithful receipt of when the request was made.
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return array<string, mixed>
+	 */
+	private function ctx_from_row( array $row ): array {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		$merchant_to = sanitize_email( (string) ( $payload['merchant_to'] ?? '' ) );
+		if ( '' === $merchant_to || ! is_email( $merchant_to ) ) {
+			$merchant_to = $this->effective_merchant_email();
+		}
+
+		$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+
+		return array(
+			'request_id'     => (string) ( $payload['request_id'] ?? '' ),
+			// Original request time, not "now".
+			'timestamp'      => mysql2date( $format, (string) ( $row['created_at'] ?? '' ) ),
+			'customer_name'  => (string) ( $row['customer_name'] ?? '' ),
+			'customer_email' => (string) ( $row['customer_email'] ?? '' ),
+			'ip_address'     => (string) ( $row['ip_address'] ?? '' ),
+			'reason'         => (string) ( $payload['reason'] ?? '' ),
+			'orders'         => isset( $payload['orders'] ) && is_array( $payload['orders'] ) ? $payload['orders'] : array(),
+			'merchant_email' => $merchant_to,
+			'store_name'     => MerchantInfo::store_name(),
+		);
+	}
+
+	/**
+	 * Effective merchant notification email: the configured value, else the
+	 * resolved SureCart store default. Mirrors the REST controller's resolver,
+	 * used only as a fallback for old rows that predate storing the recipient.
+	 *
+	 * @return string
+	 */
+	private function effective_merchant_email(): string {
+		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
+		if ( '' !== $configured && is_email( $configured ) ) {
+			return $configured;
+		}
+		return MerchantInfo::notification_email();
 	}
 
 	/**

@@ -93,7 +93,8 @@ class LogListTable extends \WP_List_Table {
 				$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
 				$cust    = ! empty( $payload['customer_email_sent'] );
 				$merch   = ! empty( $payload['merchant_email_sent'] );
-				$mark    = function ( $ok, $label ) {
+				$id      = (int) ( $item['id'] ?? 0 );
+				$mark    = function ( $ok, $label, $which ) use ( $id ) {
 					if ( $ok ) {
 						$icon   = '✓';
 						$col    = '#137333';
@@ -105,10 +106,24 @@ class LogListTable extends \WP_List_Table {
 						$status = __( 'Not sent', 'surecart-eu-helper' );
 						$tip    = __( 'WordPress could not send this email. This usually means the site has no working mail/SMTP setup (common on staging sites). The withdrawal request itself was still recorded.', 'surecart-eu-helper' );
 					}
-					return '<span style="color:' . $col . ';" title="' . esc_attr( $tip ) . '">'
+					$out = '<span style="color:' . $col . ';" title="' . esc_attr( $tip ) . '">'
 						. $icon . ' ' . esc_html( $label ) . ': ' . esc_html( $status ) . '</span>';
+
+					// Per-recipient resend. The resent email carries the original
+					// request timestamp (not "now"), so it remains a faithful receipt.
+					if ( $id && current_user_can( 'manage_options' ) ) {
+						$url  = wp_nonce_url(
+							admin_url( 'admin-post.php?action=sceu_resend_emails&id=' . $id . '&which=' . $which ),
+							'sceu_resend_emails_' . $id
+						);
+						$out .= ' &middot; <a href="' . esc_url( $url ) . '" style="font-size:12px;">'
+							. esc_html( $ok ? __( 'Resend', 'surecart-eu-helper' ) : __( 'Try again', 'surecart-eu-helper' ) )
+							. '</a>';
+					}
+					return $out;
 				};
-				return $mark( $cust, __( 'Customer', 'surecart-eu-helper' ) ) . '<br />' . $mark( $merch, __( 'Merchant', 'surecart-eu-helper' ) );
+				return $mark( $cust, __( 'Customer', 'surecart-eu-helper' ), 'customer' )
+					. '<br />' . $mark( $merch, __( 'Merchant', 'surecart-eu-helper' ), 'merchant' );
 			case 'reason':
 				$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
 				$reason  = is_array( $payload ) ? trim( (string) ( $payload['reason'] ?? '' ) ) : '';

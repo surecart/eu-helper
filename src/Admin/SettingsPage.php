@@ -332,6 +332,11 @@ class SettingsPage {
 					?>
 				</p></div>
 			<?php endif; ?>
+			<?php if ( isset( $_GET['resent'] ) && 'ok' === $_GET['resent'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Email re-sent. The "Emails sent" column shows the current delivery result.', 'surecart-eu-helper' ); ?></p></div>
+			<?php elseif ( isset( $_GET['resent'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+				<div class="notice notice-warning is-dismissible"><p><?php echo esc_html__( 'Tried to re-send, but WordPress reported the email could not be sent. This usually means the site has no working email/SMTP setup. See the "Emails sent" column below.', 'surecart-eu-helper' ); ?></p></div>
+			<?php endif; ?>
 
 			<p>
 				<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_sync_log' ), 'sceu_sync_log' ) ); ?>">
