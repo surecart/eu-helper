@@ -220,81 +220,104 @@ class SettingsPage {
 				$style .= '--sceu-primary-text:' . $ptext . ';';
 			}
 		}
+		$modules     = $this->registry->all();
+		$first_label = '';
+		foreach ( $modules as $sceu_first_module ) {
+			$first_label = $sceu_first_module->label();
+			break;
+		}
 		?>
-		<div class="wrap sceu-settings" style="<?php echo esc_attr( $style ); ?>">
-			<div class="sceu-settings__header">
-				<h1 class="sceu-settings__title"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></h1>
-				<p class="sceu-settings__subtitle"><?php echo esc_html__( 'Enable the EU-compliance modules you need and configure each one below.', 'surecart-eu-helper' ); ?></p>
-			</div>
-
-			<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-success is-dismissible"><p>
-					<?php
-					echo esc_html(
-						sprintf(
-							/* translators: %d: number of products resolved from excluded collections. */
-							_n(
-								'Excluded-product list refreshed: %d product is currently in your excluded collections.',
-								'Excluded-product list refreshed: %d products are currently in your excluded collections.',
-								(int) $_GET['exclusions_synced'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-								'surecart-eu-helper'
-							),
-							(int) $_GET['exclusions_synced'] // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-						)
-					);
-					?>
-				</p></div>
-			<?php endif; ?>
-
-			<form method="post" action="options.php" class="sceu-settings__form">
-				<?php settings_fields( self::GROUP ); ?>
-
-				<?php foreach ( $this->registry->all() as $id => $module ) : ?>
-					<?php $enabled = Settings::is_module_enabled( $id ); ?>
-					<section class="sceu-module">
-						<div class="sceu-module__bar">
-							<h2 class="sceu-module__title">
-								<span class="dashicons dashicons-shield-alt" aria-hidden="true"></span>
-								<?php echo esc_html( $module->label() ); ?>
-							</h2>
-							<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
-						</div>
-						<?php if ( '' !== $module->description() ) : ?>
-							<p class="sceu-module__desc"><?php echo esc_html( $module->description() ); ?></p>
-						<?php endif; ?>
-
-						<?php $disclaimer = $module->disclaimer(); ?>
-						<?php if ( '' !== $disclaimer ) : ?>
-							<p class="sceu-card__note">
-								<strong><?php echo esc_html__( 'Your responsibility', 'surecart-eu-helper' ); ?>:</strong>
-								<?php echo esc_html( $disclaimer ); ?>
-							</p>
-						<?php endif; ?>
-
-						<div class="sceu-card">
-							<div class="sceu-field sceu-field--toggle">
-								<span class="sceu-field__label" style="margin:0;"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
-								<label class="sceu-switch">
-									<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
-									<input type="checkbox" class="sceu-switch__input"
-										name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]"
-										value="1" <?php checked( $enabled ); ?> />
-									<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-									<span class="sceu-switch__text"><?php echo esc_html__( 'Active', 'surecart-eu-helper' ); ?></span>
-								</label>
-							</div>
-
-							<?php foreach ( $module->settings_fields() as $field ) : ?>
-								<?php $this->render_field( $id, $field ); ?>
-							<?php endforeach; ?>
-						</div>
-					</section>
-				<?php endforeach; ?>
-
-				<div class="sceu-settings__actions">
-					<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save changes', 'surecart-eu-helper' ); ?></button>
+		<div class="sceu-app" style="<?php echo esc_attr( $style ); ?>">
+			<header class="sceu-app__bar">
+				<div class="sceu-app__brand">
+					<span class="sceu-app__badge dashicons dashicons-shield-alt" aria-hidden="true"></span>
+					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
+					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
+					<span class="sceu-app__crumb" data-sceu-crumb><?php echo esc_html( $first_label ); ?></span>
 				</div>
-			</form>
+				<span class="sceu-app__meta">v<?php echo esc_html( SCEU_VERSION ); ?></span>
+			</header>
+
+			<div class="sceu-app__body">
+				<nav class="sceu-app__nav" aria-label="<?php echo esc_attr__( 'EU Helper modules', 'surecart-eu-helper' ); ?>">
+					<?php $sceu_first = true; ?>
+					<?php foreach ( $modules as $id => $module ) : ?>
+						<a class="sceu-nav__item<?php echo $sceu_first ? ' is-active' : ''; ?>"
+							href="#<?php echo esc_attr( $id ); ?>"
+							data-sceu-tab="<?php echo esc_attr( $id ); ?>">
+							<span class="dashicons dashicons-<?php echo esc_attr( 'right_of_withdrawal' === $id ? 'shield-alt' : 'admin-generic' ); ?>" aria-hidden="true"></span>
+							<?php echo esc_html( $module->label() ); ?>
+						</a>
+						<?php $sceu_first = false; ?>
+					<?php endforeach; ?>
+				</nav>
+
+				<div class="sceu-app__content">
+					<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+						<div class="notice notice-success is-dismissible"><p>
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d: number of products resolved from excluded collections. */
+									_n(
+										'Excluded-product list refreshed: %d product is currently in your excluded collections.',
+										'Excluded-product list refreshed: %d products are currently in your excluded collections.',
+										(int) $_GET['exclusions_synced'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+										'surecart-eu-helper'
+									),
+									(int) $_GET['exclusions_synced'] // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+								)
+							);
+							?>
+						</p></div>
+					<?php endif; ?>
+
+					<form method="post" action="options.php" class="sceu-settings__form">
+						<?php settings_fields( self::GROUP ); ?>
+
+						<?php $sceu_first = true; ?>
+						<?php foreach ( $modules as $id => $module ) : ?>
+							<?php $enabled = Settings::is_module_enabled( $id ); ?>
+							<section class="sceu-panel<?php echo $sceu_first ? ' is-active' : ''; ?>" data-sceu-panel="<?php echo esc_attr( $id ); ?>" <?php echo $sceu_first ? '' : 'hidden'; ?>>
+								<div class="sceu-panel__head">
+									<h2 class="sceu-panel__title"><?php echo esc_html( $module->label() ); ?></h2>
+									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
+								</div>
+								<?php if ( '' !== $module->description() ) : ?>
+									<p class="sceu-panel__desc"><?php echo esc_html( $module->description() ); ?></p>
+								<?php endif; ?>
+
+								<?php $disclaimer = $module->disclaimer(); ?>
+								<?php if ( '' !== $disclaimer ) : ?>
+									<p class="sceu-card__note">
+										<strong><?php echo esc_html__( 'Your responsibility', 'surecart-eu-helper' ); ?>:</strong>
+										<?php echo esc_html( $disclaimer ); ?>
+									</p>
+								<?php endif; ?>
+
+								<div class="sceu-card">
+									<div class="sceu-field sceu-field--toggle">
+										<span class="sceu-field__label" style="margin:0;"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
+										<label class="sceu-switch">
+											<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
+											<input type="checkbox" class="sceu-switch__input"
+												name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]"
+												value="1" <?php checked( $enabled ); ?> />
+											<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
+											<span class="sceu-switch__text"><?php echo esc_html__( 'Active', 'surecart-eu-helper' ); ?></span>
+										</label>
+									</div>
+
+									<?php foreach ( $module->settings_fields() as $field ) : ?>
+										<?php $this->render_field( $id, $field ); ?>
+									<?php endforeach; ?>
+								</div>
+							</section>
+							<?php $sceu_first = false; ?>
+						<?php endforeach; ?>
+					</form>
+				</div>
+			</div>
 		</div>
 		<?php
 	}

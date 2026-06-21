@@ -202,6 +202,14 @@ class Module implements ModuleInterface {
 			array(),
 			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
 		);
+		$settings_js = SCEU_DIR . 'assets/admin-settings.js';
+		wp_enqueue_script(
+			'sceu-admin-settings',
+			SCEU_URL . 'assets/admin-settings.js',
+			array(),
+			file_exists( $settings_js ) ? (string) filemtime( $settings_js ) : SCEU_VERSION,
+			true
+		);
 
 		$css = SCEU_DIR . 'assets/admin-exclusions.css';
 		$js  = SCEU_DIR . 'assets/admin-exclusions.js';

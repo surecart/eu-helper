@@ -21,7 +21,7 @@
     "confirm_label": { "type": "string", "default": "" },
     "success_message": { "type": "string", "default": "" }
   },
-  "version": "1.4.1",
+  "version": "1.5.0",
   "editorScript": "file:./editor.js",
   "render": "file:./render.php"
 }

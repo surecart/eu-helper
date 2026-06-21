@@ -1,114 +1,201 @@
 /**
- * SureCart-style admin settings for EU Helper.
+ * SureCart-style settings app shell for EU Helper.
  *
- * Matches SureCart's settings look using its design-token VALUES (captured from
- * the live SureCart components) plus the store's actual brand colour, which the
- * plugin injects as --sceu-primary on the wrapper (BrandColor). Self-contained:
- * it does not depend on SureCart's web components rendering on this page.
+ * Mirrors SureCart's settings structure — a top header bar, a left module
+ * navigation, and a content panel of cards — using SureCart's design-token
+ * values plus the store's brand colour (injected as --sceu-primary). Renders
+ * full-bleed inside the WP admin content area (the page output is not wrapped
+ * in .wrap), the same way SureCart's settings app fills the screen.
  */
 
-/* Tint the admin content area to SureCart's settings background. */
-body.toplevel_page_sceu-settings #wpcontent {
-	background: #f4f7f9;
-}
-
-.sceu-settings {
+.sceu-app {
 	/* SureCart design tokens (values from the SureCart component library). */
 	--sceu-primary: #388051;
 	--sceu-primary-text: #ffffff;
+	--sceu-primary-soft: rgba( 56, 128, 81, 0.1 );
 	--sceu-border: #dce0e6;
-	--sceu-bg: #ffffff;
-	--sceu-gray-50: #f8f9fa;
-	--sceu-gray-100: #f3f4f6;
+	--sceu-line: #eef0f2;
+	--sceu-bg: #f4f7f9;
+	--sceu-surface: #ffffff;
 	--sceu-gray-200: #e5e7eb;
+	--sceu-gray-400: #9ca3af;
 	--sceu-gray-500: #6b7280;
 	--sceu-gray-700: #374151;
 	--sceu-gray-900: #002e33;
-	--sceu-radius: 0.35em;
-	--sceu-radius-lg: 0.5em;
-	max-width: 880px;
-}
+	--sceu-radius: 6px;
+	--sceu-radius-lg: 8px;
 
-/* ---- Header ---- */
-.sceu-settings__header {
-	margin: 0 0 1.25em;
-}
-
-.sceu-settings__title {
-	font-size: 1.5em;
-	font-weight: 600;
+	/* Fill the admin content area edge-to-edge. */
+	margin: 0 0 0 -20px;
+	background: var( --sceu-bg );
+	min-height: calc( 100vh - 32px );
 	color: var( --sceu-gray-900 );
-	margin: 0 0 0.2em;
-	padding: 0;
+	font-size: 14px;
+	line-height: 1.5;
 }
 
-.sceu-settings__subtitle {
-	margin: 0;
+@media screen and ( max-width: 782px ) {
+	.sceu-app {
+		margin-left: -10px;
+	}
+}
+
+/* ---- Header bar ---- */
+.sceu-app__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	height: 56px;
+	padding: 0 24px;
+	background: var( --sceu-surface );
+	border-bottom: 1px solid var( --sceu-gray-200 );
+}
+
+.sceu-app__brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.sceu-app__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	font-size: 16px;
+	color: var( --sceu-primary-text );
+	background: var( --sceu-primary );
+	border-radius: var( --sceu-radius );
+	flex: none;
+}
+
+.sceu-app__name {
+	font-weight: 600;
+	font-size: 15px;
+	color: var( --sceu-gray-900 );
+}
+
+.sceu-app__sep {
+	color: var( --sceu-gray-400 );
+}
+
+.sceu-app__crumb {
 	color: var( --sceu-gray-500 );
-	font-size: 0.95em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
-/* ---- Module section: title + Save above the card (SureCart pattern) ---- */
-.sceu-module {
-	margin: 0 0 2em;
+.sceu-app__meta {
+	color: var( --sceu-gray-400 );
+	font-size: 13px;
+	flex: none;
 }
 
-.sceu-module__bar {
+/* ---- Body: nav + content ---- */
+.sceu-app__body {
+	display: flex;
+	align-items: stretch;
+}
+
+.sceu-app__nav {
+	width: 248px;
+	flex: none;
+	background: var( --sceu-surface );
+	border-right: 1px solid var( --sceu-gray-200 );
+	padding: 14px 12px;
+	min-height: calc( 100vh - 56px - 32px );
+}
+
+.sceu-nav__item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px 12px;
+	margin-bottom: 2px;
+	border-radius: var( --sceu-radius );
+	text-decoration: none;
+	font-size: 14px;
+	color: var( --sceu-gray-700 );
+}
+
+.sceu-nav__item:hover {
+	background: #f6f7f8;
+	color: var( --sceu-gray-900 );
+}
+
+.sceu-nav__item.is-active {
+	background: var( --sceu-primary-soft );
+	color: var( --sceu-primary );
+	font-weight: 600;
+}
+
+.sceu-nav__item .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	flex: none;
+}
+
+.sceu-app__content {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 28px 36px;
+}
+
+/* ---- Panel (one per module) ---- */
+.sceu-panel[hidden] {
+	display: none;
+}
+
+.sceu-panel__head {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 1em;
 	margin: 0 0 0.4em;
+	max-width: 900px;
 }
 
-.sceu-module__title {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.4em;
+.sceu-panel__title {
 	margin: 0;
 	padding: 0;
-	font-size: 1.2em;
+	font-size: 1.3em;
 	font-weight: 600;
 	color: var( --sceu-gray-900 );
 }
 
-.sceu-module__title .dashicons {
-	width: 1.1em;
-	height: 1.1em;
-	font-size: 1.1em;
-	color: var( --sceu-primary );
-}
-
-.sceu-module__desc {
-	margin: 0 0 1em;
+.sceu-panel__desc {
+	margin: 0 0 1.25em;
 	color: var( --sceu-gray-500 );
-	font-size: 0.92em;
-	line-height: 1.5;
 	max-width: 70ch;
 }
 
-/* ---- Card ---- */
-.sceu-card {
-	background: var( --sceu-bg );
-	border: 1px solid var( --sceu-gray-200 );
-	border-radius: var( --sceu-radius-lg );
-	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.04 );
-	padding: 1.5em;
-	margin: 0;
-}
-
-/* ---- Responsibility/disclaimer note ---- */
+/* ---- Responsibility note ---- */
 .sceu-card__note {
-	display: flex;
-	gap: 0.6em;
+	display: block;
+	max-width: 900px;
 	background: #fcf6e6;
 	border: 1px solid #f0d999;
 	border-radius: var( --sceu-radius );
-	padding: 0.75em 0.9em;
+	padding: 0.85em 1em;
 	margin: 0 0 1.25em;
 	font-size: 0.9em;
 	line-height: 1.5;
 	color: #6b5a20;
+}
+
+/* ---- Card ---- */
+.sceu-card {
+	max-width: 900px;
+	background: var( --sceu-surface );
+	border: 1px solid var( --sceu-gray-200 );
+	border-radius: var( --sceu-radius-lg );
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.04 );
+	padding: 1.5em;
 }
 
 /* ---- Fields (stacked: label over control) ---- */
@@ -134,13 +221,12 @@ body.toplevel_page_sceu-settings #wpcontent {
 	line-height: 1.5;
 }
 
-/* Text-like inputs + selects + textareas inside a card. */
-.sceu-settings .sceu-field__control input[type="text"],
-.sceu-settings .sceu-field__control input[type="email"],
-.sceu-settings .sceu-field__control input[type="search"],
-.sceu-settings .sceu-field__control input[type="url"],
-.sceu-settings .sceu-field__control select,
-.sceu-settings .sceu-field__control textarea {
+.sceu-app .sceu-field__control input[type="text"],
+.sceu-app .sceu-field__control input[type="email"],
+.sceu-app .sceu-field__control input[type="search"],
+.sceu-app .sceu-field__control input[type="url"],
+.sceu-app .sceu-field__control select,
+.sceu-app .sceu-field__control textarea {
 	box-sizing: border-box;
 	width: 100%;
 	max-width: 30em;
@@ -154,7 +240,7 @@ body.toplevel_page_sceu-settings #wpcontent {
 	box-shadow: none;
 }
 
-.sceu-settings .sceu-field__control input[type="number"] {
+.sceu-app .sceu-field__control input[type="number"] {
 	box-sizing: border-box;
 	width: 7em;
 	min-height: 2.6em;
@@ -164,15 +250,14 @@ body.toplevel_page_sceu-settings #wpcontent {
 	background: #fff;
 }
 
-.sceu-settings .sceu-field__control input:focus,
-.sceu-settings .sceu-field__control select:focus,
-.sceu-settings .sceu-field__control textarea:focus {
+.sceu-app .sceu-field__control input:focus,
+.sceu-app .sceu-field__control select:focus,
+.sceu-app .sceu-field__control textarea:focus {
 	border-color: var( --sceu-primary );
 	box-shadow: 0 0 0 1px var( --sceu-primary );
 	outline: none;
 }
 
-/* Radio options stacked. */
 .sceu-field--radio .sceu-field__control label {
 	display: flex;
 	align-items: center;
@@ -188,7 +273,7 @@ body.toplevel_page_sceu-settings #wpcontent {
 	justify-content: space-between;
 	gap: 1em;
 	padding-bottom: 1.25em;
-	border-bottom: 1px solid var( --sceu-gray-200 );
+	border-bottom: 1px solid var( --sceu-line );
 }
 
 .sceu-switch {
@@ -245,17 +330,13 @@ body.toplevel_page_sceu-settings #wpcontent {
 }
 
 /* ---- Primary button ---- */
-.sceu-settings__actions {
-	margin-top: 1.5em;
-}
-
 .sceu-btn--primary {
 	display: inline-flex;
 	align-items: center;
 	font: inherit;
 	font-weight: 500;
 	cursor: pointer;
-	padding: 0.6em 1.4em;
+	padding: 0.55em 1.3em;
 	border: none;
 	border-radius: var( --sceu-radius );
 	background: var( --sceu-primary );
@@ -269,4 +350,10 @@ body.toplevel_page_sceu-settings #wpcontent {
 .sceu-btn--primary:focus-visible {
 	outline: 2px solid var( --sceu-primary );
 	outline-offset: 2px;
+}
+
+/* Keep WP admin notices tidy inside the content column. */
+.sceu-app__content .notice {
+	margin: 0 0 1.25em;
+	max-width: 900px;
 }

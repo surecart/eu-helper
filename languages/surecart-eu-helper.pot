@@ -161,6 +161,10 @@ msgstr ""
 msgid "EU Helper"
 msgstr ""
 
+#: src/Admin/SettingsPage.php
+msgid "EU Helper modules"
+msgstr ""
+
 #: src/Modules/RightOfWithdrawal/Log/LogListTable.php
 msgid "Email"
 msgstr ""
@@ -187,10 +191,6 @@ msgstr ""
 
 #: src/Admin/SettingsPage.php
 msgid "Enable module"
-msgstr ""
-
-#: src/Admin/SettingsPage.php
-msgid "Enable the EU-compliance modules you need and configure each one below."
 msgstr ""
 
 #: src/Admin/SettingsPage.php
@@ -508,7 +508,7 @@ msgid "Right of Withdrawal"
 msgstr ""
 
 #: src/Admin/SettingsPage.php
-msgid "Save changes"
+msgid "Save"
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Module.php

@@ -34,7 +34,7 @@
     "confirmButtonLabel": { "type": "string", "default": "" },
     "confirmationMessage": { "type": "string", "default": "" }
   },
-  "version": "1.4.1",
+  "version": "1.5.0",
   "editorScript": "file:./editor.js",
   "editorStyle": "file:./editor.css",
   "style": "file:./view.css",
