@@ -194,6 +194,15 @@ class Module implements ModuleInterface {
 			return;
 		}
 
+		// SureCart-style settings chrome.
+		$settings_css = SCEU_DIR . 'assets/admin-settings.css';
+		wp_enqueue_style(
+			'sceu-admin-settings',
+			SCEU_URL . 'assets/admin-settings.css',
+			array(),
+			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
+		);
+
 		$css = SCEU_DIR . 'assets/admin-exclusions.css';
 		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
 		wp_enqueue_style(

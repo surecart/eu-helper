@@ -507,6 +507,10 @@ msgstr ""
 msgid "Right of Withdrawal"
 msgstr ""
 
+#: src/Admin/SettingsPage.php
+msgid "Save changes"
+msgstr ""
+
 #: src/Modules/RightOfWithdrawal/Module.php
 msgid "Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections."
 msgstr ""

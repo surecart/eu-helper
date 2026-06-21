@@ -1,0 +1,253 @@
+/**
+ * SureCart-style admin settings for EU Helper.
+ *
+ * Matches SureCart's settings look using its design-token VALUES (captured from
+ * the live SureCart components) plus the store's actual brand colour, which the
+ * plugin injects as --sceu-primary on the wrapper (BrandColor). Self-contained:
+ * it does not depend on SureCart's web components rendering on this page.
+ */
+
+.sceu-settings {
+	/* SureCart design tokens (values from the SureCart component library). */
+	--sceu-primary: #388051;
+	--sceu-primary-text: #ffffff;
+	--sceu-border: #dce0e6;
+	--sceu-bg: #ffffff;
+	--sceu-gray-50: #f8f9fa;
+	--sceu-gray-100: #f3f4f6;
+	--sceu-gray-200: #e5e7eb;
+	--sceu-gray-500: #6b7280;
+	--sceu-gray-700: #374151;
+	--sceu-gray-900: #002e33;
+	--sceu-radius: 0.35em;
+	--sceu-radius-lg: 0.5em;
+	max-width: 880px;
+}
+
+/* ---- Header ---- */
+.sceu-settings__header {
+	margin: 0 0 1.25em;
+}
+
+.sceu-settings__title {
+	font-size: 1.5em;
+	font-weight: 600;
+	color: var( --sceu-gray-900 );
+	margin: 0 0 0.2em;
+	padding: 0;
+}
+
+.sceu-settings__subtitle {
+	margin: 0;
+	color: var( --sceu-gray-500 );
+	font-size: 0.95em;
+}
+
+/* ---- Card ---- */
+.sceu-card {
+	background: var( --sceu-bg );
+	border: 1px solid var( --sceu-border );
+	border-radius: var( --sceu-radius-lg );
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.04 );
+	margin: 0 0 1.25em;
+	overflow: hidden;
+}
+
+.sceu-card__header {
+	padding: 1.1em 1.25em;
+	border-bottom: 1px solid var( --sceu-gray-200 );
+	background: var( --sceu-gray-50 );
+}
+
+.sceu-card__title {
+	font-size: 1.05em;
+	font-weight: 600;
+	color: var( --sceu-gray-900 );
+	margin: 0;
+	padding: 0;
+}
+
+.sceu-card__desc {
+	margin: 0.35em 0 0;
+	color: var( --sceu-gray-500 );
+	font-size: 0.9em;
+	line-height: 1.5;
+}
+
+.sceu-card__body {
+	padding: 1.25em;
+}
+
+/* ---- Responsibility/disclaimer note ---- */
+.sceu-card__note {
+	display: flex;
+	gap: 0.6em;
+	background: #fcf6e6;
+	border: 1px solid #f0d999;
+	border-radius: var( --sceu-radius );
+	padding: 0.75em 0.9em;
+	margin: 0 0 1.25em;
+	font-size: 0.9em;
+	line-height: 1.5;
+	color: #6b5a20;
+}
+
+/* ---- Fields (stacked: label over control) ---- */
+.sceu-field {
+	margin: 0 0 1.25em;
+}
+
+.sceu-field:last-child {
+	margin-bottom: 0;
+}
+
+.sceu-field__label {
+	display: block;
+	font-weight: 600;
+	color: var( --sceu-gray-700 );
+	margin: 0 0 0.4em;
+}
+
+.sceu-field__help {
+	margin: 0.45em 0 0;
+	color: var( --sceu-gray-500 );
+	font-size: 0.85em;
+	line-height: 1.5;
+}
+
+/* Text-like inputs + selects + textareas inside a card. */
+.sceu-settings .sceu-field__control input[type="text"],
+.sceu-settings .sceu-field__control input[type="email"],
+.sceu-settings .sceu-field__control input[type="search"],
+.sceu-settings .sceu-field__control input[type="url"],
+.sceu-settings .sceu-field__control select,
+.sceu-settings .sceu-field__control textarea {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 30em;
+	min-height: 2.6em;
+	padding: 0.45em 0.7em;
+	border: 1px solid var( --sceu-border );
+	border-radius: var( --sceu-radius );
+	background: #fff;
+	color: var( --sceu-gray-900 );
+	font-size: 0.95em;
+	box-shadow: none;
+}
+
+.sceu-settings .sceu-field__control input[type="number"] {
+	box-sizing: border-box;
+	width: 7em;
+	min-height: 2.6em;
+	padding: 0.45em 0.7em;
+	border: 1px solid var( --sceu-border );
+	border-radius: var( --sceu-radius );
+	background: #fff;
+}
+
+.sceu-settings .sceu-field__control input:focus,
+.sceu-settings .sceu-field__control select:focus,
+.sceu-settings .sceu-field__control textarea:focus {
+	border-color: var( --sceu-primary );
+	box-shadow: 0 0 0 1px var( --sceu-primary );
+	outline: none;
+}
+
+/* Radio options stacked. */
+.sceu-field--radio .sceu-field__control label {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin: 0 0 0.5em;
+	color: var( --sceu-gray-700 );
+}
+
+/* ---- Toggle switch (enable module) ---- */
+.sceu-field--toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	padding-bottom: 1.25em;
+	border-bottom: 1px solid var( --sceu-gray-200 );
+}
+
+.sceu-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6em;
+	cursor: pointer;
+}
+
+.sceu-switch__input {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+}
+
+.sceu-switch__track {
+	position: relative;
+	display: inline-block;
+	width: 2.6em;
+	height: 1.5em;
+	background: var( --sceu-gray-200 );
+	border-radius: 999px;
+	transition: background 0.15s ease;
+	flex: none;
+}
+
+.sceu-switch__thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: calc( 1.5em - 4px );
+	height: calc( 1.5em - 4px );
+	background: #fff;
+	border-radius: 50%;
+	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.2 );
+	transition: transform 0.15s ease;
+}
+
+.sceu-switch__input:checked + .sceu-switch__track {
+	background: var( --sceu-primary );
+}
+
+.sceu-switch__input:checked + .sceu-switch__track .sceu-switch__thumb {
+	transform: translateX( 1.1em );
+}
+
+.sceu-switch__input:focus-visible + .sceu-switch__track {
+	box-shadow: 0 0 0 2px var( --sceu-primary );
+}
+
+.sceu-switch__text {
+	color: var( --sceu-gray-700 );
+}
+
+/* ---- Primary button ---- */
+.sceu-settings__actions {
+	margin-top: 1.5em;
+}
+
+.sceu-btn--primary {
+	display: inline-flex;
+	align-items: center;
+	font: inherit;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 0.6em 1.4em;
+	border: none;
+	border-radius: var( --sceu-radius );
+	background: var( --sceu-primary );
+	color: var( --sceu-primary-text );
+}
+
+.sceu-btn--primary:hover {
+	filter: brightness( 0.95 );
+}
+
+.sceu-btn--primary:focus-visible {
+	outline: 2px solid var( --sceu-primary );
+	outline-offset: 2px;
+}
