@@ -253,6 +253,7 @@ class SettingsPage {
 				</nav>
 
 				<div class="sceu-app__content">
+					<div class="sceu-app__inner">
 					<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 						<div class="notice notice-success is-dismissible"><p>
 							<?php
@@ -295,9 +296,9 @@ class SettingsPage {
 									</p>
 								<?php endif; ?>
 
-								<div class="sceu-card">
-									<div class="sceu-field sceu-field--toggle">
-										<span class="sceu-field__label" style="margin:0;"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
+								<div class="sceu-card sceu-card--compact">
+									<div class="sceu-switch-row">
+										<span class="sceu-switch-row__label"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
 										<label class="sceu-switch">
 											<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
 											<input type="checkbox" class="sceu-switch__input"
@@ -307,15 +308,47 @@ class SettingsPage {
 											<span class="sceu-switch__text"><?php echo esc_html__( 'Active', 'surecart-eu-helper' ); ?></span>
 										</label>
 									</div>
-
-									<?php foreach ( $module->settings_fields() as $field ) : ?>
-										<?php $this->render_field( $id, $field ); ?>
-									<?php endforeach; ?>
 								</div>
+
+								<?php
+								$sceu_fields   = $module->settings_fields();
+								$sceu_sections = method_exists( $module, 'settings_sections' ) ? $module->settings_sections() : array();
+								$sceu_grouped  = array();
+								foreach ( $sceu_fields as $sceu_f ) {
+									$sceu_grouped[ $sceu_f['section'] ?? '_default' ][] = $sceu_f;
+								}
+								// Section order first, then any ungrouped fields.
+								$sceu_order = array_keys( $sceu_sections );
+								foreach ( array_keys( $sceu_grouped ) as $sceu_k ) {
+									if ( ! in_array( $sceu_k, $sceu_order, true ) ) {
+										$sceu_order[] = $sceu_k;
+									}
+								}
+								foreach ( $sceu_order as $sceu_skey ) :
+									if ( empty( $sceu_grouped[ $sceu_skey ] ) ) {
+										continue;
+									}
+									$sceu_sec = $sceu_sections[ $sceu_skey ] ?? array();
+									?>
+									<?php if ( ! empty( $sceu_sec['title'] ) ) : ?>
+										<div class="sceu-section__head">
+											<h3 class="sceu-section__title"><?php echo esc_html( $sceu_sec['title'] ); ?></h3>
+											<?php if ( ! empty( $sceu_sec['description'] ) ) : ?>
+												<p class="sceu-section__desc"><?php echo esc_html( $sceu_sec['description'] ); ?></p>
+											<?php endif; ?>
+										</div>
+									<?php endif; ?>
+									<div class="sceu-card">
+										<?php foreach ( $sceu_grouped[ $sceu_skey ] as $sceu_field ) : ?>
+											<?php $this->render_field( $id, $sceu_field ); ?>
+										<?php endforeach; ?>
+									</div>
+								<?php endforeach; ?>
 							</section>
 							<?php $sceu_first = false; ?>
 						<?php endforeach; ?>
 					</form>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -345,6 +378,28 @@ class SettingsPage {
 		if ( 'merchant_email' === $key && ( '' === $value || null === $value ) ) {
 			$placeholder = MerchantInfo::notification_email();
 		}
+
+		// Toggle fields render as a switch row (label left, switch right) with the
+		// explanation below — matching SureCart's toggle style.
+		if ( 'toggle' === $type ) {
+			?>
+			<div class="sceu-field sceu-field--toggle">
+				<div class="sceu-switch-row">
+					<span class="sceu-switch-row__label"><?php echo esc_html( $label ); ?></span>
+					<label class="sceu-switch">
+						<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0" />
+						<input type="checkbox" class="sceu-switch__input" id="<?php echo esc_attr( $id_attr ); ?>"
+							name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> />
+						<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
+					</label>
+				</div>
+				<?php if ( $help ) : ?>
+					<p class="sceu-field__help"><?php echo esc_html( $help ); ?></p>
+				<?php endif; ?>
+			</div>
+			<?php
+			return;
+		}
 		?>
 		<div class="sceu-field sceu-field--<?php echo esc_attr( $type ); ?>">
 			<label class="sceu-field__label" for="<?php echo esc_attr( $id_attr ); ?>"><?php echo esc_html( $label ); ?></label>
@@ -369,14 +424,6 @@ class SettingsPage {
 							<?php endforeach; ?>
 						</select>
 					<?php endif; ?>
-
-				<?php elseif ( 'toggle' === $type ) : ?>
-					<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0" />
-					<label>
-						<input type="checkbox" id="<?php echo esc_attr( $id_attr ); ?>"
-							name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> />
-						<?php echo esc_html( $field['checkbox_label'] ?? __( 'Enabled', 'surecart-eu-helper' ) ); ?>
-					</label>
 
 				<?php elseif ( 'number' === $type ) : ?>
 					<input type="number" id="<?php echo esc_attr( $id_attr ); ?>"

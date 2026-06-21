@@ -128,9 +128,12 @@
 }
 
 .sceu-nav__item.is-active {
-	background: var( --sceu-primary-soft );
 	color: var( --sceu-primary );
 	font-weight: 600;
+}
+
+.sceu-nav__item.is-active .dashicons {
+	color: var( --sceu-primary );
 }
 
 .sceu-nav__item .dashicons {
@@ -143,7 +146,14 @@
 .sceu-app__content {
 	flex: 1 1 auto;
 	min-width: 0;
-	padding: 28px 36px;
+	padding: 28px 24px;
+}
+
+/* Centered content column, matching SureCart's settings width. */
+.sceu-app__inner {
+	max-width: 768px;
+	margin: 0 auto;
+	width: 100%;
 }
 
 /* ---- Panel (one per module) ---- */
@@ -157,7 +167,43 @@
 	justify-content: space-between;
 	gap: 1em;
 	margin: 0 0 0.4em;
-	max-width: 900px;
+}
+
+/* ---- Sub-section heading (SureCart groups settings into titled cards) ---- */
+.sceu-section__head {
+	margin: 1.75em 0 0.6em;
+}
+
+.sceu-section__title {
+	margin: 0;
+	padding: 0;
+	font-size: 1em;
+	font-weight: 600;
+	color: var( --sceu-gray-900 );
+}
+
+.sceu-section__desc {
+	margin: 0.25em 0 0;
+	color: var( --sceu-gray-500 );
+	font-size: 0.88em;
+	line-height: 1.5;
+}
+
+/* ---- Enable-module switch row (its own compact card) ---- */
+.sceu-card--compact {
+	padding: 1em 1.5em;
+}
+
+.sceu-switch-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+}
+
+.sceu-switch-row__label {
+	font-weight: 600;
+	color: var( --sceu-gray-700 );
 }
 
 .sceu-panel__title {
@@ -177,7 +223,7 @@
 /* ---- Responsibility note ---- */
 .sceu-card__note {
 	display: block;
-	max-width: 900px;
+	max-width: 100%;
 	background: #fcf6e6;
 	border: 1px solid #f0d999;
 	border-radius: var( --sceu-radius );
@@ -190,7 +236,7 @@
 
 /* ---- Card ---- */
 .sceu-card {
-	max-width: 900px;
+	max-width: 100%;
 	background: var( --sceu-surface );
 	border: 1px solid var( --sceu-gray-200 );
 	border-radius: var( --sceu-radius-lg );
@@ -266,16 +312,7 @@
 	color: var( --sceu-gray-700 );
 }
 
-/* ---- Toggle switch (enable module) ---- */
-.sceu-field--toggle {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1em;
-	padding-bottom: 1.25em;
-	border-bottom: 1px solid var( --sceu-line );
-}
-
+/* ---- Toggle switch ---- */
 .sceu-switch {
 	display: inline-flex;
 	align-items: center;
@@ -355,5 +392,5 @@
 /* Keep WP admin notices tidy inside the content column. */
 .sceu-app__content .notice {
 	margin: 0 0 1.25em;
-	max-width: 900px;
+	max-width: 100%;
 }

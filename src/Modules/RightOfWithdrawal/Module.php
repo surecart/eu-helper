@@ -61,6 +61,7 @@ class Module implements ModuleInterface {
 		return array(
 			array(
 				'key'     => 'lookback_days',
+				'section'     => 'eligibility',
 				'type'    => 'number',
 				'label'   => __( 'Look-back window (days)', 'surecart-eu-helper' ),
 				'default' => 14,
@@ -69,6 +70,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'apply_to',
+				'section'     => 'eligibility',
 				'type'    => 'radio',
 				'label'   => __( 'Apply to', 'surecart-eu-helper' ),
 				'default' => 'all',
@@ -86,6 +88,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'include_unknown_country',
+				'section'            => 'eligibility',
 				'type'           => 'toggle',
 				'label'          => __( 'Customers without a country', 'surecart-eu-helper' ),
 				'checkbox_label' => __( 'Show the notice to customers who have no country on file', 'surecart-eu-helper' ),
@@ -94,6 +97,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'merchant_email',
+				'section'     => 'notifications',
 				'type'    => 'email',
 				'label'   => __( 'Merchant notification email', 'surecart-eu-helper' ),
 				'default' => '',
@@ -101,6 +105,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'form_display',
+				'section'            => 'form',
 				'type'           => 'radio',
 				'label'          => __( 'Form display', 'surecart-eu-helper' ),
 				'default'        => 'modal',
@@ -117,15 +122,45 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'   => 'excluded_collection_ids',
+				'section'   => 'exclusions',
 				'type'  => 'collection_exclusions',
 				'label' => __( 'Excluded collections', 'surecart-eu-helper' ),
 				'help'  => __( 'Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a "Digital downloads" or "Perishables" collection).', 'surecart-eu-helper' ),
 			),
 			array(
 				'key'   => 'excluded_product_ids',
+				'section'   => 'exclusions',
 				'type'  => 'product_exclusions',
 				'label' => __( 'Excluded products', 'surecart-eu-helper' ),
 				'help'  => __( 'Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections.', 'surecart-eu-helper' ),
+			),
+		);
+	}
+
+	/**
+	 * Ordered settings sub-sections, each rendered as its own card with a
+	 * heading + description (mirroring SureCart's settings layout). Fields are
+	 * grouped by their `section` key.
+	 *
+	 * @return array<string, array{title:string,description:string}>
+	 */
+	public function settings_sections(): array {
+		return array(
+			'eligibility'   => array(
+				'title'       => __( 'Eligibility', 'surecart-eu-helper' ),
+				'description' => __( 'Who sees the withdrawal notice, and for which orders.', 'surecart-eu-helper' ),
+			),
+			'notifications' => array(
+				'title'       => __( 'Notifications', 'surecart-eu-helper' ),
+				'description' => __( 'Where withdrawal requests are sent.', 'surecart-eu-helper' ),
+			),
+			'form'          => array(
+				'title'       => __( 'Customer form', 'surecart-eu-helper' ),
+				'description' => __( 'How the withdrawal form appears to customers.', 'surecart-eu-helper' ),
+			),
+			'exclusions'    => array(
+				'title'       => __( 'Product exclusions', 'surecart-eu-helper' ),
+				'description' => __( 'Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods.', 'surecart-eu-helper' ),
 			),
 		);
 	}

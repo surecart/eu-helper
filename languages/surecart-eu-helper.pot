@@ -121,6 +121,10 @@ msgstr ""
 msgid "Customer"
 msgstr ""
 
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Customer form"
+msgstr ""
+
 #: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
 msgid "Customer note:"
 msgstr ""
@@ -165,6 +169,10 @@ msgstr ""
 msgid "EU Helper modules"
 msgstr ""
 
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Eligibility"
+msgstr ""
+
 #: src/Modules/RightOfWithdrawal/Log/LogListTable.php
 msgid "Email"
 msgstr ""
@@ -191,10 +199,6 @@ msgstr ""
 
 #: src/Admin/SettingsPage.php
 msgid "Enable module"
-msgstr ""
-
-#: src/Admin/SettingsPage.php
-msgid "Enabled"
 msgstr ""
 
 #: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
@@ -277,6 +281,10 @@ msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php
 msgid "Hello %s,"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "How the withdrawal form appears to customers."
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Log/LogListTable.php
@@ -364,6 +372,10 @@ msgid "Not sent"
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Module.php
+msgid "Notifications"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
 msgid "Only customers without a VAT number (consumers)"
 msgstr ""
 
@@ -448,7 +460,15 @@ msgid "Preview — the live form looks up the order and lets the customer withdr
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Module.php
+msgid "Product exclusions"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
 msgid "Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a \"Digital downloads\" or \"Perishables\" collection)."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods."
 msgstr ""
 
 #: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
@@ -660,7 +680,15 @@ msgid "We received your withdrawal request — %s"
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Module.php
+msgid "Where withdrawal requests are sent."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
 msgid "Where withdrawal requests are sent. Leave blank to use your SureCart store email (shown as the placeholder)."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Who sees the withdrawal notice, and for which orders."
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
