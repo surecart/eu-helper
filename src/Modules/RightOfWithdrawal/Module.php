@@ -13,6 +13,7 @@ use SureCartEuHelper\Modules\ModuleInterface;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\WithdrawalController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Form\PublicForm;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Email\CustomerEmail;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Email\MerchantEmail;
@@ -134,11 +135,13 @@ class Module implements ModuleInterface {
 	 */
 	public function boot(): void {
 		add_action( 'init', array( $this, 'register_block' ) );
+		add_shortcode( 'sceu_withdrawal_form', array( $this, 'render_shortcode' ) );
 		add_action(
 			'rest_api_init',
 			function () {
 				( new WithdrawalController() )->register_routes();
 				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController() )->register_routes();
+				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\GuestController() )->register_routes();
 			}
 		);
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
@@ -191,17 +194,19 @@ class Module implements ModuleInterface {
 			return;
 		}
 
+		$css = SCEU_DIR . 'assets/admin-exclusions.css';
+		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
 		wp_enqueue_style(
 			'sceu-admin-exclusions',
 			SCEU_URL . 'assets/admin-exclusions.css',
 			array(),
-			SCEU_VERSION
+			file_exists( $css ) ? (string) filemtime( $css ) : SCEU_VERSION
 		);
 		wp_enqueue_script(
 			'sceu-admin-exclusions',
 			SCEU_URL . 'assets/admin-exclusions.js',
 			array(),
-			SCEU_VERSION,
+			file_exists( $js ) ? (string) filemtime( $js ) : SCEU_VERSION,
 			true
 		);
 		wp_localize_script(
@@ -473,6 +478,30 @@ class Module implements ModuleInterface {
 	 */
 	public function register_block(): void {
 		register_block_type( SCEU_DIR . 'blocks/right-of-withdrawal' );
+		register_block_type( SCEU_DIR . 'blocks/withdrawal-form' );
+	}
+
+	/**
+	 * Render the public withdrawal form via shortcode (for non-block-editor
+	 * sites). Shares one renderer with the block so markup + assets match.
+	 *
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
+	 * @return string
+	 */
+	public function render_shortcode( $atts ): string {
+		$atts = shortcode_atts(
+			array(
+				'heading'         => '',
+				'intro'           => '',
+				'submit_label'    => '',
+				'confirm_label'   => '',
+				'success_message' => '',
+			),
+			is_array( $atts ) ? $atts : array(),
+			'sceu_withdrawal_form'
+		);
+
+		return PublicForm::render( $atts );
 	}
 
 	/**

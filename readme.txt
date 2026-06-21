@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,10 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.3.0 =
+* **Public withdrawal form (block + shortcode).** A new front-end form lets any customer start a withdrawal without logging in — handy when shoppers expect a self-serve form. Add it with the **Withdrawal Request Form** block, or the `[sceu_withdrawal_form]` shortcode on non-block sites. The customer enters their email + order number; if they match a real order, they see its items and can withdraw specific items/quantities (exclusions still apply). If no order matches, they get a free-text box to describe what they'd like to withdraw from, which is sent to you to handle.
+* Security: the form is unauthenticated, so it's defended with a logged-out nonce, a per-IP rate limit, and a honeypot. The order's contents are only shown when the submitted email matches the order, and which field was wrong is never revealed. Order lookups run server-side with your existing SureCart token — credentials are never exposed to the browser.
 
 = 1.2.0 =
 * **Excluded products & collections.** Some goods are excluded from the statutory right of withdrawal (e.g. perishable, made-to-order, sealed hygiene, or digital items). Under **EU Helper → Settings** you can now exclude whole **product collections** (the scalable way to exclude many products at once) and/or search and add **individual products**. Excluded items never appear in the withdrawal form; the rest of an order stays withdrawable, and an order whose items are all excluded disappears. Enforced on the server too, never trusting the browser.

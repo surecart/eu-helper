@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "surecart-eu-helper/withdrawal-form",
+  "title": "Withdrawal Request Form",
+  "category": "surecart",
+  "icon": "edit-page",
+  "description": "A public form where any customer can look up an order by email + order number and request a withdrawal, with a free-text fallback when no order matches.",
+  "textdomain": "surecart-eu-helper",
+  "keywords": ["surecart", "eu", "withdrawal", "refund", "form"],
+  "supports": {
+    "html": false,
+    "color": { "text": true, "background": true },
+    "typography": { "fontSize": true, "lineHeight": true },
+    "spacing": { "margin": true, "padding": true }
+  },
+  "attributes": {
+    "heading": { "type": "string", "default": "" },
+    "intro": { "type": "string", "default": "" },
+    "submit_label": { "type": "string", "default": "" },
+    "confirm_label": { "type": "string", "default": "" },
+    "success_message": { "type": "string", "default": "" }
+  },
+  "version": "1.3.0",
+  "editorScript": "file:./editor.js",
+  "render": "file:./render.php"
+}

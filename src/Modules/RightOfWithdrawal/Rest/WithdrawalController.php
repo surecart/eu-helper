@@ -399,13 +399,8 @@ class WithdrawalController {
 	 * @return string
 	 */
 	private function ip_address(): string {
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-		/**
-		 * Filter the recorded client IP (e.g. to read a trusted proxy header).
-		 *
-		 * @param string $ip Default REMOTE_ADDR.
-		 */
-		$ip = (string) apply_filters( 'sceu_request_ip', $ip );
-		return ( $ip && filter_var( $ip, FILTER_VALIDATE_IP ) ) ? $ip : '';
+		// Resolves the real visitor IP behind CDNs/proxies (e.g. Cloudflare),
+		// rather than the proxy's REMOTE_ADDR. Honours the sceu_request_ip filter.
+		return (string) \sceu_client_ip();
 	}
 }

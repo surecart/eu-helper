@@ -523,6 +523,21 @@ class CustomerContext {
 	}
 
 	/**
+	 * Public entry point to normalise an arbitrary SureCart order object into the
+	 * flat shape the withdrawal form uses (id, number, line_items with product_id,
+	 * etc.). Used by the guest (public-form) lookup, which fetches an order by
+	 * number rather than through the logged-in customer. The normalisation helpers
+	 * are stateless with respect to the customer, so this is safe to call on any
+	 * order.
+	 *
+	 * @param mixed $order Order model object.
+	 * @return array<string, mixed>|null
+	 */
+	public function normalize_order_object( $order ): ?array {
+		return $this->normalise_order( $order );
+	}
+
+	/**
 	 * Normalise a single order object into a flat array for the form.
 	 *
 	 * @param mixed $order Order model.
