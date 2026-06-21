@@ -251,20 +251,27 @@ class SettingsPage {
 
 				<?php foreach ( $this->registry->all() as $id => $module ) : ?>
 					<?php $enabled = Settings::is_module_enabled( $id ); ?>
-					<section class="sceu-card">
-						<header class="sceu-card__header">
-							<h2 class="sceu-card__title"><?php echo esc_html( $module->label() ); ?></h2>
-							<p class="sceu-card__desc"><?php echo esc_html( $module->description() ); ?></p>
-						</header>
-						<div class="sceu-card__body">
-							<?php $disclaimer = $module->disclaimer(); ?>
-							<?php if ( '' !== $disclaimer ) : ?>
-								<p class="sceu-card__note">
-									<strong><?php echo esc_html__( 'Your responsibility', 'surecart-eu-helper' ); ?>:</strong>
-									<?php echo esc_html( $disclaimer ); ?>
-								</p>
-							<?php endif; ?>
+					<section class="sceu-module">
+						<div class="sceu-module__bar">
+							<h2 class="sceu-module__title">
+								<span class="dashicons dashicons-shield-alt" aria-hidden="true"></span>
+								<?php echo esc_html( $module->label() ); ?>
+							</h2>
+							<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
+						</div>
+						<?php if ( '' !== $module->description() ) : ?>
+							<p class="sceu-module__desc"><?php echo esc_html( $module->description() ); ?></p>
+						<?php endif; ?>
 
+						<?php $disclaimer = $module->disclaimer(); ?>
+						<?php if ( '' !== $disclaimer ) : ?>
+							<p class="sceu-card__note">
+								<strong><?php echo esc_html__( 'Your responsibility', 'surecart-eu-helper' ); ?>:</strong>
+								<?php echo esc_html( $disclaimer ); ?>
+							</p>
+						<?php endif; ?>
+
+						<div class="sceu-card">
 							<div class="sceu-field sceu-field--toggle">
 								<span class="sceu-field__label" style="margin:0;"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
 								<label class="sceu-switch">

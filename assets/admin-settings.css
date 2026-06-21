@@ -7,6 +7,11 @@
  * it does not depend on SureCart's web components rendering on this page.
  */
 
+/* Tint the admin content area to SureCart's settings background. */
+body.toplevel_page_sceu-settings #wpcontent {
+	background: #f4f7f9;
+}
+
 .sceu-settings {
 	/* SureCart design tokens (values from the SureCart component library). */
 	--sceu-primary: #388051;
@@ -43,39 +48,53 @@
 	font-size: 0.95em;
 }
 
+/* ---- Module section: title + Save above the card (SureCart pattern) ---- */
+.sceu-module {
+	margin: 0 0 2em;
+}
+
+.sceu-module__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	margin: 0 0 0.4em;
+}
+
+.sceu-module__title {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4em;
+	margin: 0;
+	padding: 0;
+	font-size: 1.2em;
+	font-weight: 600;
+	color: var( --sceu-gray-900 );
+}
+
+.sceu-module__title .dashicons {
+	width: 1.1em;
+	height: 1.1em;
+	font-size: 1.1em;
+	color: var( --sceu-primary );
+}
+
+.sceu-module__desc {
+	margin: 0 0 1em;
+	color: var( --sceu-gray-500 );
+	font-size: 0.92em;
+	line-height: 1.5;
+	max-width: 70ch;
+}
+
 /* ---- Card ---- */
 .sceu-card {
 	background: var( --sceu-bg );
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var( --sceu-gray-200 );
 	border-radius: var( --sceu-radius-lg );
 	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.04 );
-	margin: 0 0 1.25em;
-	overflow: hidden;
-}
-
-.sceu-card__header {
-	padding: 1.1em 1.25em;
-	border-bottom: 1px solid var( --sceu-gray-200 );
-	background: var( --sceu-gray-50 );
-}
-
-.sceu-card__title {
-	font-size: 1.05em;
-	font-weight: 600;
-	color: var( --sceu-gray-900 );
+	padding: 1.5em;
 	margin: 0;
-	padding: 0;
-}
-
-.sceu-card__desc {
-	margin: 0.35em 0 0;
-	color: var( --sceu-gray-500 );
-	font-size: 0.9em;
-	line-height: 1.5;
-}
-
-.sceu-card__body {
-	padding: 1.25em;
 }
 
 /* ---- Responsibility/disclaimer note ---- */
