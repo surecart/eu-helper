@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,7 +91,7 @@ the module is enabled.
 
 == Changelog ==
 
-= 1.4.0 =
+= 1.4.1 =
 * **Settings page restyled to match SureCart.** The EU Helper settings now use a card-based layout, typography, and controls that match SureCart's own settings screens — including your store's brand colour on the save button — so it feels like a native part of SureCart. The styling is self-contained (it mirrors SureCart's design tokens) so it stays stable across SureCart updates. Groundwork for additional modules.
 
 = 1.3.0 =
