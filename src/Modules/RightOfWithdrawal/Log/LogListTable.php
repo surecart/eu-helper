@@ -82,7 +82,21 @@ class LogListTable extends \WP_List_Table {
 	public function column_default( $item, $column_name ): string {
 		switch ( $column_name ) {
 			case 'created_at':
-				return esc_html( $item['created_at'] ?? '' );
+				$out = esc_html( $item['created_at'] ?? '' );
+				$id  = (int) ( $item['id'] ?? 0 );
+				// Permanent delete lives here as a hover row-action (keeps the row
+				// compact) — GDPR erasure / test cleanup; re-enables re-requesting.
+				if ( $id && current_user_can( 'manage_options' ) ) {
+					$delete_url = wp_nonce_url(
+						admin_url( 'admin-post.php?action=sceu_delete_log&id=' . $id ),
+						'sceu_delete_log_' . $id
+					);
+					$confirm = esc_js( __( 'Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone.', 'surecart-eu-helper' ) );
+					$out    .= '<div class="row-actions"><span class="delete">'
+						. '<a href="' . esc_url( $delete_url ) . '" onclick="return confirm(\'' . $confirm . '\');">'
+						. esc_html__( 'Delete permanently', 'surecart-eu-helper' ) . '</a></span></div>';
+				}
+				return $out;
 			case 'customer_name':
 				return esc_html( $item['customer_name'] ?? '' );
 			case 'customer_email':
@@ -236,19 +250,8 @@ class LogListTable extends \WP_List_Table {
 			$out .= '<div style="margin-top:4px;font-size:12px;">' . implode( ' | ', $links ) . '</div>';
 		}
 
-		// Permanent delete — separated from the workflow actions. The log is
-		// append-only otherwise; this is for GDPR erasure / test cleanup and
-		// re-enables re-requesting of the affected order(s).
-		$delete_url = wp_nonce_url(
-			admin_url( 'admin-post.php?action=sceu_delete_log&id=' . $id ),
-			'sceu_delete_log_' . $id
-		);
-		$confirm = esc_js( __( 'Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone.', 'surecart-eu-helper' ) );
-		$out    .= '<div style="margin-top:6px;font-size:12px;">'
-			. '<a href="' . esc_url( $delete_url ) . '" style="color:#a50e0e;" onclick="return confirm(\'' . $confirm . '\');">'
-			. esc_html__( 'Delete permanently', 'surecart-eu-helper' ) . '</a>'
-			. '</div>';
-
+		// Permanent delete moved to a hover row-action under the Date column to
+		// keep this row compact (see column_default 'created_at').
 		return $out;
 	}
 }

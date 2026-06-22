@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.6
+Stable tag: 1.5.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.5.7 =
+* **Admin UI polish.** The Withdrawal Requests screen now uses the same SureCart-style shell as the Settings page — header bar, store brand colour, styled Sync/Export buttons, clean full-width table with natural column widths, and on-brand status banners — instead of the plain WordPress admin look. Rows are tighter: "Delete permanently" is now a hover action under the request's date rather than a column. The settings tabs also remember which module you were on after saving, and "Settings" moves to the bottom of the EU Helper menu (below the module pages).
 
 = 1.5.6 =
 * **Withdrawal email polish.** The confirmation/notification emails now show the **quantity** for every withdrawn item (the customer email previously hid "1 ×"). The footer is attributed to your store ("sent automatically by {Store}") instead of the plugin name, and the internal "Request reference" line — an opaque ID that wasn't shown anywhere in the admin — has been removed from both emails. Orders are identified by their order number, as before.

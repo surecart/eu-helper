@@ -50,12 +50,15 @@ class SettingsPage {
 	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
+		// After all modules have added their submenus, push "Settings" to the bottom.
+		add_action( 'admin_menu', array( $this, 'reorder_submenu' ), 999 );
 		add_action( 'admin_init', array( $this, 'register_setting' ) );
 
 		// Settings-page concerns load whenever the plugin is active — NOT gated by
 		// a module's enable toggle (that toggle only governs front-end behaviour),
 		// so the settings UI stays styled and usable even when a module is off.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_filter( 'admin_body_class', array( $this, 'admin_body_class' ) );
 		add_action(
 			'rest_api_init',
 			static function () {
@@ -73,7 +76,7 @@ class SettingsPage {
 	 * @return void
 	 */
 	public function enqueue_assets( string $hook ): void {
-		if ( false === strpos( $hook, self::PAGE ) ) {
+		if ( false === strpos( $hook, self::PAGE ) && false === strpos( $hook, self::LOG_PAGE ) ) {
 			return;
 		}
 
@@ -181,6 +184,32 @@ class SettingsPage {
 				array( $this, 'render_log_page' )
 			);
 		}
+	}
+
+	/**
+	 * Move the "Settings" entry to the bottom of the EU Helper submenu, below the
+	 * module pages (Withdrawal Log, E-Invoicing, …). Runs after every submenu has
+	 * been registered.
+	 *
+	 * @return void
+	 */
+	public function reorder_submenu(): void {
+		global $submenu;
+		if ( empty( $submenu[ self::PAGE ] ) || ! is_array( $submenu[ self::PAGE ] ) ) {
+			return;
+		}
+
+		$settings = array();
+		$rest     = array();
+		foreach ( $submenu[ self::PAGE ] as $item ) {
+			if ( isset( $item[2] ) && self::PAGE === $item[2] ) {
+				$settings[] = $item;
+			} else {
+				$rest[] = $item;
+			}
+		}
+
+		$submenu[ self::PAGE ] = array_values( array_merge( $rest, $settings ) );
 	}
 
 	/**
@@ -339,7 +368,7 @@ class SettingsPage {
 						<a class="sceu-nav__item<?php echo $sceu_first ? ' is-active' : ''; ?>"
 							href="#<?php echo esc_attr( $id ); ?>"
 							data-sceu-tab="<?php echo esc_attr( $id ); ?>">
-							<span class="dashicons dashicons-<?php echo esc_attr( 'right_of_withdrawal' === $id ? 'shield-alt' : 'admin-generic' ); ?>" aria-hidden="true"></span>
+							<span class="dashicons dashicons-<?php echo esc_attr( $this->module_icon( $id, $module ) ); ?>" aria-hidden="true"></span>
 							<?php echo esc_html( $module->label() ); ?>
 						</a>
 						<?php $sceu_first = false; ?>
@@ -376,7 +405,7 @@ class SettingsPage {
 							<section class="sceu-panel<?php echo $sceu_first ? ' is-active' : ''; ?>" data-sceu-panel="<?php echo esc_attr( $id ); ?>" <?php echo $sceu_first ? '' : 'hidden'; ?>>
 								<div class="sceu-panel__head">
 									<h2 class="sceu-panel__title">
-										<span class="dashicons dashicons-<?php echo esc_attr( 'right_of_withdrawal' === $id ? 'shield-alt' : 'admin-generic' ); ?>" aria-hidden="true"></span>
+										<span class="dashicons dashicons-<?php echo esc_attr( $this->module_icon( $id, $module ) ); ?>" aria-hidden="true"></span>
 										<?php echo esc_html( $module->label() ); ?>
 									</h2>
 									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
@@ -450,6 +479,25 @@ class SettingsPage {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Dashicon (without the `dashicons-` prefix) for a module's nav + panel icon.
+	 * A module may declare its own via an optional icon() method; otherwise the
+	 * Right of Withdrawal shield, then a generic fallback.
+	 *
+	 * @param string $module_id Module id.
+	 * @param object $module    Module instance.
+	 * @return string
+	 */
+	private function module_icon( string $module_id, $module ): string {
+		if ( method_exists( $module, 'icon' ) ) {
+			$icon = (string) $module->icon();
+			if ( '' !== $icon ) {
+				return $icon;
+			}
+		}
+		return 'right_of_withdrawal' === $module_id ? 'shield-alt' : 'admin-generic';
 	}
 
 	/**
@@ -633,44 +681,93 @@ class SettingsPage {
 		}
 		$table = new LogListTable();
 		$table->prepare_items();
+
+		$primary = \SureCartEuHelper\Merchant\BrandColor::primary();
+		$ptext   = \SureCartEuHelper\Merchant\BrandColor::primary_text();
+		$style   = '';
+		if ( '' !== $primary ) {
+			$style .= '--sceu-primary:' . $primary . ';';
+			if ( '' !== $ptext ) {
+				$style .= '--sceu-primary-text:' . $ptext . ';';
+			}
+		}
 		?>
-		<div class="wrap">
-			<h1><?php echo esc_html__( 'Withdrawal Requests', 'surecart-eu-helper' ); ?></h1>
+		<div class="sceu-app sceu-app--page" style="<?php echo esc_attr( $style ); ?>">
+			<header class="sceu-app__bar">
+				<div class="sceu-app__brand">
+					<span class="sceu-app__badge dashicons dashicons-shield-alt" aria-hidden="true"></span>
+					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
+					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
+					<span class="sceu-app__crumb"><?php echo esc_html__( 'Withdrawal requests', 'surecart-eu-helper' ); ?></span>
+				</div>
+				<span class="sceu-app__meta">v<?php echo esc_html( SCEU_VERSION ); ?></span>
+			</header>
 
-			<?php if ( isset( $_GET['updated'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></p></div>
-			<?php endif; ?>
-			<?php if ( isset( $_GET['deleted'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Request permanently deleted from the log.', 'surecart-eu-helper' ); ?></p></div>
-			<?php endif; ?>
-			<?php if ( isset( $_GET['synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-info is-dismissible"><p>
-					<?php
-					/* translators: %d: number of requests marked resolved. */
-					echo esc_html( sprintf( __( 'Sync complete. %d request(s) marked resolved.', 'surecart-eu-helper' ), (int) $_GET['synced'] ) );
-					?>
-				</p></div>
-			<?php endif; ?>
-			<?php if ( isset( $_GET['resent'] ) && 'ok' === $_GET['resent'] ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Email re-sent. The "Emails sent" column shows the current delivery result.', 'surecart-eu-helper' ); ?></p></div>
-			<?php elseif ( isset( $_GET['resent'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-				<div class="notice notice-warning is-dismissible"><p><?php echo esc_html__( 'Tried to re-send, but WordPress reported the email could not be sent. This usually means the site has no working email/SMTP setup. See the "Emails sent" column below.', 'surecart-eu-helper' ); ?></p></div>
-			<?php endif; ?>
+			<div class="sceu-app__content">
+				<div class="sceu-app__inner sceu-app__inner--wide">
+					<div class="sceu-panel__head">
+						<h2 class="sceu-panel__title">
+							<span class="dashicons dashicons-shield-alt" aria-hidden="true"></span>
+							<?php echo esc_html__( 'Withdrawal requests', 'surecart-eu-helper' ); ?>
+						</h2>
+					</div>
 
-			<p>
-				<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_sync_log' ), 'sceu_sync_log' ) ); ?>">
-					<?php echo esc_html__( 'Sync statuses', 'surecart-eu-helper' ); ?>
-				</a>
-				<a class="button" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_export_log' ), 'sceu_export_log' ) ); ?>">
-					<?php echo esc_html__( 'Export CSV', 'surecart-eu-helper' ); ?>
-				</a>
-			</p>
-			<p class="description"><?php echo esc_html__( 'Sync checks SureCart for refunded/cancelled orders and marks matching requests resolved. SureCart does not always report refunds on the order, so set status manually when needed.', 'surecart-eu-helper' ); ?></p>
-			<form method="get">
-				<input type="hidden" name="page" value="<?php echo esc_attr( self::LOG_PAGE ); ?>" />
-				<?php $table->display(); ?>
-			</form>
+					<?php // phpcs:disable WordPress.Security.NonceVerification.Recommended ?>
+					<?php if ( isset( $_GET['updated'] ) ) : ?>
+						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></div>
+					<?php endif; ?>
+					<?php if ( isset( $_GET['deleted'] ) ) : ?>
+						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request permanently deleted from the log.', 'surecart-eu-helper' ); ?></div>
+					<?php endif; ?>
+					<?php if ( isset( $_GET['synced'] ) ) : ?>
+						<div class="sceu-notice sceu-notice--info">
+							<?php
+							/* translators: %d: number of requests marked resolved. */
+							echo esc_html( sprintf( __( 'Sync complete. %d request(s) marked resolved.', 'surecart-eu-helper' ), (int) $_GET['synced'] ) );
+							?>
+						</div>
+					<?php endif; ?>
+					<?php if ( isset( $_GET['resent'] ) && 'ok' === $_GET['resent'] ) : ?>
+						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Email re-sent. The "Emails sent" column shows the current delivery result.', 'surecart-eu-helper' ); ?></div>
+					<?php elseif ( isset( $_GET['resent'] ) ) : ?>
+						<div class="sceu-notice sceu-notice--warning"><?php echo esc_html__( 'Tried to re-send, but WordPress reported the email could not be sent. This usually means the site has no working email/SMTP setup. See the "Emails sent" column below.', 'surecart-eu-helper' ); ?></div>
+					<?php endif; ?>
+					<?php // phpcs:enable WordPress.Security.NonceVerification.Recommended ?>
+
+					<div class="sceu-toolbar">
+						<a class="sceu-btn--primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_sync_log' ), 'sceu_sync_log' ) ); ?>">
+							<?php echo esc_html__( 'Sync statuses', 'surecart-eu-helper' ); ?>
+						</a>
+						<a class="sceu-btn--secondary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_export_log' ), 'sceu_export_log' ) ); ?>">
+							<?php echo esc_html__( 'Export CSV', 'surecart-eu-helper' ); ?>
+						</a>
+					</div>
+					<p class="sceu-field__help" style="margin:0 0 1.5em;"><?php echo esc_html__( 'Sync checks SureCart for refunded/cancelled orders and marks matching requests resolved. SureCart does not always report refunds on the order, so set status manually when needed.', 'surecart-eu-helper' ); ?></p>
+
+					<div class="sceu-card sceu-card--table">
+						<form method="get">
+							<input type="hidden" name="page" value="<?php echo esc_attr( self::LOG_PAGE ); ?>" />
+							<?php $table->display(); ?>
+						</form>
+					</div>
+				</div>
+			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Add the full-bleed body class on the settings + withdrawal-log pages so the
+	 * shared shell styling (tint + hidden footer) applies.
+	 *
+	 * @param string $classes Existing body classes.
+	 * @return string
+	 */
+	public function admin_body_class( string $classes ): string {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( $screen && ( false !== strpos( $screen->id, self::PAGE ) || false !== strpos( $screen->id, self::LOG_PAGE ) ) ) {
+			$classes .= ' sceu-fullbleed';
+		}
+		return $classes;
 	}
 }
