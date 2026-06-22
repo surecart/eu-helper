@@ -184,6 +184,10 @@ class SettingsPage {
 				array( $this, 'render_log_page' )
 			);
 		}
+
+		// Let enabled modules add their own submenu pages (e.g. the e-invoicing
+		// document log + tools).
+		do_action( 'sceu_admin_menu', self::PAGE );
 	}
 
 	/**
@@ -227,6 +231,11 @@ class SettingsPage {
 				'default'           => array(),
 			)
 		);
+
+		// Let modules register additional options on the same settings group, so
+		// they save with the one Save button (e.g. the e-invoicing credentials,
+		// which are kept out of the autoloaded sceu_settings blob).
+		do_action( 'sceu_register_settings', self::GROUP );
 	}
 
 	/**
@@ -470,6 +479,13 @@ class SettingsPage {
 										<?php endforeach; ?>
 									</div>
 								<?php endforeach; ?>
+								<?php
+								// Let a module inject extra markup into its own panel (still
+								// inside the shared form — e.g. the e-invoicing connection card).
+								if ( method_exists( $module, 'render_settings_extra' ) ) {
+									$module->render_settings_extra( $id );
+								}
+								?>
 							</section>
 							<?php $sceu_first = false; ?>
 						<?php endforeach; ?>

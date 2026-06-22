@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       SureCart EU Helper
  * Plugin URI:        https://wpcrafter.com/
- * Description:       Modular helper that adds EU merchant-compliance features to SureCart stores. Module 1: Right of Withdrawal — a customer-area block + form letting EU consumers request withdrawal/cancellation/refund of recent orders, with merchant + customer notifications and an on-site request log.
- * Version:           1.5.7
+ * Description:       Modular helper that adds EU merchant-compliance features to SureCart stores. Modules: Right of Withdrawal (customer-area withdrawal requests) and E-Invoicing (Peppol electronic invoices via Storecove).
+ * Version:           1.6.0
  * Requires at least: 6.6
  * Requires PHP:      7.4
  * Author:            SureCart Team
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SCEU_VERSION', '1.5.7' );
+define( 'SCEU_VERSION', '1.6.0' );
 define( 'SCEU_FILE', __FILE__ );
 define( 'SCEU_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCEU_URL', plugin_dir_url( __FILE__ ) );
@@ -67,6 +67,26 @@ register_activation_hook(
 	function () {
 		require_once SCEU_DIR . 'src/Modules/RightOfWithdrawal/Log/LogTable.php';
 		\SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable::create();
+
+		// E-Invoicing module tables (documents + audit events + webhook log).
+		require_once SCEU_DIR . 'src/Modules/EInvoicing/Persistence/DocumentTable.php';
+		require_once SCEU_DIR . 'src/Modules/EInvoicing/Persistence/EventsTable.php';
+		require_once SCEU_DIR . 'src/Modules/EInvoicing/Persistence/WebhookLogTable.php';
+		\SureCartEuHelper\Modules\EInvoicing\Persistence\DocumentTable::create();
+		\SureCartEuHelper\Modules\EInvoicing\Persistence\EventsTable::create();
+		\SureCartEuHelper\Modules\EInvoicing\Persistence\WebhookLogTable::create();
+	}
+);
+
+/**
+ * Deactivation: clear the e-invoicing submission cron so no orphaned schedule
+ * lingers. (Tables + settings are preserved.)
+ */
+register_deactivation_hook(
+	__FILE__,
+	function () {
+		require_once SCEU_DIR . 'src/Modules/EInvoicing/Services/Queue.php';
+		\SureCartEuHelper\Modules\EInvoicing\Services\Queue::unschedule();
 	}
 );
 

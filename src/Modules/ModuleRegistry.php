@@ -57,6 +57,7 @@ class ModuleRegistry {
 		$this->registered = true;
 
 		$this->register( new RightOfWithdrawalModule() );
+		$this->register( new \SureCartEuHelper\Modules\EInvoicing\Module() );
 
 		/**
 		 * Register additional EU Helper modules.

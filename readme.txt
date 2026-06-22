@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.7
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,11 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.6.0 =
+* **New module: E-Invoicing (Peppol).** Generate electronic invoices from SureCart orders and transmit them over a Peppol provider — **Storecove** is the first supported provider, with a provider-agnostic core built for more (a normalised invoice/credit-note document model, an adapter contract + registry, and Storecove quarantined behind it; add a provider with a new adapter, not a rewrite).
+* Invoices are created locally — automatically when an order is paid, or manually from a **search-as-you-type order picker** — then validated and either held for **one-click submission** or **sent automatically** (an Automatic-submission toggle, off by default). Order-level discounts that SureCart keeps off line items are reconciled with a discount/adjustment line so documents always balance, and invoices are numbered sequentially from your prefix.
+* A new **EU Helper → E-Invoicing** screen logs every document with its local + provider status, provider reference (GUID), attempt counts, raw request/response, and a one-click delivery-evidence download. Reliability: idempotent generation (no duplicate documents), a stable per-submission token (no duplicate sends across retries), a WP-Cron retry queue with backoff + a provider-outage circuit breaker, separate Sandbox/Production credentials stored outside the autoloaded settings, and a "Send test document to sandbox" button. Credit notes from refunds and inbound delivery webhooks arrive in following releases.
 
 = 1.5.7 =
 * **Admin UI polish.** The Withdrawal Requests screen now uses the same SureCart-style shell as the Settings page — header bar, store brand colour, styled Sync/Export buttons, clean full-width table with natural column widths, and on-brand status banners — instead of the plain WordPress admin look. Rows are tighter: "Delete permanently" is now a hover action under the request's date rather than a column. The settings tabs also remember which module you were on after saving, and "Settings" moves to the bottom of the EU Helper menu (below the module pages).
