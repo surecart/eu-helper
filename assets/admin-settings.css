@@ -90,20 +90,20 @@ body.toplevel_page_sceu-settings #wpfooter {
 .sceu-app__name {
 	font-weight: 600;
 	font-size: 14px;
-	line-height: 1;
+	line-height: 1.4;
 	color: var( --sceu-gray-900 );
 }
 
 .sceu-app__sep {
 	font-size: 14px;
-	line-height: 1;
+	line-height: 1.4;
 	color: var( --sceu-gray-400 );
 }
 
 .sceu-app__crumb {
 	font-size: 14px;
-	line-height: 1;
-	color: var( --sceu-gray-500 );
+	line-height: 1.4;
+	color: var( --sceu-text );
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
