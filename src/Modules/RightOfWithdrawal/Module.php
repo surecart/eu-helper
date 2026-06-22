@@ -175,11 +175,9 @@ class Module implements ModuleInterface {
 			'rest_api_init',
 			function () {
 				( new WithdrawalController() )->register_routes();
-				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController() )->register_routes();
 				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\GuestController() )->register_routes();
 			}
 		);
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 		// When the excluded-collection set changes, rebuild the cached membership.
 		add_action( 'update_option_' . Settings::OPTION, array( $this, 'on_settings_updated' ), 10, 2 );
 		add_action( 'admin_post_sceu_export_log', array( $this, 'export_csv' ) );
@@ -187,91 +185,9 @@ class Module implements ModuleInterface {
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
 		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
 		add_action( 'admin_post_sceu_resend_emails', array( $this, 'resend_emails' ) );
-		add_action( 'admin_post_sceu_refresh_exclusions', array( $this, 'refresh_exclusions' ) );
 		// Background rebuild of the collection→product-id exclusion cache, so the
 		// customer-facing path never resolves collections inline.
 		add_action( Exclusions::CRON_HOOK, array( Exclusions::class, 'rebuild_cache' ) );
-	}
-
-	/**
-	 * Admin action: rebuild the product-exclusion cache now (resolve excluded
-	 * collections to their member products against SureCart).
-	 *
-	 * @return void
-	 */
-	public function refresh_exclusions(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
-		}
-		check_admin_referer( 'sceu_refresh_exclusions' );
-
-		$count = count( Exclusions::rebuild_cache() );
-
-		wp_safe_redirect( add_query_arg(
-			array(
-				'page'              => 'sceu-settings',
-				'exclusions_synced' => $count,
-			),
-			admin_url( 'admin.php' )
-		) );
-		exit;
-	}
-
-	/**
-	 * Enqueue the product-exclusion picker assets, only on our settings page.
-	 *
-	 * @param string $hook Current admin page hook.
-	 * @return void
-	 */
-	public function enqueue_admin_assets( string $hook ): void {
-		// The top-level menu slug is sceu-settings; its hook ends in the slug.
-		if ( false === strpos( $hook, 'sceu-settings' ) ) {
-			return;
-		}
-
-		// SureCart-style settings chrome.
-		$settings_css = SCEU_DIR . 'assets/admin-settings.css';
-		wp_enqueue_style(
-			'sceu-admin-settings',
-			SCEU_URL . 'assets/admin-settings.css',
-			array(),
-			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
-		);
-		$settings_js = SCEU_DIR . 'assets/admin-settings.js';
-		wp_enqueue_script(
-			'sceu-admin-settings',
-			SCEU_URL . 'assets/admin-settings.js',
-			array(),
-			file_exists( $settings_js ) ? (string) filemtime( $settings_js ) : SCEU_VERSION,
-			true
-		);
-
-		$css = SCEU_DIR . 'assets/admin-exclusions.css';
-		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
-		wp_enqueue_style(
-			'sceu-admin-exclusions',
-			SCEU_URL . 'assets/admin-exclusions.css',
-			array(),
-			file_exists( $css ) ? (string) filemtime( $css ) : SCEU_VERSION
-		);
-		wp_enqueue_script(
-			'sceu-admin-exclusions',
-			SCEU_URL . 'assets/admin-exclusions.js',
-			array(),
-			file_exists( $js ) ? (string) filemtime( $js ) : SCEU_VERSION,
-			true
-		);
-		wp_localize_script(
-			'sceu-admin-exclusions',
-			'sceuExclusions',
-			array(
-				'searchUrl' => rest_url( \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController::NAMESPACE . \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController::ROUTE ),
-				'nonce'     => wp_create_nonce( 'wp_rest' ),
-				'i18n'      => array(
-					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
-				),
-			)
-		);
 	}
 
 	/**

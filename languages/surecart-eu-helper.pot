@@ -24,8 +24,8 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/Admin/SettingsPage.php
-msgid "(%d product)"
-msgid_plural "(%d products)"
+msgid "%d product"
+msgid_plural "%d products"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -355,7 +355,7 @@ msgstr ""
 msgid "New right-of-withdrawal request"
 msgstr ""
 
-#: src/Modules/RightOfWithdrawal/Module.php
+#: src/Admin/SettingsPage.php
 msgid "No matching products"
 msgstr ""
 
@@ -484,7 +484,7 @@ msgid "Reason (optional)"
 msgstr ""
 
 #: src/Admin/SettingsPage.php
-msgid "Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and after you add products to a collection."
+msgid "Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and when you add products to a collection."
 msgstr ""
 
 #: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
@@ -729,7 +729,7 @@ msgstr ""
 msgid "WordPress could not send this email. This usually means the site has no working mail/SMTP setup (common on staging sites). The withdrawal request itself was still recorded."
 msgstr ""
 
-#: src/Modules/RightOfWithdrawal/Module.php
+#: src/Admin/SettingsPage.php src/Modules/RightOfWithdrawal/Module.php
 msgid "You are not allowed to do that."
 msgstr ""
 

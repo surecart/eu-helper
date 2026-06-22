@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,8 +91,9 @@ the module is enabled.
 
 == Changelog ==
 
-= 1.5.1 =
+= 1.5.2 =
 * **Settings redesigned as a SureCart-style app.** The EU Helper settings now have a SureCart-style header bar and a left module navigation (one entry per module — Right of Withdrawal today, Peppol and others to come), with content cards, the store brand colour, and SureCart's design tokens — so it feels like a native part of SureCart. The Withdrawal Log remains its own submenu and only appears when the Right of Withdrawal module is enabled.
+* The settings UI now loads even when a module is disabled (the enable toggle only governs front-end behaviour); active nav items match SureCart (colour change, not a filled box); sub-sections use a titled, divided layout; and the WordPress admin footer is hidden to match SureCart.
 
 = 1.3.0 =
 * **Public withdrawal form (block + shortcode).** A new front-end form lets any customer start a withdrawal without logging in — handy when shoppers expect a self-serve form. Add it with the **Withdrawal Request Form** block, or the `[sceu_withdrawal_form]` shortcode on non-block sites. The customer enters their email + order number; if they match a real order, they see its items and can withdraw specific items/quantities (exclusions still apply). If no order matches, they get a free-text box to describe what they'd like to withdraw from, which is sent to you to handle.

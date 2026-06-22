@@ -11,6 +11,7 @@ use SureCartEuHelper\Settings;
 use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\ModuleRegistry;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogListTable;
 
 defined( 'ABSPATH' ) || exit;
@@ -50,6 +51,99 @@ class SettingsPage {
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_init', array( $this, 'register_setting' ) );
+
+		// Settings-page concerns load whenever the plugin is active — NOT gated by
+		// a module's enable toggle (that toggle only governs front-end behaviour),
+		// so the settings UI stays styled and usable even when a module is off.
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action(
+			'rest_api_init',
+			static function () {
+				( new AdminController() )->register_routes();
+			}
+		);
+		add_action( 'admin_post_sceu_refresh_exclusions', array( $this, 'refresh_exclusions' ) );
+	}
+
+	/**
+	 * Enqueue the settings shell + exclusions-picker assets on the EU Helper
+	 * settings page. Versioned by file mtime so updates are never served stale.
+	 *
+	 * @param string $hook Current admin page hook.
+	 * @return void
+	 */
+	public function enqueue_assets( string $hook ): void {
+		if ( false === strpos( $hook, self::PAGE ) ) {
+			return;
+		}
+
+		$settings_css = SCEU_DIR . 'assets/admin-settings.css';
+		wp_enqueue_style(
+			'sceu-admin-settings',
+			SCEU_URL . 'assets/admin-settings.css',
+			array( 'dashicons' ),
+			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
+		);
+		$settings_js = SCEU_DIR . 'assets/admin-settings.js';
+		wp_enqueue_script(
+			'sceu-admin-settings',
+			SCEU_URL . 'assets/admin-settings.js',
+			array(),
+			file_exists( $settings_js ) ? (string) filemtime( $settings_js ) : SCEU_VERSION,
+			true
+		);
+
+		$css = SCEU_DIR . 'assets/admin-exclusions.css';
+		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
+		wp_enqueue_style(
+			'sceu-admin-exclusions',
+			SCEU_URL . 'assets/admin-exclusions.css',
+			array(),
+			file_exists( $css ) ? (string) filemtime( $css ) : SCEU_VERSION
+		);
+		wp_enqueue_script(
+			'sceu-admin-exclusions',
+			SCEU_URL . 'assets/admin-exclusions.js',
+			array(),
+			file_exists( $js ) ? (string) filemtime( $js ) : SCEU_VERSION,
+			true
+		);
+		wp_localize_script(
+			'sceu-admin-exclusions',
+			'sceuExclusions',
+			array(
+				'searchUrl' => rest_url( AdminController::NAMESPACE . AdminController::ROUTE ),
+				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				'i18n'      => array(
+					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Admin action: rebuild the product-exclusion cache now.
+	 *
+	 * @return void
+	 */
+	public function refresh_exclusions(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		check_admin_referer( 'sceu_refresh_exclusions' );
+
+		$count = count( Exclusions::rebuild_cache() );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'              => self::PAGE,
+					'exclusions_synced' => $count,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
 	}
 
 	/**
@@ -281,7 +375,10 @@ class SettingsPage {
 							<?php $enabled = Settings::is_module_enabled( $id ); ?>
 							<section class="sceu-panel<?php echo $sceu_first ? ' is-active' : ''; ?>" data-sceu-panel="<?php echo esc_attr( $id ); ?>" <?php echo $sceu_first ? '' : 'hidden'; ?>>
 								<div class="sceu-panel__head">
-									<h2 class="sceu-panel__title"><?php echo esc_html( $module->label() ); ?></h2>
+									<h2 class="sceu-panel__title">
+										<span class="dashicons dashicons-<?php echo esc_attr( 'right_of_withdrawal' === $id ? 'shield-alt' : 'admin-generic' ); ?>" aria-hidden="true"></span>
+										<?php echo esc_html( $module->label() ); ?>
+									</h2>
 									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
 								</div>
 								<?php if ( '' !== $module->description() ) : ?>
@@ -447,37 +544,37 @@ class SettingsPage {
 					<?php if ( empty( $collections ) ) : ?>
 						<p class="description"><?php echo esc_html__( 'No product collections found (or SureCart is unavailable). Create collections in SureCart to exclude products in bulk.', 'surecart-eu-helper' ); ?></p>
 					<?php else : ?>
-						<fieldset>
+						<ul class="sceu-checklist">
 							<?php foreach ( $collections as $col ) : ?>
-								<label style="display:block;margin-bottom:4px;">
-									<input type="checkbox"
-										name="<?php echo esc_attr( $name ); ?>[]"
-										value="<?php echo esc_attr( $col['id'] ); ?>"
-										<?php checked( in_array( $col['id'], $selected_cols, true ) ); ?> />
-									<?php echo esc_html( $col['name'] ); ?>
-									<span class="description">
+								<li class="sceu-checklist__item">
+									<label>
+										<input type="checkbox"
+											name="<?php echo esc_attr( $name ); ?>[]"
+											value="<?php echo esc_attr( $col['id'] ); ?>"
+											<?php checked( in_array( $col['id'], $selected_cols, true ) ); ?> />
+										<span><?php echo esc_html( $col['name'] ); ?></span>
+									</label>
+									<span class="sceu-checklist__count">
 										<?php
 										echo esc_html(
 											sprintf(
 												/* translators: %d: number of products in the collection. */
-												_n( '(%d product)', '(%d products)', (int) $col['products_count'], 'surecart-eu-helper' ),
+												_n( '%d product', '%d products', (int) $col['products_count'], 'surecart-eu-helper' ),
 												(int) $col['products_count']
 											)
 										);
 										?>
 									</span>
-								</label>
+								</li>
 							<?php endforeach; ?>
-						</fieldset>
-						<p style="margin-top:8px;">
-							<a class="button button-secondary"
+						</ul>
+						<p class="sceu-refresh-row">
+							<a class="sceu-btn--secondary"
 								href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_refresh_exclusions' ), 'sceu_refresh_exclusions' ) ); ?>">
 								<?php echo esc_html__( 'Refresh excluded product list', 'surecart-eu-helper' ); ?>
 							</a>
-							<span class="description" style="margin-left:8px;">
-								<?php echo esc_html__( "Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and after you add products to a collection.", 'surecart-eu-helper' ); ?>
-							</span>
 						</p>
+						<p class="sceu-field__help"><?php echo esc_html__( 'Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and when you add products to a collection.', 'surecart-eu-helper' ); ?></p>
 					<?php endif; ?>
 
 				<?php elseif ( 'product_exclusions' === $type ) : ?>
