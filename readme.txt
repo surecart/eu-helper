@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.2
+Stable tag: 1.5.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,7 +91,7 @@ the module is enabled.
 
 == Changelog ==
 
-= 1.5.2 =
+= 1.5.3 =
 * **Settings redesigned as a SureCart-style app.** The EU Helper settings now have a SureCart-style header bar and a left module navigation (one entry per module — Right of Withdrawal today, Peppol and others to come), with content cards, the store brand colour, and SureCart's design tokens — so it feels like a native part of SureCart. The Withdrawal Log remains its own submenu and only appears when the Right of Withdrawal module is enabled.
 * The settings UI now loads even when a module is disabled (the enable toggle only governs front-end behaviour); active nav items match SureCart (colour change, not a filled box); sub-sections use a titled, divided layout; and the WordPress admin footer is hidden to match SureCart.
 

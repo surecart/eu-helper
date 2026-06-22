@@ -81,17 +81,25 @@ body.toplevel_page_sceu-settings #wpfooter {
 	flex: none;
 }
 
+/* Breadcrumb text: identical font-size + line-height so every item shares one
+   baseline and lines up exactly next to the badge (align-items: center alone
+   only centres the boxes, not differently-sized text within them). */
 .sceu-app__name {
 	font-weight: 600;
-	font-size: 15px;
+	font-size: 14px;
+	line-height: 1;
 	color: var( --sceu-gray-900 );
 }
 
 .sceu-app__sep {
+	font-size: 14px;
+	line-height: 1;
 	color: var( --sceu-gray-400 );
 }
 
 .sceu-app__crumb {
+	font-size: 14px;
+	line-height: 1;
 	color: var( --sceu-gray-500 );
 	white-space: nowrap;
 	overflow: hidden;
