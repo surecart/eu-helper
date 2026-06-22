@@ -46,8 +46,7 @@ class CustomerEmail {
 		) . '</p>';
 		$lines[] = '<p>' . esc_html__( 'This confirms that we have received your request to withdraw from the following order(s). Our team will process it and follow up with you.', 'surecart-eu-helper' ) . '</p>';
 		$lines[] = self::orders_table( $ctx['orders'] ?? array() );
-		$lines[] = '<p><strong>' . esc_html__( 'Request reference:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['request_id'] ?? '' ) ) . '<br />';
-		$lines[] = '<strong>' . esc_html__( 'Received at:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['timestamp'] ?? '' ) ) . '</p>';
+		$lines[] = '<p><strong>' . esc_html__( 'Received at:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['timestamp'] ?? '' ) ) . '</p>';
 
 		if ( ! empty( $ctx['reason'] ) ) {
 			$lines[] = '<p><strong>' . esc_html__( 'Your note:', 'surecart-eu-helper' ) . '</strong><br />' . nl2br( esc_html( (string) $ctx['reason'] ) ) . '</p>';
@@ -114,7 +113,10 @@ class CustomerEmail {
 				continue;
 			}
 			$qty     = (int) ( $line['quantity'] ?? 1 );
-			$parts[] = ( $qty > 1 ) ? ( $qty . ' × ' . $name ) : $name;
+			if ( $qty < 1 ) {
+				$qty = 1;
+			}
+			$parts[] = $qty . ' × ' . $name;
 		}
 		return $parts ? implode( ', ', $parts ) : __( 'Entire order', 'surecart-eu-helper' );
 	}

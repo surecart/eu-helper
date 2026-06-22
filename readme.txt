@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.5
+Stable tag: 1.5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.5.6 =
+* **Withdrawal email polish.** The confirmation/notification emails now show the **quantity** for every withdrawn item (the customer email previously hid "1 ×"). The footer is attributed to your store ("sent automatically by {Store}") instead of the plugin name, and the internal "Request reference" line — an opaque ID that wasn't shown anywhere in the admin — has been removed from both emails. Orders are identified by their order number, as before.
 
 = 1.5.5 =
 * **Settings redesigned as a SureCart-style app.** The EU Helper settings now have a SureCart-style header bar and a left module navigation (one entry per module — Right of Withdrawal today, Peppol and others to come), with content cards, the store brand colour, and SureCart's design tokens — so it feels like a native part of SureCart. The Withdrawal Log remains its own submenu and only appears when the Right of Withdrawal module is enabled.
