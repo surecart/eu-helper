@@ -47,6 +47,93 @@ function restErrorMessage( body, i18n ) {
 	return i18n.error;
 }
 
+// Build the current selection from context: per-item quantities for itemised
+// orders, plus whole-order ids for orders with no line-item detail.
+// Resolve the line item a control belongs to by its tagged id, rather than
+// trusting getContext().item inside a nested data-wp-each (whose event handlers
+// can bind to the wrong iteration). Line item ids are globally unique.
+function findItem( ctx, el ) {
+	const node = el && el.closest ? el.closest( '[data-sceu-item]' ) : el;
+	const id = node && node.dataset ? node.dataset.sceuItem : '';
+	if ( ! id ) {
+		return null;
+	}
+	const orders = ctx.orders || [];
+	for ( let i = 0; i < orders.length; i++ ) {
+		const lineItems = orders[ i ].lineItems || [];
+		for ( let j = 0; j < lineItems.length; j++ ) {
+			if ( lineItems[ j ].id === id ) {
+				return lineItems[ j ];
+			}
+		}
+	}
+	return null;
+}
+
+// Read the selection straight from the rendered DOM (the exact values the
+// customer sees). This is the source of truth for review + submit: in a nested
+// data-wp-each, the per-row item proxies the inputs bind to diverge from the
+// form-level context.orders, so reading context here records the wrong data.
+function readSelection( root ) {
+	const orders = [];
+	if ( ! root ) {
+		return orders;
+	}
+	root.querySelectorAll( '.sceu-orders__item' ).forEach( function ( orderEl ) {
+		const orderId = orderEl.getAttribute( 'data-sceu-order' ) || '';
+		const cb = orderEl.querySelector( '.sceu-orders__cb' );
+		const checked = cb ? cb.checked : false;
+		const labelEl = orderEl.querySelector( '.sceu-orders__label' );
+		const metaEl = orderEl.querySelector( '.sceu-orders__meta' );
+		const label = labelEl ? labelEl.textContent.trim() : '';
+		const meta = metaEl ? metaEl.textContent.trim() : '';
+		const rows = Array.prototype.slice.call(
+			orderEl.querySelectorAll( '.sceu-item' )
+		);
+
+		// Whole-order orders have no item rows: a checked box selects them.
+		if ( rows.length === 0 ) {
+			if ( checked ) {
+				orders.push( { id: orderId, label, meta, whole: true, items: [] } );
+			}
+			return;
+		}
+
+		const items = [];
+		rows.forEach( function ( r ) {
+			const input = r.querySelector( '.sceu-item__input' );
+			const nameEl = r.querySelector( '.sceu-item__name' );
+			const id = input ? input.getAttribute( 'data-sceu-item' ) : '';
+			const qty = input ? parseInt( input.value, 10 ) || 0 : 0;
+			if ( id && qty > 0 ) {
+				items.push( {
+					id,
+					name: nameEl ? nameEl.textContent.trim() : '',
+					qty,
+				} );
+			}
+		} );
+		if ( items.length ) {
+			orders.push( { id: orderId, label, meta, whole: false, items } );
+		}
+	} );
+	return orders;
+}
+
+// The block root for an action. Prefer the event's target (reliable in both
+// click and form-submit handlers); fall back to getElement(), which does not
+// resolve consistently inside a form-submit handler.
+function blockRoot( event ) {
+	if ( event && event.target && event.target.closest ) {
+		const r = event.target.closest( '.sceu-row' );
+		if ( r ) {
+			return r;
+		}
+	}
+	const el = getElement() && getElement().ref;
+	return el && el.closest ? el.closest( '.sceu-row' ) : null;
+}
+
 const { state, actions } = store( 'surecart-eu-helper', {
 	state: {
 		get isOpen() {
@@ -70,6 +157,41 @@ const { state, actions } = store( 'surecart-eu-helper', {
 				return ctx.reviewTitle;
 			}
 			return 'requests' === ctx.panel ? ctx.requestsTitle : ctx.modalTitle;
+		},
+		get showItems() {
+			const ctx = getContext();
+			return (
+				!! ctx.order.selected &&
+				! ctx.order.wholeOrder &&
+				( ctx.order.lineItems || [] ).length > 0
+			);
+		},
+		get incDisabled() {
+			const item = getContext().item;
+			return ( item.qty || 0 ) >= ( item.max || 0 );
+		},
+		get decDisabled() {
+			return ( getContext().item.qty || 0 ) <= 0;
+		},
+		get itemQtyLabel() {
+			return ( state.i18n.qtyLabel || '%s' ).replace( '%s', getContext().item.name );
+		},
+		get incLabel() {
+			return ( state.i18n.incLabel || '%s' ).replace( '%s', getContext().item.name );
+		},
+		get decLabel() {
+			return ( state.i18n.decLabel || '%s' ).replace( '%s', getContext().item.name );
+		},
+		get itemAnnounce() {
+			const item = getContext().item;
+			return ( state.i18n.qtyAnnounce || '%1$s %2$s %3$s' )
+				.replace( '%1$s', item.name )
+				.replace( '%2$s', String( item.qty || 0 ) )
+				.replace( '%3$s', String( item.max || 0 ) );
+		},
+		get hasConfirmed() {
+			const ctx = getContext();
+			return ( ctx.confirmedDetails || [] ).length > 0;
 		},
 	},
 
@@ -120,15 +242,40 @@ const { state, actions } = store( 'surecart-eu-helper', {
 			}
 		},
 		toggleOrder( event ) {
-			const ctx = getContext();
-			const id = event.target.value;
-			const set = new Set( ctx.selectedIds );
-			if ( event.target.checked ) {
-				set.add( id );
-			} else {
-				set.delete( id );
+			const order = getContext().order;
+			order.selected = event.target.checked;
+			// Selecting an order REVEALS its items at quantity 0 — the customer
+			// then adds exactly what they want to withdraw. (We do not pre-fill
+			// to full quantity, which made it look like everything was already
+			// selected.) Deselecting clears any quantities entered.
+			if ( ! order.selected && ! order.wholeOrder ) {
+				( order.lineItems || [] ).forEach( function ( li ) {
+					li.qty = 0;
+				} );
 			}
-			ctx.selectedIds = Array.from( set );
+		},
+		setItemQty( event ) {
+			const item = findItem( getContext(), event.target );
+			if ( ! item ) {
+				return;
+			}
+			let v = parseInt( event.target.value, 10 );
+			if ( isNaN( v ) ) {
+				v = 0;
+			}
+			item.qty = Math.max( 0, Math.min( item.max || 0, v ) );
+		},
+		incItem( event ) {
+			const item = findItem( getContext(), event.target );
+			if ( item && ( item.qty || 0 ) < ( item.max || 0 ) ) {
+				item.qty = ( item.qty || 0 ) + 1;
+			}
+		},
+		decItem( event ) {
+			const item = findItem( getContext(), event.target );
+			if ( item && ( item.qty || 0 ) > 0 ) {
+				item.qty = ( item.qty || 0 ) - 1;
+			}
 		},
 		setName( event ) {
 			getContext().name = event.target.value;
@@ -139,16 +286,27 @@ const { state, actions } = store( 'surecart-eu-helper', {
 		review( event ) {
 			event.preventDefault();
 			const ctx = getContext();
-			if ( ! ctx.selectedIds.length ) {
+			const sel = readSelection( blockRoot( event ) );
+			if ( ! sel.length ) {
 				ctx.status = state.i18n.selectOne;
 				return;
 			}
-			// Snapshot the chosen orders so the review step can reproduce the
-			// declaration the consumer is about to confirm.
-			const selected = new Set( ctx.selectedIds );
-			ctx.reviewOrders = ctx.orders.filter( function ( o ) {
-				return selected.has( o.id );
-			} );
+			// Render the review as a single text string (one order per line),
+			// shown via data-wp-text. A data-wp-each repeater does not render a
+			// client-populated list here, but plain data-wp-text bindings (name,
+			// email, status) update reliably — so we use one of those.
+			ctx.reviewSummary = sel
+				.map( function ( o ) {
+					const itemsText = o.whole
+						? state.i18n.entireOrder
+						: o.items
+								.map( function ( it ) {
+									return it.qty > 1 ? it.qty + '× ' + it.name : it.name;
+								} )
+								.join( ', ' );
+					return o.label + ' — ' + itemsText;
+				} )
+				.join( '\n' );
 			ctx.status = '';
 			ctx.panel = 'review';
 		},
@@ -160,7 +318,23 @@ const { state, actions } = store( 'surecart-eu-helper', {
 		*submit( event ) {
 			event.preventDefault();
 			const ctx = getContext();
-			if ( ! ctx.selectedIds.length ) {
+			const sel = readSelection( blockRoot( event ) );
+			const items = [];
+			const wholeOrderIds = [];
+			sel.forEach( function ( o ) {
+				if ( o.whole ) {
+					wholeOrderIds.push( o.id );
+					return;
+				}
+				o.items.forEach( function ( it ) {
+					items.push( {
+						order_id: o.id,
+						line_item_id: it.id,
+						quantity: it.qty,
+					} );
+				} );
+			} );
+			if ( ! items.length && ! wholeOrderIds.length ) {
 				ctx.status = state.i18n.selectOne;
 				return;
 			}
@@ -176,7 +350,8 @@ const { state, actions } = store( 'surecart-eu-helper', {
 						'X-WP-Nonce': state.nonce,
 					},
 					body: JSON.stringify( {
-						order_ids: ctx.selectedIds,
+						items,
+						order_ids: wholeOrderIds,
 						name: ctx.name,
 						email: ctx.email,
 						reason: ctx.reason,
@@ -184,8 +359,8 @@ const { state, actions } = store( 'surecart-eu-helper', {
 				} );
 				if ( res.ok ) {
 					// Reflect the new request in the UI without a page reload:
-					// append its row, drop the submitted orders from the form, and
-					// flip the visibility flags the markup binds to.
+					// append its row, decrement the remaining quantities (dropping
+					// emptied items/orders), and flip the visibility flags.
 					let okBody = {};
 					try {
 						okBody = yield res.json();
@@ -194,7 +369,11 @@ const { state, actions } = store( 'surecart-eu-helper', {
 					}
 					const r = okBody && okBody.request ? okBody.request : null;
 					if ( r ) {
-						ctx.requests = ctx.requests.concat( [
+						// Itemised summary shown on the confirmation screen.
+						ctx.confirmedDetails = ( r.details || [] ).slice();
+						// Prepend so the newest request appears at the top, matching
+						// the server-rendered list's newest-first order.
+						ctx.requests = [
 							{
 								id: r.id,
 								statusLabel: r.statusLabel,
@@ -202,6 +381,7 @@ const { state, actions } = store( 'surecart-eu-helper', {
 									state.i18n.ordersLabel +
 									': ' +
 									( r.orders || [] ).join( ', ' ),
+								detailsText: ( r.details || [] ).join( '; ' ),
 								dateText: r.date
 									? state.i18n.submittedLabel + ': ' + r.date
 									: '',
@@ -209,15 +389,62 @@ const { state, actions } = store( 'surecart-eu-helper', {
 								isResolved: r.status === 'resolved',
 								isRejected: r.status === 'rejected',
 							},
-						] );
+						].concat( ctx.requests );
 						ctx.hasRequests = true;
 					}
-					const submitted = new Set( ctx.selectedIds );
-					ctx.orders = ctx.orders.filter( function ( o ) {
-						return ! submitted.has( o.id );
+
+					// Per-line-item quantities just submitted.
+					const taken = {};
+					items.forEach( function ( i ) {
+						taken[ i.line_item_id ] =
+							( taken[ i.line_item_id ] || 0 ) + i.quantity;
 					} );
-					ctx.hasOrders = ctx.orders.length > 0;
-					ctx.selectedIds = [];
+					const wholeTaken = {};
+					wholeOrderIds.forEach( function ( id ) {
+						wholeTaken[ id ] = true;
+					} );
+
+					const nextOrders = [];
+					( ctx.orders || [] ).forEach( function ( o ) {
+						if ( o.wholeOrder ) {
+							if ( ! wholeTaken[ o.id ] ) {
+								nextOrders.push(
+									Object.assign( {}, o, { selected: false } )
+								);
+							}
+							return;
+						}
+						const remaining = ( o.lineItems || [] )
+							.map( function ( li ) {
+								const max = Math.max(
+									0,
+									( li.max || 0 ) - ( taken[ li.id ] || 0 )
+								);
+								return Object.assign( {}, li, {
+									max,
+									qty: 0,
+									availText: state.i18n.availableTemplate.replace(
+										'%d',
+										String( max )
+									),
+								} );
+							} )
+							.filter( function ( li ) {
+								return li.max > 0;
+							} );
+						if ( remaining.length ) {
+							nextOrders.push(
+								Object.assign( {}, o, {
+									selected: false,
+									lineItems: remaining,
+								} )
+							);
+						}
+					} );
+
+					ctx.orders = nextOrders;
+					ctx.hasOrders = nextOrders.length > 0;
+					ctx.reviewSummary = '';
 					ctx.panel = 'confirmation';
 				} else {
 					let body = {};
