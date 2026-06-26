@@ -211,8 +211,16 @@ class LogTable {
 	 */
 	public static function update_status( int $id, string $status ): bool {
 		global $wpdb;
+		// `false !== ...` (not a bool cast): $wpdb->update() returns 0 when the row
+		// matched but the value was unchanged, which is success, not failure.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		return (bool) $wpdb->update( self::table_name(), array( 'status' => $status ), array( 'id' => $id ) );
+		return false !== $wpdb->update(
+			self::table_name(),
+			array( 'status' => $status ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
 	}
 
 	/**
