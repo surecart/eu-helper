@@ -29,12 +29,24 @@
 }
 
 .sceu-row--scheme-dark,
-.sceu-modal--dark {
+.sceu-modal--dark,
+/* "auto" follows the active theme. SureCart's dark theme only darkens the page
+   background — it leaves our (plain-HTML) block inheriting a light-mode text
+   colour, and the modal still defaults to light. SureCart flags dark mode with
+   `body.surecart-theme-dark`, so map auto → the dark palette there. */
+body.surecart-theme-dark .sceu-row--scheme-auto,
+body.surecart-theme-dark .sceu-modal--auto {
 	--sceu-text: #f4f5f7;
 	--sceu-muted: #a9aeb8;
 	--sceu-surface: #1a1c20;
 	--sceu-border: rgba( 255, 255, 255, 0.12 );
 	--sceu-field-border: rgba( 255, 255, 255, 0.28 );
+}
+
+/* The auto default dims the intro via opacity (it has no muted colour of its
+   own); under dark mode it gets a real --sceu-muted, so drop the dimming. */
+body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
+	opacity: 1;
 }
 
 /* ---- Block container ---- */
@@ -77,8 +89,13 @@
 	min-width: 220px;
 }
 
-.sceu-row__heading {
+/* `.sceu-row .…` (0,2,0) so the scheme colour wins over themes that colour bare
+   headings — e.g. Astra's `.entry-content :where(h3)` (0,1,0) — which would
+   otherwise override the colour inherited from .sceu-row and leave the heading
+   the theme's (light-mode) colour on a dark page. */
+.sceu-row .sceu-row__heading {
 	margin: 0;
+	color: var( --sceu-text, currentColor );
 }
 
 .sceu-row__intro {
@@ -164,15 +181,21 @@
 	color: #a50e0e;
 }
 .sceu-row--scheme-dark .sceu-badge--received,
-.sceu-modal--dark .sceu-badge--received {
+.sceu-modal--dark .sceu-badge--received,
+body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--received,
+body.surecart-theme-dark .sceu-modal--auto .sceu-badge--received {
 	color: #f0c674;
 }
 .sceu-row--scheme-dark .sceu-badge--resolved,
-.sceu-modal--dark .sceu-badge--resolved {
+.sceu-modal--dark .sceu-badge--resolved,
+body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--resolved,
+body.surecart-theme-dark .sceu-modal--auto .sceu-badge--resolved {
 	color: #6bd193;
 }
 .sceu-row--scheme-dark .sceu-badge--rejected,
-.sceu-modal--dark .sceu-badge--rejected {
+.sceu-modal--dark .sceu-badge--rejected,
+body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--rejected,
+body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	color: #f08a8a;
 }
 
@@ -215,6 +238,23 @@
 .sceu-field__input--readonly {
 	opacity: 0.7;
 	cursor: not-allowed;
+}
+
+/* Form controls follow the scheme's colours. Themes colour bare `label`
+   (Astra 0,0,1 — which also darkens the order-row text nested inside the
+   <label>) and force a solid `input[type=…]` background/colour (0,1,1),
+   overriding the block's intended transparent, theme-following fields. Scope
+   under .sceu-row (0,2,0) so the block wins — mirrors the public .sceu-wf form. */
+.sceu-row .sceu-field__label,
+.sceu-row .sceu-orders__head {
+	color: var( --sceu-text, currentColor );
+}
+.sceu-row .sceu-field__input,
+.sceu-row .sceu-item__input,
+.sceu-row .sceu-step {
+	color: var( --sceu-text, currentColor );
+	background: transparent;
+	border-color: var( --sceu-field-border );
 }
 
 .sceu-orders {
@@ -505,8 +545,12 @@ body.sceu-modal-open {
 	margin-bottom: 1.1em;
 }
 
-.sceu-modal__title {
+/* `.sceu-modal__dialog .…` (0,2,0) so the title takes the dialog's scheme
+   colour, not a theme heading rule (e.g. Astra's `.entry-content :where(h2)`,
+   0,1,0) that would leave it dark on a dark dialog. */
+.sceu-modal__dialog .sceu-modal__title {
 	margin: 0;
+	color: inherit;
 }
 
 .sceu-modal__close {

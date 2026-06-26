@@ -41,6 +41,20 @@ This plugin is a guest in SureCart's house. It should feel native, never bolted-
   app shell (header bar, brand colour, left module nav, content cards) and design tokens
   (`--sceu-primary: #388051`, `--sceu-border`, `--sceu-radius`, …). Pull the live store brand
   colour via `Merchant\BrandColor`.
+- **Follow SureCart's dark theme.** SureCart's store-wide dark mode (Settings →
+  Design & Branding → "Dark") is signalled by `body.surecart-theme-dark` (light is
+  `surecart-theme-light`) — a persistent store setting, **not** OS
+  `prefers-color-scheme`, so don't gate dark styles on that media query. SureCart
+  only darkens its own surfaces; plain-HTML blocks keep inheriting a light-mode
+  text colour, so front-end CSS must supply its own readable colour under
+  `body.surecart-theme-dark`. Note themes colour bare headings at specificity
+  0,1,0 (e.g. Astra `.entry-content :where(h3)`), which beats a colour merely
+  *inherited* from a container — give headings an explicit colour at ≥0,2,0
+  (e.g. `.sceu-row .sceu-row__heading`). The same trap hits bare `label`
+  (Astra colours it directly, so nested text inherits the wrong colour) and
+  `input[type=…]` (themes force a solid background/colour, 0,1,1) — scope form
+  controls under the block root (`.sceu-row` / `.sceu-wf`, 0,2,0) so the block's
+  transparent, scheme-coloured fields win.
 
 ---
 

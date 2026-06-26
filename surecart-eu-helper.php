@@ -3,7 +3,7 @@
  * Plugin Name:       SureCart EU Helper
  * Plugin URI:        https://wpcrafter.com/
  * Description:       Modular helper that adds EU merchant-compliance features to SureCart stores. Module 1: Right of Withdrawal — a customer-area block + form letting EU consumers request withdrawal/cancellation/refund of recent orders, with merchant + customer notifications and an on-site request log.
- * Version:           1.5.7
+ * Version:           1.5.8
  * Requires at least: 6.6
  * Requires PHP:      7.4
  * Requires Plugins:  surecart
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SCEU_VERSION', '1.5.7' );
+define( 'SCEU_VERSION', '1.5.8' );
 define( 'SCEU_FILE', __FILE__ );
 define( 'SCEU_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCEU_URL', plugin_dir_url( __FILE__ ) );

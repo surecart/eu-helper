@@ -12,8 +12,12 @@
 	margin: 1em 0;
 }
 
-.sceu-wf__heading {
+/* `.sceu-wf .…` (0,2,0) so the heading follows the form's colour rather than a
+   theme that colours bare headings — e.g. Astra's `.entry-content :where(h3)`
+   (0,1,0) — which would otherwise keep its light-mode colour on a dark page. */
+.sceu-wf .sceu-wf__heading {
 	margin: 0 0 0.4em;
+	color: inherit;
 }
 
 .sceu-wf__intro {
@@ -31,6 +35,13 @@
 	display: block;
 	font-weight: 600;
 	margin: 0 0 0.35em;
+}
+
+/* Astra colours bare `label` (0,0,1); scope under .sceu-wf (0,2,0) so labels
+   follow the form's colour and stay readable on SureCart's dark theme. */
+.sceu-wf .sceu-form-control__label,
+.sceu-wf .sceu-wf__label {
+	color: inherit;
 }
 
 .sceu-form-control__required {
@@ -321,4 +332,18 @@
 	padding: 1em 1.25em;
 	border: 1px solid var( --sceu-border, #c3c4c7 );
 	border-radius: 8px;
+}
+
+/* SureCart dark theme. The form follows the page via `color: inherit`, but
+   SureCart's dark theme only darkens the background — the inherited text colour
+   stays a light-mode slate, leaving the heading and copy low-contrast on the
+   dark page. SureCart flags dark mode with `body.surecart-theme-dark`; restore a
+   readable text colour (and a lighter error red) there. Scoped to that class so
+   the shortcode on non-SureCart pages keeps inheriting the surrounding theme. */
+body.surecart-theme-dark .sceu-wf {
+	color: #f4f5f7;
+}
+
+body.surecart-theme-dark .sceu-wf__error {
+	color: #f08a8a;
 }

@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.7
+Stable tag: 1.5.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,9 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.5.8 =
+* **Dark mode fixes.** With SureCart's dark theme active, the Right of Withdrawal UI now renders correctly throughout. The notice heading and description stay readable instead of showing low-contrast dark text; the "Request a withdrawal" modal follows the dark theme instead of opening as a bright white panel; and the form fields, labels, order list, and the public withdrawal form are all readable — field labels and inputs no longer pick up the theme's light-mode colours (dark text on dark, or stray white input boxes). Stores using the light theme — or the block's explicit Light/Dark colour scheme — are unaffected.
 
 = 1.5.7 =
 * **Admin UI polish.** The Withdrawal Requests screen now uses the same SureCart-style shell as the Settings page — header bar, store brand colour, styled Sync/Export buttons, clean full-width table with natural column widths, and on-brand status banners — instead of the plain WordPress admin look. Rows are tighter: "Delete permanently" is now a hover action under the request's date rather than a column. The settings tabs also remember which module you were on after saving, and "Settings" moves to the bottom of the EU Helper menu (below the module pages).
