@@ -52,17 +52,24 @@
 		var state = { email: '', orderNumber: '', hp: '' };
 
 		// Toggle a button's in-flight state: disable it and show a spinner (the
-		// CSS .is-loading::before), keeping its existing label unchanged.
+		// CSS .is-loading::before), keeping its existing label unchanged. aria-busy
+		// conveys the in-flight state to assistive tech without changing the label.
 		function setLoading( btn, on ) {
 			if ( ! btn ) { return; }
 			btn.disabled = on;
 			btn.classList.toggle( 'is-loading', on );
+			btn.setAttribute( 'aria-busy', on ? 'true' : 'false' );
 		}
 
 		function showLookupError( msg ) {
 			if ( ! errorEl ) { return; }
 			errorEl.textContent = msg;
 			errorEl.hidden = ! msg;
+			// Mark the fields invalid so SR users hear the error when they return to them.
+			lookupForm.querySelectorAll( '[name="email"], [name="order_number"]' ).forEach( function ( input ) {
+				if ( msg ) { input.setAttribute( 'aria-invalid', 'true' ); }
+				else { input.removeAttribute( 'aria-invalid' ); }
+			} );
 		}
 
 		function clearResult() { result.innerHTML = ''; result.hidden = true; }

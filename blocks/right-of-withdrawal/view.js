@@ -18,9 +18,15 @@ const lastTrigger = new WeakMap();
 // Whether each block root's panel was open on the previous watch run, so the
 // focus/scroll-lock side effects fire only on open/close transitions.
 const wasOpen = new WeakMap();
+// The panel shown on the previous watch run, so focus can also move on
+// panel-to-panel transitions within an already-open modal (form -> review -> …).
+const lastPanel = new WeakMap();
 
+// `sc-button` is a SureCart web component that delegates focus to its internal
+// button; it must be in this list or the focus trap computes the wrong
+// first/last boundary and Tab escapes the dialog.
 const FOCUSABLE =
-	'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+	'a[href], button:not([disabled]), sc-button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Map a REST error payload to a user-facing status string.
@@ -132,6 +138,28 @@ function blockRoot( event ) {
 	}
 	const el = getElement() && getElement().ref;
 	return el && el.closest ? el.closest( '.sceu-row' ) : null;
+}
+
+// Move focus into the visible panel. Prefer the modal title (it carries the
+// dialog name via aria-labelledby, so screen readers announce the new step);
+// otherwise focus the first focusable control in the visible panel.
+function focusPanel( root ) {
+	const title = root.querySelector(
+		'.sceu-modal:not([hidden]) .sceu-modal__title'
+	);
+	if ( title ) {
+		title.focus();
+		return;
+	}
+	const scope = root.querySelector(
+		'.sceu-modal:not([hidden]), .sceu-row__panel:not([hidden])'
+	);
+	if ( scope ) {
+		const target = scope.querySelector( FOCUSABLE );
+		if ( target ) {
+			target.focus();
+		}
+	}
 }
 
 const { state, actions } = store( 'surecart-eu-helper', {
@@ -472,24 +500,21 @@ const { state, actions } = store( 'surecart-eu-helper', {
 			const ctx = getContext();
 			const open = ctx.panel !== 'none';
 			const was = wasOpen.get( root ) || false;
+			const prevPanel = lastPanel.get( root );
 
 			if ( ctx.display === 'modal' ) {
 				document.body.classList.toggle( 'sceu-modal-open', open );
 			}
 
 			if ( open && ! was ) {
-				// Remember the trigger so focus can return to it on close.
+				// Opening: remember the trigger so focus can return to it on close.
 				lastTrigger.set( root, document.activeElement );
-				// Move focus into the now-visible panel.
-				const scope = root.querySelector(
-					'.sceu-modal:not([hidden]), .sceu-row__panel:not([hidden])'
-				);
-				if ( scope ) {
-					const target = scope.querySelector( FOCUSABLE );
-					if ( target ) {
-						target.focus();
-					}
-				}
+				focusPanel( root );
+			} else if ( open && was && ctx.panel !== prevPanel ) {
+				// Switched step within an open modal (form -> review -> confirmation):
+				// move focus to the new step so keyboard/SR users aren't stranded on a
+				// now-hidden control.
+				focusPanel( root );
 			} else if ( ! open && was ) {
 				const trigger = lastTrigger.get( root );
 				if ( trigger && document.body.contains( trigger ) ) {
@@ -498,6 +523,7 @@ const { state, actions } = store( 'surecart-eu-helper', {
 			}
 
 			wasOpen.set( root, open );
+			lastPanel.set( root, ctx.panel );
 		},
 	},
 } );

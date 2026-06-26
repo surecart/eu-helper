@@ -133,7 +133,7 @@ class PublicForm {
 						<span class="sceu-form-control__required" aria-hidden="true">*</span>
 					</label>
 					<div class="sceu-form-control__input">
-						<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" autocomplete="email" required />
+						<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" autocomplete="email" required aria-required="true" aria-describedby="sceu-wf-error" />
 					</div>
 				</div>
 				<div class="sceu-form-control sceu-form-control--has-label">
@@ -142,7 +142,7 @@ class PublicForm {
 						<span class="sceu-form-control__required" aria-hidden="true">*</span>
 					</label>
 					<div class="sceu-form-control__input">
-						<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required />
+						<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required aria-required="true" aria-describedby="sceu-wf-error" />
 					</div>
 				</div>
 				<div class="sceu-wf__hp" aria-hidden="true">
@@ -151,7 +151,7 @@ class PublicForm {
 					</label>
 				</div>
 				<button type="submit" class="sceu-wf__submit"><?php echo esc_html( $copy['submit_label'] ); ?></button>
-				<p class="sceu-wf__error" role="alert" hidden></p>
+				<p class="sceu-wf__error" id="sceu-wf-error" role="alert" hidden></p>
 			</form>
 
 			<div class="sceu-wf__result" data-sceu-result role="region" aria-label="<?php echo esc_attr__( 'Your withdrawal request', 'surecart-eu-helper' ); ?>" tabindex="-1" hidden></div>

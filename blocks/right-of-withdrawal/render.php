@@ -472,7 +472,7 @@ $sceu_review_html = ob_get_clean();
 				role="dialog" aria-modal="true" aria-labelledby="<?php echo esc_attr( $sceu_uid ); ?>-mtitle"
 				data-wp-on--keydown="actions.onDialogKeydown">
 				<div class="sceu-modal__head">
-					<h2 class="sceu-modal__title" id="<?php echo esc_attr( $sceu_uid ); ?>-mtitle" data-wp-text="state.heading"><?php echo esc_html( $sceu_modal_title ); ?></h2>
+					<h2 class="sceu-modal__title" id="<?php echo esc_attr( $sceu_uid ); ?>-mtitle" tabindex="-1" data-wp-text="state.heading"><?php echo esc_html( $sceu_modal_title ); ?></h2>
 					<button type="button" class="sceu-modal__close" aria-label="<?php echo esc_attr__( 'Close', 'surecart-eu-helper' ); ?>" data-wp-on--click="actions.close">&times;</button>
 				</div>
 				<div data-wp-bind--hidden="!state.isForm"><?php echo $sceu_form_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?></div>

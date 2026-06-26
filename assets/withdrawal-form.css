@@ -111,6 +111,13 @@
 	}
 }
 
+/* Respect reduced-motion: show the ring but stop it spinning. */
+@media ( prefers-reduced-motion: reduce ) {
+	.sceu-wf .sceu-wf__submit.is-loading::before {
+		animation: none;
+	}
+}
+
 .sceu-wf .sceu-wf__back {
 	font: inherit;
 	cursor: pointer;
