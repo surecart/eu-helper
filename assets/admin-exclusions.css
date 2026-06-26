@@ -2,7 +2,111 @@
 
 .sceu-excl {
 	position: relative;
-	max-width: 32em;
+	max-width: 30em; /* match the other settings inputs (.sceu-field__control caps at 30em) */
+}
+
+/* Wraps the input so the loading spinner can sit inside it on the right. */
+.sceu-excl__field {
+	position: relative;
+	display: block;
+}
+
+/* The settings page caps field inputs at max-width:30em via
+   `.sceu-app .sceu-field__control input[type="search"]` (specificity 0,3,1).
+   Inside the picker the input must fill its wrapper so the spinner/clear sit
+   inside its right edge, so override that cap with a more specific selector. */
+.sceu-excl__field .sceu-excl__search,
+.sceu-app .sceu-field__control .sceu-excl__field .sceu-excl__search {
+	width: 100%;
+	max-width: none;
+	box-sizing: border-box;
+	/* Leave room for the spinner / clear button so text never sits under them. */
+	padding-right: 32px;
+}
+
+/* Hide the browser's native search clear control — we render our own (below) so
+   the spinner and clear share one slot with consistent styling cross-browser. */
+.sceu-excl__search::-webkit-search-cancel-button {
+	-webkit-appearance: none;
+	appearance: none;
+}
+.sceu-excl__search::-ms-clear {
+	display: none;
+}
+
+/* Clear (×) button: shown only when the field has text and no request is in
+   flight (the spinner owns the slot while loading). */
+.sceu-excl__clear {
+	position: absolute;
+	top: 50%;
+	right: 6px;
+	transform: translateY( -50% );
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: none;
+	border-radius: 3px;
+	background: transparent;
+	color: #646970;
+	font-size: 18px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.sceu-excl__clear:hover {
+	color: #1d2327;
+}
+
+.sceu-excl__clear[hidden] {
+	display: none;
+}
+
+/* While loading, the spinner takes the slot — never both at once. */
+.sceu-excl.is-loading .sceu-excl__clear {
+	display: none;
+}
+
+/* Shown only while a search request is in flight (.is-loading on the root). */
+.sceu-excl__spinner {
+	position: absolute;
+	top: 50%;
+	right: 9px;
+	transform: translateY( -50% );
+	width: 16px;
+	height: 16px;
+	box-sizing: border-box;
+	border: 2px solid rgba( 0, 0, 0, 0.15 );
+	border-top-color: #2271b1; /* WP admin accent */
+	border-radius: 50%;
+	display: none;
+	pointer-events: none;
+	animation: sceu-excl-spin 0.6s linear infinite;
+}
+
+.sceu-excl.is-loading .sceu-excl__spinner {
+	display: block;
+}
+
+@keyframes sceu-excl-spin {
+	to {
+		transform: translateY( -50% ) rotate( 360deg );
+	}
+}
+
+/* Respect reduced-motion: show the ring, don't spin it. */
+@media ( prefers-reduced-motion: reduce ) {
+	.sceu-excl__spinner {
+		animation: none;
+	}
+}
+
+/* Request failed (distinct from an empty result set). */
+.sceu-excl__result.is-error {
+	color: #a50e0e;
+	cursor: default;
 }
 
 .sceu-excl__results {

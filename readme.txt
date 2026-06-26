@@ -92,6 +92,7 @@ the module is enabled.
 == Changelog ==
 
 = 1.5.8 =
+* **Excluded-products search fixed + polished.** The individual "Excluded products" search now works reliably — its lookup endpoint is always registered (it previously returned a 404 on some setups, which showed up as "No matching products" for every term). The field also gains a loading spinner while searching, a clear (×) button to reset it, and a distinct error message if the lookup ever fails, so a real failure is no longer mistaken for an empty result.
 * **Dark mode fixes.** With SureCart's dark theme active, the Right of Withdrawal UI now renders correctly throughout. The notice heading and description stay readable instead of showing low-contrast dark text; the "Request a withdrawal" modal follows the dark theme instead of opening as a bright white panel; and the form fields, labels, order list, and the public withdrawal form are all readable — field labels and inputs no longer pick up the theme's light-mode colours (dark text on dark, or stray white input boxes). Stores using the light theme — or the block's explicit Light/Dark colour scheme — are unaffected.
 
 = 1.5.7 =
