@@ -129,19 +129,6 @@ class LogTable {
 	}
 
 	/**
-	 * All rows (for CSV export).
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	public static function all_rows(): array {
-		global $wpdb;
-		$table = self::table_name();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
-		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY created_at DESC", ARRAY_A );
-		return is_array( $rows ) ? $rows : array();
-	}
-
-	/**
 	 * Fetch a single row by id.
 	 *
 	 * @param int $id Row id.

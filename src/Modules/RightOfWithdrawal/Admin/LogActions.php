@@ -7,7 +7,6 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal\Admin;
 
-use SureCartEuHelper\Settings;
 use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
@@ -197,50 +196,57 @@ class LogActions {
 	public function export_csv(): void {
 		$this->guard( 'sceu_export_log' );
 
-		$rows = LogTable::all_rows();
-
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename=withdrawal-requests-' . gmdate( 'Ymd-His' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
 		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'withdrawing', 'reason', 'status' ) );
-		foreach ( $rows as $row ) {
-			$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
-			$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
 
-			// Explicit per-order item detail (mirrors the admin table).
-			$detail = '';
-			if ( is_array( $payload ) && ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) ) {
-				$parts = array();
-				foreach ( $payload['orders'] as $order ) {
-					$ref     = (string) ( $order['number'] ?? $order['id'] ?? '' );
-					$summary = Withdrawals::merchant_items_summary( $order );
-					$parts[] = 'Order ' . $ref . ': ' . $summary;
+		// Stream in pages so the whole log is never held in memory at once.
+		$per_page = 500;
+		$offset   = 0;
+		do {
+			$rows = LogTable::get_rows( $per_page, $offset );
+			foreach ( $rows as $row ) {
+				$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+				$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
+
+				// Explicit per-order item detail (mirrors the admin table).
+				$detail = '';
+				if ( is_array( $payload ) && ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) ) {
+					$parts = array();
+					foreach ( $payload['orders'] as $order ) {
+						$ref     = (string) ( $order['number'] ?? $order['id'] ?? '' );
+						$summary = Withdrawals::merchant_items_summary( $order );
+						$parts[] = 'Order ' . $ref . ': ' . $summary;
+					}
+					$detail = implode( ' | ', $parts );
 				}
-				$detail = implode( ' | ', $parts );
-			}
 
-			fputcsv(
-				$out,
-				array_map(
-					array( $this, 'csv_safe' ),
-					array(
-						$row['id'] ?? '',
-						$row['created_at'] ?? '',
-						$row['user_id'] ?? '',
-						$row['customer_id'] ?? '',
-						$row['customer_name'] ?? '',
-						$row['customer_email'] ?? '',
-						$row['ip_address'] ?? '',
-						$row['order_ids'] ?? '',
-						$detail,
-						$reason,
-						$row['status'] ?? '',
+				fputcsv(
+					$out,
+					array_map(
+						array( $this, 'csv_safe' ),
+						array(
+							$row['id'] ?? '',
+							$row['created_at'] ?? '',
+							$row['user_id'] ?? '',
+							$row['customer_id'] ?? '',
+							$row['customer_name'] ?? '',
+							$row['customer_email'] ?? '',
+							$row['ip_address'] ?? '',
+							$row['order_ids'] ?? '',
+							$detail,
+							$reason,
+							$row['status'] ?? '',
+						)
 					)
-				)
-			);
-		}
+				);
+			}
+			$offset += $per_page;
+		} while ( count( $rows ) === $per_page );
+
 		fclose( $out );
 		exit;
 	}
@@ -280,7 +286,7 @@ class LogActions {
 
 		$merchant_to = sanitize_email( (string) ( $payload['merchant_to'] ?? '' ) );
 		if ( '' === $merchant_to || ! is_email( $merchant_to ) ) {
-			$merchant_to = $this->effective_merchant_email();
+			$merchant_to = Withdrawals::merchant_recipient();
 		}
 
 		$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
@@ -297,21 +303,6 @@ class LogActions {
 			'merchant_email' => $merchant_to,
 			'store_name'     => MerchantInfo::store_name(),
 		);
-	}
-
-	/**
-	 * Effective merchant notification email: the configured value, else the
-	 * resolved SureCart store default. Mirrors the REST controller's resolver,
-	 * used only as a fallback for old rows that predate storing the recipient.
-	 *
-	 * @return string
-	 */
-	private function effective_merchant_email(): string {
-		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
-		if ( '' !== $configured && is_email( $configured ) ) {
-			return $configured;
-		}
-		return MerchantInfo::notification_email();
 	}
 
 	/**
@@ -333,8 +324,7 @@ class LogActions {
 			return false;
 		}
 
-		$status = strtolower( (string) ( $order->status ?? '' ) );
-		if ( in_array( $status, array( 'canceled', 'cancelled', 'refunded' ), true ) ) {
+		if ( Withdrawals::is_terminal_status( (string) ( $order->status ?? '' ) ) ) {
 			return true;
 		}
 
