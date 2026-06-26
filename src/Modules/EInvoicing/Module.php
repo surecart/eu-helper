@@ -307,7 +307,7 @@ class Module implements ModuleInterface {
 			if ( '' === $key || '' === $value ) {
 				continue; // Blank = keep existing.
 			}
-			$current[ $key ] = (string) apply_filters( 'sceu_einv_encrypt', $value, $key );
+			$current[ $key ] = Secrets::encrypt_value( $value, $key );
 		}
 
 		return $current;

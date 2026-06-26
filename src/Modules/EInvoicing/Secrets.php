@@ -12,10 +12,20 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Stores provider API keys/secrets in a dedicated, NON-autoloaded option, kept
  * out of the main `sceu_settings` blob (which is autoloaded on every request and
- * exposed throughout the settings UI). Values pass through the `sceu_einv_encrypt`
- * / `sceu_einv_decrypt` filters on the way in/out so a future release can add
- * at-rest encryption without changing callers (PR 4 hardening); by default the
- * filters are pass-through.
+ * exposed throughout the settings UI).
+ *
+ * Secrets are ENCRYPTED AT REST by default, reusing SureCart's own
+ * `\SureCart\Support\Encryption` (AES-256-CTR keyed off the site's
+ * LOGGED_IN_KEY/SALT or the SURECART_ENCRYPTION_* constants) — the same scheme
+ * SureCart uses for its API token. A site may fully override the scheme via the
+ * `sceu_einv_encrypt` / `sceu_einv_decrypt` filters; if neither has a callback,
+ * the default encryption is applied. Legacy plaintext values written before
+ * encryption are still readable (decrypt falls back to the raw value).
+ *
+ * For maximum hardening a value can be supplied via a wp-config constant named
+ * `SCEU_SECRET_<UPPERCASE_KEY>` (e.g.
+ * `SCEU_SECRET_STORECOVE__PRODUCTION__API_KEY`), which takes precedence on read
+ * so the production credential never has to live in the database at all.
  *
  * Keys are namespaced by provider + environment, e.g. "storecove__sandbox__api_key".
  */
@@ -42,6 +52,12 @@ final class Secrets {
 	 * @return string
 	 */
 	public static function get( string $key ): string {
+		// A wp-config constant always wins, so prod keys need never touch the DB.
+		$override = self::constant_override( $key );
+		if ( null !== $override ) {
+			return $override;
+		}
+
 		$all = get_option( self::OPTION, array() );
 		if ( ! is_array( $all ) || ! isset( $all[ $key ] ) ) {
 			return '';
@@ -50,7 +66,7 @@ final class Secrets {
 		if ( '' === $stored ) {
 			return '';
 		}
-		return (string) apply_filters( 'sceu_einv_decrypt', $stored, $key );
+		return self::decrypt( $stored, $key );
 	}
 
 	/**
@@ -79,11 +95,93 @@ final class Secrets {
 		if ( '' === $value ) {
 			unset( $all[ $key ] );
 		} else {
-			$all[ $key ] = (string) apply_filters( 'sceu_einv_encrypt', $value, $key );
+			$all[ $key ] = self::encrypt_value( $value, $key );
 		}
 
 		// autoload=false: secrets must never load on every request.
 		update_option( self::OPTION, $all, false );
+	}
+
+	/**
+	 * Encrypt a value for storage.
+	 *
+	 * Public so callers that persist the secrets option themselves (e.g. the
+	 * settings-page sanitize callback) share one encryption routine. A site can
+	 * fully override the scheme via the `sceu_einv_encrypt` filter (it must pair
+	 * with `sceu_einv_decrypt`); otherwise SureCart's at-rest encryption is used.
+	 *
+	 * @param string $value Plain value.
+	 * @param string $key   Namespaced key (passed to the override filter).
+	 * @return string
+	 */
+	public static function encrypt_value( string $value, string $key ): string {
+		if ( has_filter( 'sceu_einv_encrypt' ) ) {
+			/**
+			 * Override how a secret is encrypted before storage.
+			 *
+			 * @param string $value Plain value.
+			 * @param string $key   Namespaced secret key.
+			 */
+			return (string) apply_filters( 'sceu_einv_encrypt', $value, $key );
+		}
+
+		if ( class_exists( '\SureCart\Support\Encryption' ) ) {
+			$encrypted = \SureCart\Support\Encryption::encrypt( $value );
+			if ( is_string( $encrypted ) && '' !== $encrypted ) {
+				return $encrypted;
+			}
+		}
+
+		// Last resort (e.g. openssl unavailable): store as-is rather than lose the
+		// value. Encryption is best-effort, mirroring SureCart's own behaviour.
+		return $value;
+	}
+
+	/**
+	 * Decrypt a stored value.
+	 *
+	 * @param string $stored Stored (encrypted) value.
+	 * @param string $key    Namespaced key (passed to the override filter).
+	 * @return string
+	 */
+	private static function decrypt( string $stored, string $key ): string {
+		if ( has_filter( 'sceu_einv_decrypt' ) ) {
+			/**
+			 * Override how a secret is decrypted on read.
+			 *
+			 * @param string $stored Stored value.
+			 * @param string $key    Namespaced secret key.
+			 */
+			return (string) apply_filters( 'sceu_einv_decrypt', $stored, $key );
+		}
+
+		if ( class_exists( '\SureCart\Support\Encryption' ) ) {
+			$decrypted = \SureCart\Support\Encryption::decrypt( $stored );
+			// decrypt() returns false when $stored is not our ciphertext (e.g. a
+			// legacy plaintext value) — fall back to the raw value so it still reads.
+			if ( is_string( $decrypted ) ) {
+				return $decrypted;
+			}
+		}
+
+		return $stored;
+	}
+
+	/**
+	 * Read a `SCEU_SECRET_<UPPERCASE_KEY>` wp-config constant for this key.
+	 *
+	 * @param string $key Namespaced key.
+	 * @return string|null The constant value, or null when not defined/empty.
+	 */
+	private static function constant_override( string $key ): ?string {
+		$constant = 'SCEU_SECRET_' . strtoupper( $key );
+		if ( defined( $constant ) ) {
+			$value = (string) constant( $constant );
+			if ( '' !== $value ) {
+				return $value;
+			}
+		}
+		return null;
 	}
 
 	/**
