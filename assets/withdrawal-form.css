@@ -1,0 +1,250 @@
+/* Public withdrawal form (block + shortcode).
+   Borders use a translucent grey so they stay visible on any theme background
+   (light or dark) — themes that set their own border colour to white/near-bg
+   would otherwise make the fields invisible. Field/control rules are scoped
+   under .sceu-wf so they out-specify the theme's `input[type=...]` rules. */
+
+.sceu-wf {
+	--sceu-field-border: rgba( 127, 127, 127, 0.45 );
+	--sceu-border: rgba( 127, 127, 127, 0.3 );
+	--sceu-muted: rgba( 127, 127, 127, 0.9 );
+	max-width: 32em;
+	margin: 1em 0;
+}
+
+.sceu-wf__heading {
+	margin: 0 0 0.4em;
+}
+
+.sceu-wf__intro {
+	margin: 0 0 1em;
+}
+
+.sceu-wf__field {
+	margin: 0 0 0.85em;
+}
+
+.sceu-wf__label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 0.25em;
+}
+
+.sceu-wf .sceu-wf__input,
+.sceu-wf .sceu-wf__textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.6em 0.7em;
+	font: inherit;
+	color: inherit;
+	background: transparent;
+	border: 1px solid var( --sceu-field-border );
+	border-radius: 6px;
+}
+
+.sceu-wf .sceu-wf__submit {
+	font: inherit;
+	cursor: pointer;
+	padding: 0.6em 1.2em;
+	border: none;
+	border-radius: 6px;
+	background: var( --sc-color-primary-500, #2271b1 );
+	color: var( --sc-color-primary-text, #fff );
+}
+
+.sceu-wf .sceu-wf__submit[disabled] {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.sceu-wf .sceu-wf__back {
+	font: inherit;
+	cursor: pointer;
+	background: none;
+	border: none;
+	color: var( --sceu-muted, currentColor );
+	padding: 0.6em 0.4em;
+	margin-left: 0.5em;
+}
+
+.sceu-wf__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin-top: 1em;
+}
+
+/* Honeypot: visually hidden but present for bots. */
+.sceu-wf__hp {
+	position: absolute !important;
+	left: -9999px !important;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.sceu-wf__error {
+	color: #a50e0e;
+	margin: 0.6em 0 0;
+}
+
+/* Visually hidden but announced by screen readers (quantity live region). */
+.sceu-wf .sceu-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect( 0 0 0 0 );
+	white-space: nowrap;
+}
+
+/* Don't show a focus outline when we programmatically move focus to the
+   result region after a lookup (it's not a user-actioned focus). */
+.sceu-wf .sceu-wf__result:focus {
+	outline: none;
+}
+
+.sceu-wf__again {
+	font: inherit;
+	cursor: pointer;
+	background: none;
+	border: none;
+	padding: 0 0 0.6em;
+	color: var( --sceu-muted, currentColor );
+	text-decoration: underline;
+}
+
+.sceu-wf__order-head {
+	font-weight: 600;
+	margin: 0 0 0.5em;
+}
+
+/* Item picker — same structure + look as the logged-in dashboard form.
+   Scoped under .sceu-wf so these out-specify the theme's input/button rules
+   (and min-*:0 defeats themes that force a fixed control height), giving the
+   same 30px steppers the dashboard uses. */
+
+.sceu-wf .sceu-items {
+	list-style: none;
+	margin: 0.75em 0 1em;
+	padding: 0.6em 0 0;
+	border-top: 1px solid var( --sceu-border );
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+}
+
+.sceu-wf .sceu-items__hint {
+	margin: 0;
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+.sceu-wf .sceu-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75em;
+}
+
+.sceu-wf .sceu-item__img {
+	width: 40px;
+	height: 40px;
+	flex: none;
+	object-fit: cover;
+	border-radius: 4px;
+	border: 1px solid var( --sceu-border );
+}
+
+.sceu-wf .sceu-item__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.sceu-wf .sceu-item__name {
+	font-weight: 500;
+}
+
+.sceu-wf .sceu-item__avail {
+	font-size: 0.82em;
+	opacity: 0.7;
+}
+
+.sceu-wf .sceu-item__qty {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: none;
+}
+
+.sceu-wf .sceu-step {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 30px;
+	height: 30px;
+	min-width: 0;
+	min-height: 0;
+	padding: 0;
+	border: 1px solid var( --sceu-field-border );
+	border-radius: 6px;
+	background: transparent;
+	color: inherit;
+	font-size: 16px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.sceu-wf .sceu-step:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.sceu-wf .sceu-item__input {
+	box-sizing: border-box;
+	width: 3em;
+	height: 30px;
+	min-height: 0;
+	text-align: center;
+	padding: 0 0.25em;
+	border: 1px solid var( --sceu-field-border );
+	border-radius: 6px;
+	font: inherit;
+	line-height: normal;
+	color: inherit;
+	background: transparent;
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.sceu-wf .sceu-item__input::-webkit-outer-spin-button,
+.sceu-wf .sceu-item__input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.sceu-wf__review {
+	margin: 0 0 0.5em;
+	padding-left: 1.2em;
+}
+
+.sceu-wf__whole {
+	font-style: italic;
+	margin: 0 0 0.8em;
+}
+
+.sceu-wf__notfound {
+	margin: 0 0 0.8em;
+}
+
+.sceu-wf__success {
+	padding: 1em 1.25em;
+	border: 1px solid var( --sceu-border, #c3c4c7 );
+	border-radius: 8px;
+}
