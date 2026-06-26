@@ -23,7 +23,22 @@
 		edit: function ( props ) {
 			var a = props.attributes;
 			var setA = props.setAttributes;
-			var blockProps = useBlockProps( { className: "sceu-wf-editor-preview" } );
+			var blockProps = useBlockProps( { className: "sceu-wf sceu-wf-editor-preview" } );
+
+			// One SureCart-style form-control field (label + input wrapper) for the
+			// static preview; the live form renders the same markup server-side.
+			function previewField( labelText, type ) {
+				return el(
+					"div",
+					{ className: "sceu-form-control sceu-form-control--has-label" },
+					el( "label", { className: "sceu-form-control__label" }, labelText ),
+					el(
+						"div",
+						{ className: "sceu-form-control__input" },
+						el( "input", { type: type, className: "sceu-wf__input", disabled: true } )
+					)
+				);
+			}
 
 			return el(
 				wp.element.Fragment,
@@ -69,14 +84,12 @@
 				el(
 					"div",
 					blockProps,
-					el( "h3", { style: { margin: "0 0 0.4em" } }, a.heading || DEFAULTS.heading ),
-					el( "p", { style: { margin: "0 0 1em" } }, a.intro || DEFAULTS.intro ),
-					el( "p", null, el( "strong", null, __( "Email address", "surecart-eu-helper" ) ) ),
-					el( "input", { type: "email", disabled: true, style: { width: "100%", marginBottom: "0.6em", padding: "0.5em" } } ),
-					el( "p", null, el( "strong", null, __( "Order number", "surecart-eu-helper" ) ) ),
-					el( "input", { type: "text", disabled: true, style: { width: "100%", marginBottom: "0.8em", padding: "0.5em" } } ),
-					el( "button", { type: "button", disabled: true }, a.submit_label || __( "Find my order", "surecart-eu-helper" ) ),
-					el( "p", { style: { fontSize: "0.85em", opacity: 0.7, marginTop: "0.8em" } }, __( "Preview — the live form looks up the order and lets the customer withdraw.", "surecart-eu-helper" ) )
+					el( "h3", { className: "sceu-wf__heading" }, a.heading || DEFAULTS.heading ),
+					el( "p", { className: "sceu-wf__intro" }, a.intro || DEFAULTS.intro ),
+					previewField( __( "Email address", "surecart-eu-helper" ), "email" ),
+					previewField( __( "Order number", "surecart-eu-helper" ), "text" ),
+					el( "button", { type: "button", className: "sceu-wf__submit", disabled: true }, a.submit_label || __( "Find my order", "surecart-eu-helper" ) ),
+					el( "p", { className: "sceu-wf__preview-note" }, __( "Preview — the live form looks up the order and lets the customer withdraw.", "surecart-eu-helper" ) )
 				)
 			);
 		},

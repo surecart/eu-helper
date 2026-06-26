@@ -51,6 +51,14 @@
 
 		var state = { email: '', orderNumber: '', hp: '' };
 
+		// Toggle a button's in-flight state: disable it and show a spinner (the
+		// CSS .is-loading::before), keeping its existing label unchanged.
+		function setLoading( btn, on ) {
+			if ( ! btn ) { return; }
+			btn.disabled = on;
+			btn.classList.toggle( 'is-loading', on );
+		}
+
 		function showLookupError( msg ) {
 			if ( ! errorEl ) { return; }
 			errorEl.textContent = msg;
@@ -62,8 +70,7 @@
 		function resetToLookup() {
 			clearResult();
 			lookupForm.hidden = false;
-			var btn = lookupForm.querySelector( '.sceu-wf__submit' );
-			if ( btn ) { btn.disabled = false; }
+			setLoading( lookupForm.querySelector( '.sceu-wf__submit' ), false );
 			var email = lookupForm.querySelector( '[name="email"]' );
 			if ( email ) { email.focus(); }
 		}
@@ -116,11 +123,11 @@
 			}
 
 			var btn = lookupForm.querySelector( '.sceu-wf__submit' );
-			if ( btn ) { btn.disabled = true; }
+			setLoading( btn, true );
 
 			postJSON( cfg.lookupUrl, { email: state.email, order_number: state.orderNumber, hp: state.hp } )
 				.then( function ( res ) {
-					if ( btn ) { btn.disabled = false; }
+					setLoading( btn, false );
 					if ( res.status === 429 || res.status === 403 ) {
 						showLookupError( ( res.data && res.data.message ) || t( 'genericError', 'Please try again.' ) );
 						return;
@@ -221,14 +228,14 @@
 			back.addEventListener( 'click', function () { renderFound( order ); } );
 			confirm.addEventListener( 'click', function () {
 				err.hidden = true;
-				confirm.disabled = true;
+				setLoading( confirm, true );
 				postJSON( cfg.submitUrl, {
 					email: state.email,
 					order_number: state.orderNumber,
 					hp: state.hp,
 					items: chosen.map( function ( c ) { return { line_item_id: c.line_item_id, quantity: c.quantity }; } )
 				} ).then( function ( res ) {
-					confirm.disabled = false;
+					setLoading( confirm, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }
 					else {
 						err.textContent = ( res.data && res.data.message ) || t( 'genericError', 'Something went wrong. Please try again.' );
@@ -255,14 +262,14 @@
 				err.hidden = true;
 				var reason = textarea.value.trim();
 				if ( ! reason ) { err.textContent = t( 'describe', 'Please describe what you would like to withdraw from.' ); err.hidden = false; return; }
-				send.disabled = true;
+				setLoading( send, true );
 				postJSON( cfg.submitUrl, {
 					email: state.email,
 					order_number: state.orderNumber,
 					hp: state.hp,
 					reason: reason
 				} ).then( function ( res ) {
-					send.disabled = false;
+					setLoading( send, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }
 					else { err.textContent = ( res.data && res.data.message ) || t( 'genericError', 'Something went wrong. Please try again.' ); err.hidden = false; }
 				} );
@@ -270,8 +277,10 @@
 
 			setResult( h( 'div', { class: 'sceu-wf__fallback' }, [
 				h( 'p', { class: 'sceu-wf__notfound', text: t( 'notFound', "We couldn't match that order. Tell us what you'd like to withdraw from below." ) } ),
-				h( 'label', { class: 'sceu-wf__label', text: t( 'describe', 'Describe what you would like to withdraw from' ) } ),
-				textarea,
+				h( 'div', { class: 'sceu-form-control sceu-form-control--has-label' }, [
+					h( 'label', { class: 'sceu-form-control__label', text: t( 'describe', 'Describe what you would like to withdraw from' ) } ),
+					h( 'div', { class: 'sceu-form-control__input' }, [ textarea ] )
+				] ),
 				err,
 				send
 			] ) );

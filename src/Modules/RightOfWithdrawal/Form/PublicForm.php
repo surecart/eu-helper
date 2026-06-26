@@ -127,14 +127,24 @@ class PublicForm {
 			<?php endif; ?>
 
 			<form class="sceu-wf__lookup" data-sceu-step="lookup" novalidate>
-				<p class="sceu-wf__field">
-					<label class="sceu-wf__label" for="sceu-wf-email"><?php echo esc_html__( 'Email address', 'surecart-eu-helper' ); ?></label>
-					<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" autocomplete="email" required />
-				</p>
-				<p class="sceu-wf__field">
-					<label class="sceu-wf__label" for="sceu-wf-number"><?php echo esc_html__( 'Order number', 'surecart-eu-helper' ); ?></label>
-					<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required />
-				</p>
+				<div class="sceu-form-control sceu-form-control--has-label">
+					<label class="sceu-form-control__label" for="sceu-wf-email">
+						<?php echo esc_html__( 'Email address', 'surecart-eu-helper' ); ?>
+						<span class="sceu-form-control__required" aria-hidden="true">*</span>
+					</label>
+					<div class="sceu-form-control__input">
+						<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" autocomplete="email" required />
+					</div>
+				</div>
+				<div class="sceu-form-control sceu-form-control--has-label">
+					<label class="sceu-form-control__label" for="sceu-wf-number">
+						<?php echo esc_html__( 'Order number', 'surecart-eu-helper' ); ?>
+						<span class="sceu-form-control__required" aria-hidden="true">*</span>
+					</label>
+					<div class="sceu-form-control__input">
+						<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required />
+					</div>
+				</div>
 				<div class="sceu-wf__hp" aria-hidden="true">
 					<label><?php echo esc_html__( 'Leave this field empty', 'surecart-eu-helper' ); ?>
 						<input type="text" name="hp" tabindex="-1" autocomplete="off" />
