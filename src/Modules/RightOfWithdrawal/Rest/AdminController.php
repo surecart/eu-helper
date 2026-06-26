@@ -32,7 +32,10 @@ class AdminController {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'search' ),
 				'permission_callback' => static function () {
-					return current_user_can( 'manage_options' );
+					// Reads SureCart product data, so gate on SureCart's own
+					// product capability (what its admin product screens use),
+					// falling back to manage_options for plain admins.
+					return current_user_can( 'edit_sc_products' ) || current_user_can( 'manage_options' );
 				},
 				'args'                => array(
 					'q' => array(

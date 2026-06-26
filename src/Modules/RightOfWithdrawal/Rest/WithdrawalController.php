@@ -42,8 +42,28 @@ class WithdrawalController {
 				'permission_callback' => array( $this, 'permission' ),
 				'args'                => array(
 					'order_ids' => array(
-						'required' => true,
+						'required' => false,
 						'type'     => 'array',
+						'items'    => array( 'type' => 'string' ),
+					),
+					'items'     => array(
+						'required' => false,
+						'type'     => 'array',
+					),
+					'email'     => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_email',
+					),
+					'name'      => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'reason'    => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
 					),
 				),
 			)
@@ -51,15 +71,25 @@ class WithdrawalController {
 	}
 
 	/**
-	 * Only logged-in users with a resolvable SureCart customer may submit. The
-	 * cookie nonce (X-WP-Nonce) is validated by the REST infrastructure.
+	 * Only logged-in users with a resolvable SureCart customer may submit.
 	 *
+	 * The cookie auth scheme already enforces the X-WP-Nonce, but we verify it
+	 * explicitly so the CSRF guarantee does not silently depend on which auth
+	 * scheme handled the request (mirroring the guest endpoints' explicit check).
+	 *
+	 * @param \WP_REST_Request $request Request.
 	 * @return bool
 	 */
-	public function permission(): bool {
+	public function permission( \WP_REST_Request $request ): bool {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
+
+		$nonce = (string) ( $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' ) );
+		if ( ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return false;
+		}
+
 		return ( new CustomerContext() )->is_customer();
 	}
 

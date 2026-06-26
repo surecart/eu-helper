@@ -41,12 +41,54 @@ class GuestController {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		$args = array(
+		$base = array(
 			'methods'             => 'POST',
-			'permission_callback' => '__return_true', // Public; defended in-handler.
+			'permission_callback' => '__return_true', // Public; defended in-handler (nonce + rate limit + honeypot).
 		);
-		register_rest_route( self::NAMESPACE, self::LOOKUP_ROUTE, array_merge( $args, array( 'callback' => array( $this, 'lookup' ) ) ) );
-		register_rest_route( self::NAMESPACE, self::SUBMIT_ROUTE, array_merge( $args, array( 'callback' => array( $this, 'submit' ) ) ) );
+
+		// Shared input contract. Handlers still re-sanitise and re-validate every
+		// value server-side (and never trust the client), but declaring the schema
+		// keeps the public surface explicit and consistent with SureCart's REST.
+		$common_args = array(
+			'email'        => array(
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_email',
+			),
+			'order_number' => array(
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'hp'           => array(
+				'type'              => 'string',
+				'required'          => false,
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+		);
+
+		$submit_args = array_merge(
+			$common_args,
+			array(
+				'name'   => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				),
+				'reason' => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_textarea_field',
+				),
+				'items'  => array(
+					'type'     => 'array',
+					'required' => false,
+				),
+			)
+		);
+
+		register_rest_route( self::NAMESPACE, self::LOOKUP_ROUTE, array_merge( $base, array( 'callback' => array( $this, 'lookup' ), 'args' => $common_args ) ) );
+		register_rest_route( self::NAMESPACE, self::SUBMIT_ROUTE, array_merge( $base, array( 'callback' => array( $this, 'submit' ), 'args' => $submit_args ) ) );
 	}
 
 	/**
@@ -403,7 +445,10 @@ class GuestController {
 			return new \WP_Error( 'sceu_bad_nonce', __( 'Your session expired. Please reload the page and try again.', 'surecart-eu-helper' ), array( 'status' => 403 ) );
 		}
 
-		$key   = 'sceu_guest_' . $bucket . '_' . md5( $this->ip_address() );
+		// Throttle on a spoof-resistant identity (REMOTE_ADDR by default), NOT the
+		// proxy-header-derived audit IP, which a client can forge to win a fresh
+		// bucket on every request. See sceu_rate_limit_ip().
+		$key   = 'sceu_guest_' . $bucket . '_' . md5( (string) \sceu_rate_limit_ip() );
 		$count = (int) get_transient( $key );
 		if ( $count >= $max ) {
 			return new \WP_Error( 'sceu_rate_limited', __( 'Too many attempts. Please wait a few minutes and try again.', 'surecart-eu-helper' ), array( 'status' => 429 ) );
