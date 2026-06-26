@@ -92,3 +92,41 @@ if ( ! function_exists( 'sceu_client_ip' ) ) {
 		return filter_var( $resolved, FILTER_VALIDATE_IP ) ? $resolved : '';
 	}
 }
+
+if ( ! function_exists( 'sceu_rate_limit_ip' ) ) {
+	/**
+	 * Resolve a spoof-resistant client identity for rate limiting / abuse keys.
+	 *
+	 * SECURITY: `sceu_client_ip()` trusts proxy headers (X-Forwarded-For, etc.)
+	 * which a client can forge on any site NOT actually behind a normalising
+	 * proxy — fine for an informational audit field, but unusable as a throttle
+	 * key (an attacker would just rotate the header to win a fresh bucket). So
+	 * this defaults to the un-forgeable REMOTE_ADDR.
+	 *
+	 * Sites genuinely behind a reverse proxy/CDN (where every visitor shares one
+	 * REMOTE_ADDR) can opt in to header-based resolution via the
+	 * `sceu_trust_proxy_headers` filter, which is the operator asserting their
+	 * edge strips client-supplied forwarding headers.
+	 *
+	 * @return string A valid IP address, or '' when none can be determined.
+	 */
+	function sceu_rate_limit_ip() {
+		/**
+		 * Opt in to trusting proxy headers for the rate-limit key. Only enable
+		 * this when the site sits behind a proxy/CDN that overwrites the
+		 * forwarding headers (e.g. Cloudflare), otherwise the limiter is
+		 * bypassable.
+		 *
+		 * @param bool $trust Whether forwarded headers are trustworthy here.
+		 */
+		if ( apply_filters( 'sceu_trust_proxy_headers', false ) ) {
+			return sceu_client_ip();
+		}
+
+		$remote = ! empty( $_SERVER['REMOTE_ADDR'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+			: '';
+
+		return filter_var( $remote, FILTER_VALIDATE_IP ) ? $remote : '';
+	}
+}
