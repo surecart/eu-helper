@@ -160,7 +160,7 @@ class WithdrawalController {
 
 		$reason = sanitize_textarea_field( (string) $request->get_param( 'reason' ) );
 
-		$request_id = $this->generate_request_id();
+		$request_id = Withdrawals::generate_request_id();
 		$timestamp  = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
 
 		$ctx = array(
@@ -170,12 +170,12 @@ class WithdrawalController {
 			'customer_id'    => (string) $customer->customer_id(),
 			'customer_name'  => $name,
 			'customer_email' => $email,
-			'ip_address'     => $this->ip_address(),
+			'ip_address'     => (string) \sceu_client_ip(),
 			'reason'         => $reason,
 			'orders'         => $selected['orders'],
 			'order_ids'      => wp_list_pluck( $selected['orders'], 'id' ),
 			'items'          => $selected['items'],
-			'merchant_email' => $this->merchant_email(),
+			'merchant_email' => Withdrawals::merchant_recipient(),
 			'store_name'     => MerchantInfo::store_name(),
 		);
 
@@ -351,7 +351,7 @@ class WithdrawalController {
 				// True only when the selection covers EVERY line item in the
 				// order at its full purchased quantity (so the Partial / Full
 				// label can't mislabel a single line item as the whole order).
-				'covers_entire_order' => $this->covers_entire_order( $order, $c['items'] ),
+				'covers_entire_order' => Withdrawals::covers_entire_order( $order, $c['items'] ),
 				'line_items'    => $items,
 			);
 			foreach ( $items as $li ) {
@@ -368,69 +368,5 @@ class WithdrawalController {
 			'orders' => $orders,
 			'items'  => $flat_items,
 		);
-	}
-
-	/**
-	 * Whether the chosen items cover the order's ENTIRE original line-item set,
-	 * each at its full purchased quantity. Used so a request that takes one whole
-	 * line item out of a multi-item order is still labelled "Partial".
-	 *
-	 * @param array<string, mixed>           $order  Withdrawable order (carries all_line_items).
-	 * @param array<string, array<string,mixed>> $chosen Chosen items keyed by line id.
-	 * @return bool
-	 */
-	private function covers_entire_order( array $order, array $chosen ): bool {
-		$all = isset( $order['all_line_items'] ) && is_array( $order['all_line_items'] )
-			? $order['all_line_items']
-			: array();
-		if ( empty( $all ) ) {
-			return false;
-		}
-		foreach ( $all as $line ) {
-			$id        = (string) ( $line['id'] ?? '' );
-			$purchased = (int) ( $line['quantity'] ?? 0 );
-			if ( '' === $id || $purchased < 1 ) {
-				return false;
-			}
-			$picked = isset( $chosen[ $id ] ) ? (int) $chosen[ $id ]['quantity'] : 0;
-			if ( $picked < $purchased ) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
-	 * Effective merchant email: the configured value, else the resolved default.
-	 *
-	 * @return string
-	 */
-	private function merchant_email(): string {
-		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
-		if ( '' !== $configured && is_email( $configured ) ) {
-			return $configured;
-		}
-		return MerchantInfo::notification_email();
-	}
-
-	/**
-	 * Generate a human-friendly request reference.
-	 *
-	 * @return string
-	 */
-	private function generate_request_id(): string {
-		$suffix = strtoupper( substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 6 ) );
-		return 'WD-' . gmdate( 'Ymd' ) . '-' . $suffix;
-	}
-
-	/**
-	 * Best-effort client IP for the audit log.
-	 *
-	 * @return string
-	 */
-	private function ip_address(): string {
-		// Resolves the real visitor IP behind CDNs/proxies (e.g. Cloudflare),
-		// rather than the proxy's REMOTE_ADDR. Honours the sceu_request_ip filter.
-		return (string) \sceu_client_ip();
 	}
 }

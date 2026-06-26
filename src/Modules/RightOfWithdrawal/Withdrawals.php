@@ -9,6 +9,8 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal;
 
+use SureCartEuHelper\Settings;
+use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Customer\CustomerContext;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
 
@@ -110,7 +112,7 @@ class Withdrawals {
 			if ( ! empty( $order['refunded'] ) ) {
 				continue;
 			}
-			if ( in_array( strtolower( (string) ( $order['status'] ?? '' ) ), array( 'canceled', 'cancelled', 'refunded' ), true ) ) {
+			if ( self::is_terminal_status( (string) ( $order['status'] ?? '' ) ) ) {
 				continue;
 			}
 			if ( ! empty( $requested['fullOrders'][ (string) $order['id'] ] ) ) {
@@ -338,5 +340,69 @@ class Withdrawals {
 			default:
 				return __( 'Pending review', 'surecart-eu-helper' );
 		}
+	}
+
+	/**
+	 * Whether a SureCart order status means it's cancelled/refunded and so no
+	 * longer withdrawable.
+	 *
+	 * @param string $status Order status.
+	 * @return bool
+	 */
+	public static function is_terminal_status( string $status ): bool {
+		return in_array( strtolower( trim( $status ) ), array( 'canceled', 'cancelled', 'refunded' ), true );
+	}
+
+	/**
+	 * Generate a human-friendly, unique request reference (e.g. WD-20260626-1A2B3C).
+	 *
+	 * @return string
+	 */
+	public static function generate_request_id(): string {
+		return 'WD-' . gmdate( 'Ymd' ) . '-' . strtoupper( substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 6 ) );
+	}
+
+	/**
+	 * The merchant notification recipient: the configured address, else the
+	 * resolved SureCart store default.
+	 *
+	 * @return string
+	 */
+	public static function merchant_recipient(): string {
+		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
+		if ( '' !== $configured && is_email( $configured ) ) {
+			return $configured;
+		}
+		return MerchantInfo::notification_email();
+	}
+
+	/**
+	 * Whether the chosen items cover the order's ENTIRE original line-item set,
+	 * each at its full purchased quantity — so a request that takes one whole
+	 * line item out of a multi-item order is still labelled "Partial".
+	 *
+	 * @param array<string, mixed>                $order  Order carrying all_line_items.
+	 * @param array<string, array<string, mixed>> $chosen Chosen items keyed by line id.
+	 * @return bool
+	 */
+	public static function covers_entire_order( array $order, array $chosen ): bool {
+		$all = isset( $order['all_line_items'] ) && is_array( $order['all_line_items'] )
+			? $order['all_line_items']
+			: array();
+		if ( empty( $all ) ) {
+			return false;
+		}
+		foreach ( $all as $line ) {
+			$id        = (string) ( $line['id'] ?? '' );
+			$purchased = (int) ( $line['quantity'] ?? 0 );
+			if ( '' === $id || $purchased < 1 ) {
+				return false;
+			}
+			$picked = isset( $chosen[ $id ] ) ? (int) $chosen[ $id ]['quantity'] : 0;
+			if ( $picked < $purchased ) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

@@ -98,6 +98,10 @@ class GuestController {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function lookup( \WP_REST_Request $request ) {
+		$available = $this->module_available();
+		if ( is_wp_error( $available ) ) {
+			return $available;
+		}
 		$guard = $this->guard( $request, 'lookup', 15 );
 		if ( is_wp_error( $guard ) ) {
 			return $guard;
@@ -135,6 +139,10 @@ class GuestController {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function submit( \WP_REST_Request $request ) {
+		$available = $this->module_available();
+		if ( is_wp_error( $available ) ) {
+			return $available;
+		}
 		$guard = $this->guard( $request, 'submit', 8 );
 		if ( is_wp_error( $guard ) ) {
 			return $guard;
@@ -202,7 +210,7 @@ class GuestController {
 			'number'              => (string) ( $order['number'] ?? '' ),
 			'total_display'       => (string) ( $order['total_display'] ?? '' ),
 			'whole_order'         => ! empty( $order['whole_order'] ),
-			'covers_entire_order' => $this->covers_entire_order( $order, $selected['line_items'] ),
+			'covers_entire_order' => Withdrawals::covers_entire_order( $order, $selected['line_items'] ),
 			'line_items'          => array_values( $selected['line_items'] ),
 		);
 
@@ -306,32 +314,6 @@ class GuestController {
 	}
 
 	/**
-	 * Whether the chosen items cover the order's entire original line-item set.
-	 *
-	 * @param array<string, mixed>                $order  Looked-up order.
-	 * @param array<string, array<string, mixed>> $chosen Chosen items keyed by line id.
-	 * @return bool
-	 */
-	private function covers_entire_order( array $order, array $chosen ): bool {
-		$all = isset( $order['all_line_items'] ) && is_array( $order['all_line_items'] ) ? $order['all_line_items'] : array();
-		if ( empty( $all ) ) {
-			return false;
-		}
-		foreach ( $all as $line ) {
-			$id        = (string) ( $line['id'] ?? '' );
-			$purchased = (int) ( $line['quantity'] ?? 0 );
-			if ( '' === $id || $purchased < 1 ) {
-				return false;
-			}
-			$picked = isset( $chosen[ $id ] ) ? (int) $chosen[ $id ]['quantity'] : 0;
-			if ( $picked < $purchased ) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	/**
 	 * Build the notification/log context for a guest submission.
 	 *
 	 * @param string                           $email    Email.
@@ -343,21 +325,19 @@ class GuestController {
 	 * @return array<string, mixed>
 	 */
 	private function build_ctx( string $email, string $name, string $reason, array $orders, array $items, bool $verified ): array {
-		$suffix = strtoupper( substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 6 ) );
-
 		return array(
-			'request_id'     => 'WD-' . gmdate( 'Ymd' ) . '-' . $suffix,
+			'request_id'     => Withdrawals::generate_request_id(),
 			'timestamp'      => date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) ),
 			'user_id'        => 0,
 			'customer_id'    => '',
 			'customer_name'  => '' !== $name ? $name : __( 'Customer', 'surecart-eu-helper' ),
 			'customer_email' => $email,
-			'ip_address'     => $this->ip_address(),
+			'ip_address'     => (string) \sceu_client_ip(),
 			'reason'         => $reason,
 			'orders'         => $orders,
 			'order_ids'      => wp_list_pluck( $orders, 'id' ),
 			'items'          => $items,
-			'merchant_email' => $this->merchant_email(),
+			'merchant_email' => Withdrawals::merchant_recipient(),
 			'store_name'     => MerchantInfo::store_name(),
 			'guest'          => true,
 			'verified'       => $verified,
@@ -432,6 +412,20 @@ class GuestController {
 	}
 
 	/**
+	 * Defense-in-depth: the routes only register while the module is enabled, but
+	 * re-check in-handler so the endpoint can never act on a disabled module
+	 * (mirrors the logged-in WithdrawalController).
+	 *
+	 * @return true|\WP_Error
+	 */
+	private function module_available() {
+		if ( ! Settings::is_module_enabled( 'right_of_withdrawal' ) ) {
+			return new \WP_Error( 'sceu_module_disabled', __( 'This feature is not available.', 'surecart-eu-helper' ), array( 'status' => 403 ) );
+		}
+		return true;
+	}
+
+	/**
 	 * Shared request guard: logged-out nonce + per-IP rate limit.
 	 *
 	 * @param \WP_REST_Request $request Request.
@@ -466,29 +460,5 @@ class GuestController {
 	 */
 	private function is_bot( \WP_REST_Request $request ): bool {
 		return '' !== trim( (string) $request->get_param( 'hp' ) );
-	}
-
-	/**
-	 * Effective merchant notification email.
-	 *
-	 * @return string
-	 */
-	private function merchant_email(): string {
-		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
-		if ( '' !== $configured && is_email( $configured ) ) {
-			return $configured;
-		}
-		return MerchantInfo::notification_email();
-	}
-
-	/**
-	 * Best-effort client IP for rate limiting + the audit log.
-	 *
-	 * @return string
-	 */
-	private function ip_address(): string {
-		// Resolves the real visitor IP behind CDNs/proxies (e.g. Cloudflare),
-		// rather than the proxy's REMOTE_ADDR.
-		return (string) \sceu_client_ip();
 	}
 }

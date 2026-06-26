@@ -12,6 +12,7 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal;
 
+use SureCartEuHelper\Settings;
 use SureCartEuHelper\Customer\CustomerContext;
 
 defined( 'ABSPATH' ) || exit;
@@ -64,10 +65,34 @@ class GuestLookup {
 			if ( 0 !== strcasecmp( self::order_email( $order ), $email ) ) {
 				continue; // Email doesn't match this order.
 			}
+			if ( ! self::within_lookback( $order ) ) {
+				continue; // Outside the withdrawal window — treat as not found.
+			}
 			return self::annotate( $order );
 		}
 
 		return null;
+	}
+
+	/**
+	 * Whether the order falls inside the configured look-back window, matching
+	 * the logged-in eligibility rule so a guest can't request withdrawal on an
+	 * arbitrarily old order. Unknown timestamps are allowed (fail open to the
+	 * email + exclusion + refund checks that still apply).
+	 *
+	 * @param object $order Order model.
+	 * @return bool
+	 */
+	private static function within_lookback( $order ): bool {
+		$created = (int) ( $order->created_at ?? 0 );
+		if ( $created <= 0 ) {
+			return true;
+		}
+		$lookback = (int) Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
+		if ( $lookback <= 0 ) {
+			return true;
+		}
+		return $created >= ( time() - ( $lookback * DAY_IN_SECONDS ) );
 	}
 
 	/**
@@ -108,7 +133,7 @@ class GuestLookup {
 		if ( ! empty( $norm['refunded'] ) ) {
 			return null;
 		}
-		if ( in_array( strtolower( (string) ( $norm['status'] ?? '' ) ), array( 'canceled', 'cancelled', 'refunded' ), true ) ) {
+		if ( Withdrawals::is_terminal_status( (string) ( $norm['status'] ?? '' ) ) ) {
 			return null;
 		}
 
