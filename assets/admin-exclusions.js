@@ -34,9 +34,24 @@
 			);
 		}
 
+		var i18n      = cfg.i18n || {};
+		var status    = root.querySelector( '[data-sceu-excl-status]' );
+		var resultsId = results.id || 'sceu-excl-results';
+		var options   = []; // { li, item } for the currently-shown results.
+		var active    = -1; // Index of the arrow-key-highlighted option.
+
+		function announce( msg ) {
+			if ( status ) { status.textContent = msg || ''; }
+		}
+
+		// ARIA combobox: collapse the listbox and reset its state.
 		function clearResults() {
 			results.innerHTML = '';
 			results.hidden = true;
+			options = [];
+			active = -1;
+			search.setAttribute( 'aria-expanded', 'false' );
+			search.removeAttribute( 'aria-activedescendant' );
 		}
 
 		function addChip( id, name ) {
@@ -47,6 +62,12 @@
 			var li   = frag.querySelector( '.sceu-excl__chip' );
 			li.setAttribute( 'data-id', id );
 			li.querySelector( '.sceu-excl__chip-label' ).textContent = name;
+
+			// Per-chip accessible name so each remove button is distinguishable.
+			var removeBtn = li.querySelector( '.sceu-excl__remove' );
+			if ( removeBtn && i18n.remove ) {
+				removeBtn.setAttribute( 'aria-label', i18n.remove.replace( '%s', name ) );
+			}
 
 			var idInput = li.querySelector( '[data-name-ids]' );
 			idInput.setAttribute( 'name', idInput.getAttribute( 'data-name-ids' ) );
@@ -59,39 +80,62 @@
 			chips.appendChild( li );
 		}
 
+		function choose( item ) {
+			addChip( item.id, item.name );
+			search.value = '';
+			clearResults();
+			search.focus();
+		}
+
+		// Move the arrow-key highlight (wraps around) and point
+		// aria-activedescendant at the highlighted option.
+		function setActive( idx ) {
+			if ( ! options.length ) { return; }
+			if ( idx < 0 ) { idx = options.length - 1; }
+			if ( idx >= options.length ) { idx = 0; }
+			options.forEach( function ( o, i ) {
+				o.li.classList.toggle( 'is-active', i === idx );
+				o.li.setAttribute( 'aria-selected', i === idx ? 'true' : 'false' );
+			} );
+			active = idx;
+			search.setAttribute( 'aria-activedescendant', options[ idx ].li.id );
+			options[ idx ].li.scrollIntoView( { block: 'nearest' } );
+		}
+
 		function renderResults( items ) {
 			results.innerHTML = '';
+			options = [];
+			active = -1;
 			var sel = selectedIds();
-			var shown = 0;
 			items.forEach( function ( it ) {
 				if ( sel.indexOf( it.id ) !== -1 ) {
 					return;
 				}
 				var li = document.createElement( 'li' );
 				li.className = 'sceu-excl__result';
+				li.id = resultsId + '-opt-' + options.length;
 				li.textContent = it.name;
-				li.setAttribute( 'role', 'button' );
-				li.tabIndex = 0;
-				li.addEventListener( 'click', function () {
-					addChip( it.id, it.name );
-					search.value = '';
-					clearResults();
-					search.focus();
-				} );
-				li.addEventListener( 'keydown', function ( e ) {
-					if ( e.key === 'Enter' || e.key === ' ' ) { e.preventDefault(); li.click(); }
-				} );
+				li.setAttribute( 'role', 'option' );
+				li.setAttribute( 'aria-selected', 'false' );
+				// mousedown would blur the input before click; prevent it so focus stays.
+				li.addEventListener( 'mousedown', function ( e ) { e.preventDefault(); } );
+				li.addEventListener( 'click', function () { choose( it ); } );
 				results.appendChild( li );
-				shown++;
+				options.push( { li: li, item: it } );
 			} );
 
-			if ( shown === 0 ) {
+			if ( ! options.length ) {
 				var empty = document.createElement( 'li' );
 				empty.className = 'sceu-excl__result is-empty';
-				empty.textContent = ( cfg.i18n && cfg.i18n.noResults ) || 'No matching products';
+				empty.setAttribute( 'aria-disabled', 'true' );
+				empty.textContent = i18n.noResults || 'No matching products';
 				results.appendChild( empty );
+				announce( empty.textContent );
+			} else {
+				announce( ( i18n.results || '%d' ).replace( '%d', options.length ) );
 			}
 			results.hidden = false;
+			search.setAttribute( 'aria-expanded', 'true' );
 		}
 
 		// Per-query result cache + a handle to the in-flight request, so we don't
@@ -129,9 +173,21 @@
 		}, 350 );
 
 		search.addEventListener( 'input', doSearch );
-		// Don't let Enter in the search box submit the settings form.
+		// Combobox keyboard model: arrows move the highlight, Enter picks it,
+		// Escape closes. Enter also never submits the settings form.
 		search.addEventListener( 'keydown', function ( e ) {
-			if ( e.key === 'Enter' ) { e.preventDefault(); }
+			if ( results.hidden || ! options.length ) {
+				if ( e.key === 'Enter' ) { e.preventDefault(); }
+				return;
+			}
+			if ( e.key === 'ArrowDown' ) { e.preventDefault(); setActive( active + 1 ); }
+			else if ( e.key === 'ArrowUp' ) { e.preventDefault(); setActive( active - 1 ); }
+			else if ( e.key === 'Enter' ) {
+				e.preventDefault();
+				if ( active >= 0 && options[ active ] ) { choose( options[ active ].item ); }
+			} else if ( e.key === 'Escape' ) {
+				clearResults();
+			}
 		} );
 
 		chips.addEventListener( 'click', function ( e ) {

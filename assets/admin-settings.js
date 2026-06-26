@@ -40,6 +40,12 @@
 		navs.forEach( function ( n ) {
 			var on = n.getAttribute( 'data-sceu-tab' ) === id;
 			n.classList.toggle( 'is-active', on );
+			// Convey the active item to AT (the .is-active styling is colour-only).
+			if ( on ) {
+				n.setAttribute( 'aria-current', 'page' );
+			} else {
+				n.removeAttribute( 'aria-current' );
+			}
 			if ( on ) {
 				matched = true;
 				if ( crumb ) {
@@ -127,7 +133,7 @@
 		var dismiss = document.createElement( 'button' );
 		dismiss.type = 'button';
 		dismiss.className = 'sceu-notice__dismiss';
-		dismiss.setAttribute( 'aria-label', 'Dismiss this notice' );
+		dismiss.setAttribute( 'aria-label', ( window.sceuSettings && window.sceuSettings.i18n && window.sceuSettings.i18n.dismiss ) || 'Dismiss this notice' );
 		dismiss.innerHTML = '&times;';
 		dismiss.addEventListener( 'click', function () {
 			notice.parentNode.removeChild( notice );

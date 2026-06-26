@@ -27,7 +27,8 @@
 }
 
 .sceu-excl__result:hover,
-.sceu-excl__result:focus {
+.sceu-excl__result:focus,
+.sceu-excl__result.is-active {
 	background: #f0f6fc;
 	outline: none;
 }

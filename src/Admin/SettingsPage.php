@@ -95,6 +95,15 @@ class SettingsPage {
 			file_exists( $settings_js ) ? (string) filemtime( $settings_js ) : SCEU_VERSION,
 			true
 		);
+		wp_localize_script(
+			'sceu-admin-settings',
+			'sceuSettings',
+			array(
+				'i18n' => array(
+					'dismiss' => __( 'Dismiss this notice', 'surecart-eu-helper' ),
+				),
+			)
+		);
 
 		$css = SCEU_DIR . 'assets/admin-exclusions.css';
 		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
@@ -119,6 +128,10 @@ class SettingsPage {
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
 				'i18n'      => array(
 					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
+					/* translators: %s: product name. */
+					'remove'    => __( 'Remove %s', 'surecart-eu-helper' ),
+					/* translators: %d: number of matching products found. */
+					'results'   => __( '%d products found', 'surecart-eu-helper' ),
 				),
 			)
 		);
@@ -661,14 +674,18 @@ class SettingsPage {
 					<div class="sceu-excl" data-sceu-excl>
 						<input type="search" class="sceu-excl__search regular-text"
 							placeholder="<?php echo esc_attr__( 'Search products by name…', 'surecart-eu-helper' ); ?>"
-							autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>" />
-						<ul class="sceu-excl__results" hidden></ul>
+							autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>"
+							role="combobox" aria-expanded="false" aria-autocomplete="list"
+							aria-controls="<?php echo esc_attr( $id_attr ); ?>-results" />
+						<ul class="sceu-excl__results" id="<?php echo esc_attr( $id_attr ); ?>-results" role="listbox" hidden></ul>
+						<span class="screen-reader-text" data-sceu-excl-status aria-live="polite"></span>
 						<ul class="sceu-excl__chips">
 							<?php foreach ( $selected_ids as $pid ) : ?>
 								<?php $pname = $labels[ $pid ] ?? $pid; ?>
 								<li class="sceu-excl__chip" data-id="<?php echo esc_attr( $pid ); ?>">
 									<span class="sceu-excl__chip-label"><?php echo esc_html( $pname ); ?></span>
-									<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr__( 'Remove', 'surecart-eu-helper' ); ?>">&times;</button>
+									<?php /* translators: %s: product name. */ ?>
+									<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr( sprintf( __( 'Remove %s', 'surecart-eu-helper' ), $pname ) ); ?>">&times;</button>
 									<input type="hidden" name="<?php echo esc_attr( $name ); ?>[]" value="<?php echo esc_attr( $pid ); ?>" />
 									<input type="hidden" name="<?php echo esc_attr( Settings::OPTION . '[' . $module_id . '][excluded_product_labels][' . $pid . ']' ); ?>" value="<?php echo esc_attr( $pname ); ?>" />
 								</li>
