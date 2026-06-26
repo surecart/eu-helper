@@ -1,6 +1,6 @@
 name: QA Build
 # Build an installable plugin ZIP for QA when a PR gets the "qa ready" label
-# (or via a manual run). The ZIP is uploaded as a workflow artifact and a
+# (or via a manual run). The plugin is uploaded as a workflow artifact and a
 # download link is posted back to the PR. No release is published — this is a
 # throwaway build for testers. Releases are handled separately by release.yml.
 
@@ -27,32 +27,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve version + ZIP name
+      - name: Read plugin version (for the PR comment)
         id: meta
         run: |
           VERSION="$(grep -oiP '^\s*\*\s*Version:\s*\K[0-9][0-9.]*' surecart-eu-helper.php | head -1)"
           [ -n "$VERSION" ] || VERSION="0.0.0"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "zip_name=surecart-eu-helper-v${VERSION}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-      # Stage into a slug-named folder so the ZIP unpacks to wp-content/plugins/
-      # surecart-eu-helper/. Mirrors release.yml so QA tests the same layout.
+      # Stage into a slug-named folder so the artifact installs to
+      # wp-content/plugins/surecart-eu-helper/. Mirrors release.yml so QA tests
+      # the same layout the release ships.
       - name: Stage plugin
         run: |
           mkdir -p build/surecart-eu-helper
           rsync -a --exclude-from='.distignore' --exclude 'build' ./ build/surecart-eu-helper/
 
-      - name: Create ZIP
-        run: |
-          cd build
-          zip -r "../${{ steps.meta.outputs.zip_name }}.zip" surecart-eu-helper
-
+      # Upload the FOLDER (not a zip). GitHub wraps the artifact in a single zip
+      # named after the artifact, so the download is `surecart-eu-helper.zip`,
+      # which WordPress installs directly — no nested/double zip. The artifact
+      # name must stay the plugin slug so the install folder is correct.
       - name: Upload artifact
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.meta.outputs.zip_name }}
-          path: ${{ steps.meta.outputs.zip_name }}.zip
+          name: surecart-eu-helper
+          path: build/surecart-eu-helper
           if-no-files-found: error
           retention-days: 14
 
@@ -68,9 +67,9 @@ jobs:
               '',
               `**Version:** \`${{ steps.meta.outputs.version }}\` · **Commit:** \`${context.sha.substring(0, 7)}\``,
               '',
-              `▶️ **[Download the plugin ZIP](${artifactUrl})** — sign in to GitHub; the \`.zip\` is under **Artifacts** on the [workflow run](${runUrl}).`,
+              `▶️ **[Download \`surecart-eu-helper.zip\`](${artifactUrl})** — sign in to GitHub; the file is under **Artifacts** on the [workflow run](${runUrl}).`,
               '',
-              'Install on a test site that has **SureCart** active: *Plugins → Add New → Upload Plugin*.',
+              'Install on a test site that has **SureCart** active: *Plugins → Add New → Upload Plugin* — upload the `.zip` as-is (no need to unzip it first).',
               '',
               '_Remove and re-add the **qa ready** label to rebuild._',
             ].join('\n');
