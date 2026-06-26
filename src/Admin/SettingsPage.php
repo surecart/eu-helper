@@ -239,6 +239,9 @@ class SettingsPage {
 		$input = is_array( $input ) ? $input : array();
 		$out   = array( 'modules' => array() );
 
+		// Plugin-level: whether to purge all data on uninstall (default off).
+		$out['remove_data'] = ! empty( $input['remove_data'] );
+
 		foreach ( $this->registry->all() as $id => $module ) {
 			// Enable flag (hidden 0 + checkbox 1 pattern).
 			$out['modules'][ $id ] = ! empty( $input['modules'][ $id ] ) ? true : false;
@@ -473,7 +476,32 @@ class SettingsPage {
 							</section>
 							<?php $sceu_first = false; ?>
 						<?php endforeach; ?>
-					</form>
+
+							<?php $sceu_remove_data = ! empty( Settings::all()['remove_data'] ); ?>
+							<div class="sceu-uninstall">
+								<div class="sceu-panel__head">
+									<h2 class="sceu-panel__title">
+										<?php echo Icons::svg( 'admin-generic' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?>
+										<?php echo esc_html__( 'Uninstall', 'surecart-eu-helper' ); ?>
+									</h2>
+									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
+								</div>
+								<p class="sceu-panel__desc"><?php echo esc_html__( 'Change your plugin uninstall settings.', 'surecart-eu-helper' ); ?></p>
+								<div class="sceu-card sceu-card--compact">
+									<label class="sceu-toggle">
+										<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[remove_data]" value="0" />
+										<input type="checkbox" class="sceu-switch__input"
+											name="<?php echo esc_attr( Settings::OPTION ); ?>[remove_data]"
+											value="1" <?php checked( $sceu_remove_data ); ?> />
+										<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
+										<span class="sceu-toggle__body">
+											<span class="sceu-toggle__label"><?php echo esc_html__( 'Remove Plugin Data', 'surecart-eu-helper' ); ?></span>
+											<span class="sceu-field__help"><?php echo esc_html__( 'Completely remove all plugin data — settings and the withdrawal-request log — when the plugin is deleted. This cannot be undone.', 'surecart-eu-helper' ); ?></span>
+										</span>
+									</label>
+								</div>
+							</div>
+						</form>
 					</div>
 				</div>
 			</div>

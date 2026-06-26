@@ -241,6 +241,13 @@ body.toplevel_page_sceu-settings #wpfooter {
 	color: var( --sceu-primary );
 }
 
+/* ---- Plugin-level Uninstall section (always visible, below the panels) ---- */
+.sceu-uninstall {
+	margin-top: 2.5em;
+	padding-top: 0.5em;
+	border-top: 1px solid var( --sceu-gray-200 );
+}
+
 /* ---- Sub-section heading (SureCart groups settings into titled cards) ---- */
 .sceu-section__head {
 	margin: 1.75em 0 0.6em;
