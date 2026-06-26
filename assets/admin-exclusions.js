@@ -94,17 +94,39 @@
 			results.hidden = false;
 		}
 
+		// Per-query result cache + a handle to the in-flight request, so we don't
+		// refetch a query we've already seen and don't let overlapping requests
+		// race (an earlier, slower response overwriting a newer one).
+		var cache      = {};
+		var controller = null;
+
 		var doSearch = debounce( function () {
 			var q = search.value.trim();
 			if ( q.length < 2 ) { clearResults(); return; }
+
+			var key = q.toLowerCase();
+			if ( cache[ key ] ) { renderResults( cache[ key ] ); return; }
+
+			// Supersede any request still in flight for an earlier keystroke.
+			if ( controller ) { controller.abort(); }
+			controller = ( typeof AbortController !== 'undefined' ) ? new AbortController() : null;
+
 			fetch( cfg.searchUrl + '?q=' + encodeURIComponent( q ), {
 				headers: { 'X-WP-Nonce': cfg.nonce },
-				credentials: 'same-origin'
+				credentials: 'same-origin',
+				signal: controller ? controller.signal : undefined
 			} )
 				.then( function ( r ) { return r.ok ? r.json() : []; } )
-				.then( function ( items ) { renderResults( Array.isArray( items ) ? items : [] ); } )
-				.catch( function () { clearResults(); } );
-		}, 250 );
+				.then( function ( items ) {
+					var list = Array.isArray( items ) ? items : [];
+					cache[ key ] = list;
+					renderResults( list );
+				} )
+				.catch( function ( e ) {
+					if ( e && 'AbortError' === e.name ) { return; } // superseded — ignore.
+					clearResults();
+				} );
+		}, 350 );
 
 		search.addEventListener( 'input', doSearch );
 		// Don't let Enter in the search box submit the settings form.
