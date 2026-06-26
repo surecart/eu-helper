@@ -6,6 +6,7 @@
  * Version:           1.5.7
  * Requires at least: 6.6
  * Requires PHP:      7.4
+ * Requires Plugins:  surecart
  * Author:            SureCart Team
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -34,7 +35,13 @@ spl_autoload_register(
 			return;
 		}
 		$relative = substr( $class, $len );
-		$path     = SCEU_DIR . 'src/' . str_replace( '\\', '/', $relative ) . '.php';
+
+		// Defence-in-depth: only ever resolve well-formed namespace tokens, so a
+		// crafted class name can never reach outside src/ via traversal segments.
+		if ( ! preg_match( '/^[A-Za-z0-9_\\\\]+$/', $relative ) ) {
+			return;
+		}
+		$path = SCEU_DIR . 'src/' . str_replace( '\\', '/', $relative ) . '.php';
 		if ( file_exists( $path ) ) {
 			require $path;
 		}
@@ -59,16 +66,35 @@ add_action(
 /**
  * Activation: create the withdrawal log table.
  *
- * The module owns the schema; activation just delegates so the table exists
- * even before any module is booted on a normal request.
+ * Guarded by the same stable SureCart sentinel as boot — the `Requires Plugins`
+ * header blocks activation without SureCart on WP 6.5+, and this guard covers
+ * older cores so we never leave an orphan table behind a missing dependency.
+ * The schema is owned by the module; runtime also self-heals via
+ * `LogTable::maybe_create()`, so this is just an early convenience.
  */
 register_activation_hook(
 	__FILE__,
 	function () {
+		if ( ! sceu_surecart_is_active() ) {
+			return;
+		}
 		require_once SCEU_DIR . 'src/Modules/RightOfWithdrawal/Log/LogTable.php';
 		\SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable::create();
 	}
 );
+
+/**
+ * Whether SureCart is present and loaded.
+ *
+ * Gates on the `SURECART_PLUGIN_FILE` constant — SureCart's own bootstrap
+ * defines it and it is stable across releases, unlike model class names which
+ * can move between major versions.
+ *
+ * @return bool
+ */
+function sceu_surecart_is_active(): bool {
+	return defined( 'SURECART_PLUGIN_FILE' );
+}
 
 /**
  * Boot the plugin once all plugins are loaded, so we can detect SureCart.
@@ -77,7 +103,7 @@ add_action(
 	'plugins_loaded',
 	function () {
 		// Guard: SureCart must be active for any of this to make sense.
-		if ( ! class_exists( '\SureCart\Models\Customer' ) ) {
+		if ( ! sceu_surecart_is_active() ) {
 			add_action(
 				'admin_notices',
 				function () {
