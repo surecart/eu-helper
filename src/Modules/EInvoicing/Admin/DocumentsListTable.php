@@ -153,7 +153,7 @@ class DocumentsListTable extends \WP_List_Table {
 		$number = is_array( $totals ) ? (string) ( $totals['order_number'] ?? '' ) : '';
 		$text   = '' !== $number ? ( '#' . $number ) : __( 'View order', 'surecart-eu-helper' );
 
-		$url  = function_exists( 'sceu_order_admin_url' ) ? sceu_order_admin_url( $order_id ) : '';
+		$url  = \SureCartEuHelper\Admin\AdminUrl::order( (string) $order_id );
 		$html = $url ? '<a href="' . esc_url( $url ) . '">' . esc_html( $text ) . '</a>' : esc_html( $text );
 
 		$refund = (string) ( $item['surecart_refund_id'] ?? '' );

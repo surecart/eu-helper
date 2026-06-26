@@ -98,9 +98,9 @@ class LogListTable extends \WP_List_Table {
 				}
 				return $out;
 			case 'customer_name':
-				return esc_html( $item['customer_name'] ?? '' );
+				return $this->customer_link( $item, (string) ( $item['customer_name'] ?? '' ) );
 			case 'customer_email':
-				return esc_html( $item['customer_email'] ?? '' );
+				return $this->customer_link( $item, (string) ( $item['customer_email'] ?? '' ) );
 			case 'ip_address':
 				return esc_html( $item['ip_address'] ?? '' );
 			case 'emails':
@@ -165,6 +165,29 @@ class LogListTable extends \WP_List_Table {
 	}
 
 	/**
+	 * Render a customer field (name or email), linked to the SureCart customer
+	 * record when the request came from a resolved customer. Guest/unverified
+	 * requests have no `customer_id`, so they render as plain text.
+	 *
+	 * @param array<string, mixed> $item Row.
+	 * @param string               $text Display text (name or email).
+	 * @return string
+	 */
+	private function customer_link( array $item, string $text ): string {
+		if ( '' === trim( $text ) ) {
+			return '&mdash;';
+		}
+
+		$customer_id = (string) ( $item['customer_id'] ?? '' );
+		if ( '' === $customer_id ) {
+			return esc_html( $text );
+		}
+
+		return '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::customer( $customer_id ) ) . '">'
+			. esc_html( $text ) . '</a>';
+	}
+
+	/**
 	 * "Withdrawing" column: for each order, a link to the order plus exactly what
 	 * to action — "Entire order", or the specific items as "2 of 3 × Product" —
 	 * with a Partial/Full badge so the merchant knows the action at a glance.
@@ -186,7 +209,7 @@ class LogListTable extends \WP_List_Table {
 			}
 			$links = array();
 			foreach ( $ids as $id ) {
-				$links[] = '<a href="' . esc_url( sceu_order_admin_url( (string) $id ) ) . '">' . esc_html( (string) $id ) . '</a>';
+				$links[] = '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::order( (string) $id ) ) . '">' . esc_html( (string) $id ) . '</a>';
 			}
 			return implode( '<br />', $links );
 		}
@@ -205,7 +228,7 @@ class LogListTable extends \WP_List_Table {
 			$badge      = '<span style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:' . $badge_bg . ';color:' . $badge_fg . ';margin-left:6px;">' . esc_html( $badge_text ) . '</span>';
 
 			$blocks[] = '<div style="margin-bottom:8px;">'
-				. '<a href="' . esc_url( sceu_order_admin_url( $id ) ) . '"><strong>' . sprintf(
+				. '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::order( $id ) ) . '"><strong>' . sprintf(
 					/* translators: %s: order reference. */
 					esc_html__( 'Order %s', 'surecart-eu-helper' ),
 					esc_html( $ref )

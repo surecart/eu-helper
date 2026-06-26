@@ -29,6 +29,14 @@ This plugin is a guest in SureCart's house. It should feel native, never bolted-
 - **Depend, don't reimplement.** Read customer/order/product data through SureCart's own PHP
   models (`\SureCart\Models\User|Customer|Order|Product|ProductCollection|Account`). The
   plugin never handles the API key — SureCart's stored token authenticates these calls.
+  Likewise, build SureCart admin deep links with its own router —
+  `\SureCart::getUrl()->edit( 'order'|'customer'|…, $id )` (keys map to page slugs in
+  SureCart's `AdminRouteService::$page_names`) — never by hand-assembling
+  `admin.php?page=sc-…`. Go through the `Admin\AdminUrl` adapter (`::order()` / `::customer()`),
+  which wraps that call in `try/catch`, falls back to the known route if the router is absent,
+  and exposes the `sceu_order_admin_url` / `sceu_customer_admin_url` override filters. (Links to
+  the plugin's *own* admin pages, e.g. `sceu-withdrawal-log`, use plain `admin_url()` — SureCart's
+  router doesn't know them.)
 - **Gate on the stable sentinel.** Detect SureCart with `sceu_surecart_is_active()`
   (checks `defined( 'SURECART_PLUGIN_FILE' )`), not on model class names — classes move
   between major versions, the constant doesn't. Boot on `plugins_loaded`.

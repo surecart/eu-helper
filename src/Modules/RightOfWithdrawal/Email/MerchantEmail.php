@@ -82,7 +82,7 @@ class MerchantEmail {
 			$id    = (string) ( $order['id'] ?? '' );
 			$when  = ! empty( $order['created_at'] ) ? date_i18n( get_option( 'date_format' ), (int) $order['created_at'] ) : '';
 			$total = (string) ( $order['total_display'] ?? '' );
-			$url   = sceu_order_admin_url( $id );
+			$url   = \SureCartEuHelper\Admin\AdminUrl::order( $id );
 
 			$meta = array_filter( array( $when, $total ) );
 
