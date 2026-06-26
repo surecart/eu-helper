@@ -7,6 +7,8 @@
  * WordPress Settings API. Because saving reloads the page (and the URL fragment
  * is lost across the redirect), the active tab is also remembered in
  * sessionStorage so you return to the module you were editing — not the first one.
+ *
+ * It also warns before leaving with unsaved edits (native browser prompt).
  */
 ( function () {
 	var app = document.querySelector( '.sceu-app' );
@@ -80,4 +82,57 @@
 			history.replaceState( null, '', '#' + saved );
 		}
 	}
+
+	// Warn before leaving with unsaved edits.
+	var form = app.querySelector( '.sceu-settings__form' );
+	if ( form ) {
+		var dirty = false;
+		var markDirty = function () {
+			dirty = true;
+		};
+		form.addEventListener( 'input', markDirty );
+		form.addEventListener( 'change', markDirty );
+		form.addEventListener( 'submit', function () {
+			dirty = false;
+		} );
+		window.addEventListener( 'beforeunload', function ( e ) {
+			if ( ! dirty ) {
+				return;
+			}
+			e.preventDefault();
+			e.returnValue = ''; // Required for the native prompt to show.
+		} );
+	}
+
+	// Make the action banners dismissible. They are driven by one-shot query args
+	// (resent, updated, …) that the post-action redirect adds, so on dismiss we
+	// also strip those args — otherwise a refresh would show the message again.
+	function cleanNoticeArgs() {
+		if ( ! window.history || ! history.replaceState ) {
+			return;
+		}
+		try {
+			var url = new URL( window.location.href );
+			[ 'resent', 'updated', 'deleted', 'synced', 'exclusions_synced', 'settings-updated' ].forEach( function ( k ) {
+				url.searchParams.delete( k );
+			} );
+			history.replaceState( null, '', url.toString() );
+		} catch ( e ) {}
+	}
+
+	// Strip one-shot notice args on load so a refresh won't replay the banner.
+	cleanNoticeArgs();
+
+	[].slice.call( app.querySelectorAll( '.sceu-notice' ) ).forEach( function ( notice ) {
+		var dismiss = document.createElement( 'button' );
+		dismiss.type = 'button';
+		dismiss.className = 'sceu-notice__dismiss';
+		dismiss.setAttribute( 'aria-label', 'Dismiss this notice' );
+		dismiss.innerHTML = '&times;';
+		dismiss.addEventListener( 'click', function () {
+			notice.parentNode.removeChild( notice );
+			cleanNoticeArgs();
+		} );
+		notice.appendChild( dismiss );
+	} );
 } )();

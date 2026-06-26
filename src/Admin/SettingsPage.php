@@ -353,7 +353,7 @@ class SettingsPage {
 		<div class="sceu-app" style="<?php echo esc_attr( $style ); ?>">
 			<header class="sceu-app__bar">
 				<div class="sceu-app__brand">
-					<span class="sceu-app__badge dashicons dashicons-shield-alt" aria-hidden="true"></span>
+					<span class="sceu-app__badge"><?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
 					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
 					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
 					<span class="sceu-app__crumb" data-sceu-crumb><?php echo esc_html( $first_label ); ?></span>
@@ -368,7 +368,7 @@ class SettingsPage {
 						<a class="sceu-nav__item<?php echo $sceu_first ? ' is-active' : ''; ?>"
 							href="#<?php echo esc_attr( $id ); ?>"
 							data-sceu-tab="<?php echo esc_attr( $id ); ?>">
-							<span class="dashicons dashicons-<?php echo esc_attr( $this->module_icon( $id, $module ) ); ?>" aria-hidden="true"></span>
+							<span class="sceu-nav__icon"><?php echo Icons::svg( $this->module_icon( $id, $module ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
 							<?php echo esc_html( $module->label() ); ?>
 						</a>
 						<?php $sceu_first = false; ?>
@@ -377,7 +377,8 @@ class SettingsPage {
 
 				<div class="sceu-app__content">
 					<div class="sceu-app__inner">
-					<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+					<?php settings_errors(); // Render the Settings API "Settings saved." notice; not auto-shown on top-level menu pages. ?>
+						<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 						<div class="notice notice-success is-dismissible"><p>
 							<?php
 							echo esc_html(
@@ -405,7 +406,7 @@ class SettingsPage {
 							<section class="sceu-panel<?php echo $sceu_first ? ' is-active' : ''; ?>" data-sceu-panel="<?php echo esc_attr( $id ); ?>" <?php echo $sceu_first ? '' : 'hidden'; ?>>
 								<div class="sceu-panel__head">
 									<h2 class="sceu-panel__title">
-										<span class="dashicons dashicons-<?php echo esc_attr( $this->module_icon( $id, $module ) ); ?>" aria-hidden="true"></span>
+										<?php echo Icons::svg( $this->module_icon( $id, $module ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?>
 										<?php echo esc_html( $module->label() ); ?>
 									</h2>
 									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
@@ -423,17 +424,16 @@ class SettingsPage {
 								<?php endif; ?>
 
 								<div class="sceu-card sceu-card--compact">
-									<div class="sceu-switch-row">
-										<span class="sceu-switch-row__label"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
-										<label class="sceu-switch">
-											<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
-											<input type="checkbox" class="sceu-switch__input"
-												name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]"
-												value="1" <?php checked( $enabled ); ?> />
-											<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-											<span class="sceu-switch__text"><?php echo esc_html__( 'Active', 'surecart-eu-helper' ); ?></span>
-										</label>
-									</div>
+									<label class="sceu-toggle">
+										<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
+										<input type="checkbox" class="sceu-switch__input"
+											name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]"
+											value="1" <?php checked( $enabled ); ?> />
+										<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
+										<span class="sceu-toggle__body">
+											<span class="sceu-toggle__label"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
+										</span>
+									</label>
 								</div>
 
 								<?php
@@ -529,18 +529,18 @@ class SettingsPage {
 		if ( 'toggle' === $type ) {
 			?>
 			<div class="sceu-field sceu-field--toggle">
-				<div class="sceu-switch-row">
-					<span class="sceu-switch-row__label"><?php echo esc_html( $label ); ?></span>
-					<label class="sceu-switch">
-						<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0" />
-						<input type="checkbox" class="sceu-switch__input" id="<?php echo esc_attr( $id_attr ); ?>"
-							name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> />
-						<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-					</label>
-				</div>
-				<?php if ( $help ) : ?>
-					<p class="sceu-field__help"><?php echo esc_html( $help ); ?></p>
-				<?php endif; ?>
+				<label class="sceu-toggle" for="<?php echo esc_attr( $id_attr ); ?>">
+					<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0" />
+					<input type="checkbox" class="sceu-switch__input" id="<?php echo esc_attr( $id_attr ); ?>"
+						name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> />
+					<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
+					<span class="sceu-toggle__body">
+						<span class="sceu-toggle__label"><?php echo esc_html( $label ); ?></span>
+						<?php if ( $help ) : ?>
+							<span class="sceu-field__help"><?php echo esc_html( $help ); ?></span>
+						<?php endif; ?>
+					</span>
+				</label>
 			</div>
 			<?php
 			return;
@@ -695,7 +695,7 @@ class SettingsPage {
 		<div class="sceu-app sceu-app--page" style="<?php echo esc_attr( $style ); ?>">
 			<header class="sceu-app__bar">
 				<div class="sceu-app__brand">
-					<span class="sceu-app__badge dashicons dashicons-shield-alt" aria-hidden="true"></span>
+					<span class="sceu-app__badge"><?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
 					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
 					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
 					<span class="sceu-app__crumb"><?php echo esc_html__( 'Withdrawal requests', 'surecart-eu-helper' ); ?></span>
@@ -707,7 +707,7 @@ class SettingsPage {
 				<div class="sceu-app__inner sceu-app__inner--wide">
 					<div class="sceu-panel__head">
 						<h2 class="sceu-panel__title">
-							<span class="dashicons dashicons-shield-alt" aria-hidden="true"></span>
+							<?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?>
 							<?php echo esc_html__( 'Withdrawal requests', 'surecart-eu-helper' ); ?>
 						</h2>
 					</div>

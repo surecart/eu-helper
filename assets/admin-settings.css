@@ -10,7 +10,7 @@
 
 /* Match SureCart: tint the whole admin content column and hide the WP footer. */
 body.toplevel_page_sceu-settings #wpcontent {
-	background: #f4f7f9;
+	background: #f8fafb;
 }
 
 body.toplevel_page_sceu-settings #wpfooter {
@@ -24,7 +24,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 	--sceu-primary-soft: rgba( 56, 128, 81, 0.1 );
 	--sceu-border: #dce0e6;
 	--sceu-line: #eef0f2;
-	--sceu-bg: #f4f7f9;
+	--sceu-bg: #f8fafb;
 	--sceu-surface: #ffffff;
 	--sceu-gray-200: #e5e7eb;
 	--sceu-gray-400: #9ca3af;
@@ -109,10 +109,48 @@ body.toplevel_page_sceu-settings #wpfooter {
 	text-overflow: ellipsis;
 }
 
+/* Version, shown as a bordered pill to mirror SureCart's header actions. */
 .sceu-app__meta {
-	color: var( --sceu-gray-400 );
-	font-size: 13px;
+	color: var( --sceu-gray-500 );
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
 	flex: none;
+	padding: 6px 10px;
+	background: #fff;
+	border: 1px solid var( --sceu-gray-200 );
+	border-radius: var( --sceu-radius );
+}
+
+/* ---- Icons (inline SVG, line style — matches SureCart's nav glyphs) ---- */
+.sceu-app__badge .sceu-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.sceu-nav__icon {
+	display: inline-flex;
+	flex: none;
+}
+
+.sceu-nav__icon .sceu-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.sceu-panel__title .sceu-icon {
+	width: 1.05em;
+	height: 1.05em;
+	color: var( --sceu-primary );
+}
+
+.sceu-icon {
+	display: block;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 }
 
 /* ---- Body: nav + content ---- */
@@ -228,18 +266,6 @@ body.toplevel_page_sceu-settings #wpfooter {
 	padding: 1em 1.5em;
 }
 
-.sceu-switch-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1em;
-}
-
-.sceu-switch-row__label {
-	font-weight: 500;
-	color: var( --sceu-label );
-}
-
 .sceu-panel__title {
 	margin: 0;
 	padding: 0;
@@ -350,13 +376,6 @@ body.toplevel_page_sceu-settings #wpfooter {
 }
 
 /* ---- Toggle switch ---- */
-.sceu-switch {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.6em;
-	cursor: pointer;
-}
-
 .sceu-switch__input {
 	position: absolute;
 	opacity: 0;
@@ -399,8 +418,38 @@ body.toplevel_page_sceu-settings #wpfooter {
 	box-shadow: 0 0 0 2px var( --sceu-primary );
 }
 
-.sceu-switch__text {
-	color: var( --sceu-gray-700 );
+/* ---- Toggle field (SureCart layout: switch left, label + help to the right,
+   the whole row is the <label> so clicking the text flips the switch) ---- */
+.sceu-toggle {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75em;
+	margin: 0;
+	cursor: pointer;
+}
+
+/* Nudge the pill so it centres on the first line of the label text. */
+.sceu-toggle .sceu-switch__track {
+	margin-top: 0.1em;
+}
+
+.sceu-toggle__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+	min-width: 0;
+}
+
+/* Match the regular field label exactly, so a toggle's label is visually
+   identical to every other field label on the page. */
+.sceu-toggle__label {
+	font-weight: 500;
+	color: var( --sceu-label );
+	line-height: 1.4;
+}
+
+.sceu-toggle .sceu-field__help {
+	margin: 0;
 }
 
 /* ---- Primary button ---- */
@@ -493,7 +542,7 @@ body.toplevel_page_sceu-settings #wpfooter {
    ========================================================================== */
 
 body.sceu-fullbleed #wpcontent {
-	background: #f4f7f9;
+	background: #f8fafb;
 }
 
 body.sceu-fullbleed #wpfooter {
@@ -512,12 +561,39 @@ body.sceu-fullbleed #wpfooter {
 
 /* Action result banner (success / error). */
 .sceu-notice {
+	position: relative;
 	border: 1px solid;
 	border-radius: var( --sceu-radius );
-	padding: 0.85em 1em;
+	padding: 0.85em 2.6em 0.85em 1em;
 	margin: 0 0 1.25em;
 	font-size: 0.95em;
 	line-height: 1.5;
+}
+
+.sceu-notice__dismiss {
+	position: absolute;
+	top: 0.5em;
+	right: 0.5em;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6em;
+	height: 1.6em;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font-size: 1.1em;
+	line-height: 1;
+	cursor: pointer;
+	border-radius: var( --sceu-radius );
+	opacity: 0.6;
+}
+
+.sceu-notice__dismiss:hover,
+.sceu-notice__dismiss:focus {
+	opacity: 1;
+	background: rgba( 0, 0, 0, 0.06 );
 }
 
 .sceu-notice--success {
