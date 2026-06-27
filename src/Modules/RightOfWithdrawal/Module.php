@@ -214,13 +214,15 @@ class Module implements ModuleInterface {
 	}
 
 	/**
-	 * Register the block.
+	 * Register every built block by scanning the compiled `build/blocks/` output.
 	 *
-	 * All assets are declared in block.json with `file:./` paths and registered
-	 * by core from the block's directory: editor.js (+ editor.asset.php for its
-	 * wp-* deps and translations), editor.css (editor-only), view.css (front-end
-	 * + editor preview), and view.js (Interactivity API script module). Core
-	 * also auto-enqueues view.css only when the block actually renders content.
+	 * Block sources live in `assets/src/blocks/<name>/` and are compiled by
+	 * @wordpress/scripts into `build/blocks/<name>/` (block.json + index.js +
+	 * generated index.asset.php for wp-* deps/translations, the extracted
+	 * stylesheets, and any view module). Each compiled `block.json` declares its
+	 * own assets with `file:./` paths, which core registers from that directory;
+	 * adding a new block therefore needs no change here — drop a folder in the
+	 * source tree and it is discovered automatically.
 	 *
 	 * @return void
 	 */
@@ -230,8 +232,16 @@ class Module implements ModuleInterface {
 		// its editor preview and front-end render.
 		PublicForm::register_assets();
 
-		register_block_type( SCEU_DIR . 'blocks/right-of-withdrawal' );
-		register_block_type( SCEU_DIR . 'blocks/withdrawal-form' );
+		$blocks_dir = SCEU_DIR . 'build/blocks';
+		if ( ! is_dir( $blocks_dir ) ) {
+			return; // Not built yet (e.g. a source clone without `npm run build`).
+		}
+
+		foreach ( (array) glob( $blocks_dir . '/*', GLOB_ONLYDIR ) as $dir ) {
+			if ( is_file( $dir . '/block.json' ) ) {
+				register_block_type( $dir );
+			}
+		}
 	}
 
 	/**

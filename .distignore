@@ -2,8 +2,19 @@
 /.github
 /.gitignore
 /.distignore
+/.claude
+/.release
 /tests
+/docs
 .DS_Store
 /.idea
 /.vscode
 *.zip
+
+# Build tooling & JS sources are dev-only. The COMPILED output (build/blocks/*) ships
+# and is NOT excluded; the sources that produce it are.
+/node_modules
+/assets/src
+/package.json
+/package-lock.json
+/webpack.config.js

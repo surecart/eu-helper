@@ -13,16 +13,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Compile the blocks into build/blocks/* (block.json auto-discovered from
+      # assets/src/blocks). The staged folder below includes this build/ output.
+      - name: Build blocks
+        run: |
+          npm ci
+          npm run build
+
+      # Stage into .release/ (NOT build/, which now holds the plugin's compiled
+      # block output and must be copied into the package, not excluded).
       - name: Stage plugin into slug-named folder
         run: |
-          mkdir -p build/surecart-eu-helper
+          mkdir -p .release/surecart-eu-helper
           rsync -a --exclude-from='.distignore' \
-            --exclude 'build' \
-            ./ build/surecart-eu-helper/
+            --exclude '.release' \
+            ./ .release/surecart-eu-helper/
 
       - name: Create eu-helper.zip
         run: |
-          cd build
+          cd .release
           zip -r ../eu-helper.zip surecart-eu-helper
 
       - name: Attach ZIP to the release

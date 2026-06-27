@@ -750,3 +750,11 @@ body.sceu-fullbleed #wpfooter {
 	gap: 0.6em;
 	margin: 0 0 0.75em;
 }
+
+/* React settings app: bottom Save bar — give it breathing room from the card
+   above so it doesn't sit flush against the panel. */
+.sceu-app__actions {
+	margin-top: 20px;
+	display: flex;
+	justify-content: flex-start;
+}
