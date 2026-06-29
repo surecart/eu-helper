@@ -31,6 +31,25 @@
 		return node;
 	}
 
+	// Resolve a reCAPTCHA v3 token when protection is active; resolves to '' if it
+	// isn't configured or the script didn't load, so the flow still proceeds — the
+	// server enforces verification only when it's active.
+	function recaptchaToken() {
+		var rc = cfg.recaptcha;
+		if ( ! rc || ! rc.siteKey || typeof window.grecaptcha === 'undefined' || ! window.grecaptcha.execute ) {
+			return Promise.resolve( '' );
+		}
+		return new Promise( function ( resolve ) {
+			try {
+				window.grecaptcha.ready( function () {
+					window.grecaptcha.execute( rc.siteKey, { action: rc.action || 'submit' } )
+						.then( function ( token ) { resolve( token || '' ); } )
+						.catch( function () { resolve( '' ); } );
+				} );
+			} catch ( e ) { resolve( '' ); }
+		} );
+	}
+
 	function postJSON( url, body ) {
 		return fetch( url, {
 			method: 'POST',
@@ -236,11 +255,14 @@
 			confirm.addEventListener( 'click', function () {
 				err.hidden = true;
 				setLoading( confirm, true );
-				postJSON( cfg.submitUrl, {
-					email: state.email,
-					order_number: state.orderNumber,
-					hp: state.hp,
-					items: chosen.map( function ( c ) { return { line_item_id: c.line_item_id, quantity: c.quantity }; } )
+				recaptchaToken().then( function ( token ) {
+					return postJSON( cfg.submitUrl, {
+						email: state.email,
+						order_number: state.orderNumber,
+						hp: state.hp,
+						grecaptcha_token: token,
+						items: chosen.map( function ( c ) { return { line_item_id: c.line_item_id, quantity: c.quantity }; } )
+					} );
 				} ).then( function ( res ) {
 					setLoading( confirm, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }
@@ -270,11 +292,14 @@
 				var reason = textarea.value.trim();
 				if ( ! reason ) { err.textContent = t( 'describe', 'Please describe what you would like to withdraw from.' ); err.hidden = false; return; }
 				setLoading( send, true );
-				postJSON( cfg.submitUrl, {
-					email: state.email,
-					order_number: state.orderNumber,
-					hp: state.hp,
-					reason: reason
+				recaptchaToken().then( function ( token ) {
+					return postJSON( cfg.submitUrl, {
+						email: state.email,
+						order_number: state.orderNumber,
+						hp: state.hp,
+						grecaptcha_token: token,
+						reason: reason
+					} );
 				} ).then( function ( res ) {
 					setLoading( send, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }

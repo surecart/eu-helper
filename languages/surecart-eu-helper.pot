@@ -29,6 +29,12 @@ msgid_plural "%d products"
 msgstr[0] ""
 msgstr[1] ""
 
+#: src/Admin/SettingsPage.php
+msgid "%d request has a partial refund flagged for review — set its status manually."
+msgid_plural "%d requests have a partial refund flagged for review — set their status manually."
+msgstr[0] ""
+msgstr[1] ""
+
 #: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
 msgid "A customer has submitted a right-of-withdrawal request. Review the order(s) below and process the cancellation/refund in SureCart."
 msgstr ""
@@ -511,6 +517,10 @@ msgstr ""
 msgid "Request reference:"
 msgstr ""
 
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Refund detected — review"
+msgstr ""
+
 #: src/Admin/SettingsPage.php
 msgid "Request status updated."
 msgstr ""
@@ -608,11 +618,15 @@ msgid "SureCart EU Helper requires the SureCart plugin to be installed and activ
 msgstr ""
 
 #: src/Admin/SettingsPage.php
-msgid "Sync checks SureCart for refunded/cancelled orders and marks matching requests resolved. SureCart does not always report refunds on the order, so set status manually when needed."
+msgid "Sync checks SureCart for refunds and cancellations. Fully refunded or cancelled orders are marked resolved. A partial refund is flagged for review instead of resolved — it can't be matched to a specific request, so set the status manually. SureCart does not always report refunds, so set status manually when needed."
 msgstr ""
 
 #: src/Admin/SettingsPage.php
 msgid "Sync complete. %d request(s) marked resolved."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Sync found a partial refund for this order in SureCart. It was not resolved automatically because a partial refund can't be matched to a specific request — review and set the status manually."
 msgstr ""
 
 #: src/Admin/SettingsPage.php
