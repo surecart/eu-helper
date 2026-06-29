@@ -359,6 +359,25 @@ class CustomerContext {
 	}
 
 	/**
+	 * Whether any of the customer's orders within the look-back window carries a
+	 * VAT/tax identifier on its checkout. This is the verified, per-purchase VAT,
+	 * which the customer-level tax_identifier does not reliably mirror — so it is
+	 * the authoritative source for the "is a business?" question. Reuses the
+	 * already-fetched, transient-cached recent orders (no extra API calls).
+	 *
+	 * @param int $days Look-back window in days.
+	 * @return bool
+	 */
+	public function has_vat_on_recent_orders( int $days ): bool {
+		foreach ( $this->recent_orders( $days ) as $order ) {
+			if ( ! empty( $order['has_vat'] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Whether the customer has any billing/shipping country on file.
 	 *
 	 * @return bool
@@ -430,12 +449,16 @@ class CustomerContext {
 	private function query_orders_since( string $customer_id, int $since ): array {
 		// Try richer expansions first, but never let an unsupported `expand`
 		// silently disable the feature: on error, retry with less, then none.
+		// `checkout.tax_identifier` rides along on every checkout-bearing variant:
+		// the verified per-purchase VAT lives there (the customer-level tax id is
+		// not reliably kept in sync), and we need it to answer has_vat() correctly
+		// for the `non_vat` audience rule — at no extra API cost.
 		$expansions = array(
 			// Richest: reach the product name via line_item.price.product.
-			array( 'checkout', 'checkout.line_items', 'line_item.price', 'price.product' ),
-			array( 'checkout', 'checkout.line_items', 'line_item.price' ),
-			array( 'checkout', 'checkout.line_items' ),
-			array( 'checkout' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items', 'line_item.price', 'price.product' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items', 'line_item.price' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items' ),
+			array( 'checkout', 'checkout.tax_identifier' ),
 			array(),
 		);
 
@@ -571,6 +594,7 @@ class CustomerContext {
 			'created_at'    => (int) $created,
 			'status'        => (string) ( $order->status ?? '' ),
 			'refunded'      => is_numeric( $refunded_amount ) && (int) $refunded_amount > 0,
+			'has_vat'       => is_object( $checkout ) ? $this->extract_has_vat( $checkout->tax_identifier ?? null ) : false,
 			'total_display' => $this->format_money( $amount, (string) $currency ),
 			'summary'       => $this->extract_line_summary( $order ),
 			'line_items'    => $this->normalise_line_items( $order, (string) $currency ),
@@ -868,16 +892,17 @@ class CustomerContext {
 	 */
 	public function debug(): array {
 		return array(
-			'logged_in'    => is_user_logged_in(),
-			'user_id'      => get_current_user_id(),
-			'mode'         => $this->mode(),
-			'customer_id'  => $this->customer_id(),
-			'name'         => $this->customer_name(),
-			'email'        => $this->customer_email(),
-			'country_code' => $this->country_code(),
-			'is_eu'        => $this->is_eu(),
-			'has_vat'      => $this->has_vat(),
-			'orders_14d'   => count( $this->recent_orders( 14 ) ),
+			'logged_in'          => is_user_logged_in(),
+			'user_id'            => get_current_user_id(),
+			'mode'               => $this->mode(),
+			'customer_id'        => $this->customer_id(),
+			'name'               => $this->customer_name(),
+			'email'              => $this->customer_email(),
+			'country_code'       => $this->country_code(),
+			'is_eu'              => $this->is_eu(),
+			'has_vat'            => $this->has_vat(),
+			'has_vat_orders_14d' => $this->has_vat_on_recent_orders( 14 ),
+			'orders_14d'         => count( $this->recent_orders( 14 ) ),
 		);
 	}
 }

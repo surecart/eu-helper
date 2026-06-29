@@ -38,6 +38,26 @@ class Withdrawals {
 	}
 
 	/**
+	 * Whether the customer should be treated as a VAT-registered business for the
+	 * `non_vat` audience rule.
+	 *
+	 * The customer-level tax_identifier is not reliably kept in sync with the VAT
+	 * captured and verified per purchase, so a customer with a valid VAT on their
+	 * latest order can still read as a consumer on the customer record. We
+	 * therefore treat the customer as a business if a VAT number is present on the
+	 * customer record OR on any checkout within the same look-back window. Presence
+	 * of a number (not its validity) signals business intent — failing closed
+	 * toward the merchant's "only customers without a VAT number" setting.
+	 *
+	 * @param CustomerContext $customer Customer gateway.
+	 * @param int             $lookback Look-back window in days.
+	 * @return bool
+	 */
+	public static function is_vat_business( CustomerContext $customer, int $lookback ): bool {
+		return $customer->has_vat() || $customer->has_vat_on_recent_orders( $lookback );
+	}
+
+	/**
 	 * Quantities the customer has already requested, summed across their
 	 * non-rejected requests. Supports partial withdrawal: an item's remaining
 	 * quantity is its purchased quantity minus what's already been requested.
