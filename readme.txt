@@ -92,6 +92,7 @@ the module is enabled.
 == Changelog ==
 
 = 1.5.8 =
+* **Optional spam protection for the public form.** A new **Spam protection** setting (off by default) lets you screen the logged-out Withdrawal Request Form with **reCAPTCHA v3**, reusing the keys you've already set under SureCart → Settings → Spam Protection & Security — no separate keys to manage. It has no effect until those keys are configured, and the form's honeypot, nonce, and per-IP rate limiting always apply regardless. (reCAPTCHA mitigates bots/floods; it complements, but doesn't replace, the server-side order match-verification.)
 * **Dark mode fixes.** With SureCart's dark theme active, the Right of Withdrawal UI now renders correctly throughout. The notice heading and description stay readable instead of showing low-contrast dark text; the "Request a withdrawal" modal follows the dark theme instead of opening as a bright white panel; and the form fields, labels, order list, and the public withdrawal form are all readable — field labels and inputs no longer pick up the theme's light-mode colours (dark text on dark, or stray white input boxes). Stores using the light theme — or the block's explicit Light/Dark colour scheme — are unaffected.
 
 = 1.5.7 =
