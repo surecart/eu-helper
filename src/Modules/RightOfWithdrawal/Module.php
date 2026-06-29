@@ -7,10 +7,16 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal;
 
+use SureCartEuHelper\Settings;
+use SureCartEuHelper\Merchant\MerchantInfo;
 use SureCartEuHelper\Modules\ModuleInterface;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\WithdrawalController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Form\PublicForm;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Email\CustomerEmail;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Email\MerchantEmail;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -55,6 +61,7 @@ class Module implements ModuleInterface {
 		return array(
 			array(
 				'key'     => 'lookback_days',
+				'section'     => 'eligibility',
 				'type'    => 'number',
 				'label'   => __( 'Look-back window (days)', 'surecart-eu-helper' ),
 				'default' => 14,
@@ -63,6 +70,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'apply_to',
+				'section'     => 'eligibility',
 				'type'    => 'radio',
 				'label'   => __( 'Apply to', 'surecart-eu-helper' ),
 				'default' => 'all',
@@ -80,6 +88,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'include_unknown_country',
+				'section'            => 'eligibility',
 				'type'           => 'toggle',
 				'label'          => __( 'Customers without a country', 'surecart-eu-helper' ),
 				'checkbox_label' => __( 'Show the notice to customers who have no country on file', 'surecart-eu-helper' ),
@@ -88,6 +97,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'merchant_email',
+				'section'     => 'notifications',
 				'type'    => 'email',
 				'label'   => __( 'Merchant notification email', 'surecart-eu-helper' ),
 				'default' => '',
@@ -95,6 +105,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'form_display',
+				'section'            => 'form',
 				'type'           => 'radio',
 				'label'          => __( 'Form display', 'surecart-eu-helper' ),
 				'default'        => 'modal',
@@ -109,6 +120,48 @@ class Module implements ModuleInterface {
 					),
 				),
 			),
+			array(
+				'key'   => 'excluded_collection_ids',
+				'section'   => 'exclusions',
+				'type'  => 'collection_exclusions',
+				'label' => __( 'Excluded collections', 'surecart-eu-helper' ),
+				'help'  => __( 'Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a "Digital downloads" or "Perishables" collection).', 'surecart-eu-helper' ),
+			),
+			array(
+				'key'   => 'excluded_product_ids',
+				'section'   => 'exclusions',
+				'type'  => 'product_exclusions',
+				'label' => __( 'Excluded products', 'surecart-eu-helper' ),
+				'help'  => __( 'Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections.', 'surecart-eu-helper' ),
+			),
+		);
+	}
+
+	/**
+	 * Ordered settings sub-sections, each rendered as its own card with a
+	 * heading + description (mirroring SureCart's settings layout). Fields are
+	 * grouped by their `section` key.
+	 *
+	 * @return array<string, array{title:string,description:string}>
+	 */
+	public function settings_sections(): array {
+		return array(
+			'eligibility'   => array(
+				'title'       => __( 'Eligibility', 'surecart-eu-helper' ),
+				'description' => __( 'Who sees the withdrawal notice, and for which orders.', 'surecart-eu-helper' ),
+			),
+			'notifications' => array(
+				'title'       => __( 'Notifications', 'surecart-eu-helper' ),
+				'description' => __( 'Where withdrawal requests are sent.', 'surecart-eu-helper' ),
+			),
+			'form'          => array(
+				'title'       => __( 'Customer form', 'surecart-eu-helper' ),
+				'description' => __( 'How the withdrawal form appears to customers.', 'surecart-eu-helper' ),
+			),
+			'exclusions'    => array(
+				'title'       => __( 'Product exclusions', 'surecart-eu-helper' ),
+				'description' => __( 'Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods.', 'surecart-eu-helper' ),
+			),
 		);
 	}
 
@@ -117,15 +170,177 @@ class Module implements ModuleInterface {
 	 */
 	public function boot(): void {
 		add_action( 'init', array( $this, 'register_block' ) );
+		add_shortcode( 'sceu_withdrawal_form', array( $this, 'render_shortcode' ) );
 		add_action(
 			'rest_api_init',
 			function () {
 				( new WithdrawalController() )->register_routes();
+				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\GuestController() )->register_routes();
 			}
 		);
+		// When the excluded-collection set changes, rebuild the cached membership.
+		add_action( 'update_option_' . Settings::OPTION, array( $this, 'on_settings_updated' ), 10, 2 );
 		add_action( 'admin_post_sceu_export_log', array( $this, 'export_csv' ) );
 		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
+		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
+		add_action( 'admin_post_sceu_resend_emails', array( $this, 'resend_emails' ) );
+		// Background rebuild of the collection→product-id exclusion cache, so the
+		// customer-facing path never resolves collections inline.
+		add_action( Exclusions::CRON_HOOK, array( Exclusions::class, 'rebuild_cache' ) );
+	}
+
+	/**
+	 * Rebuild the exclusion cache when the excluded-collection set changes.
+	 *
+	 * @param mixed $old Old option value.
+	 * @param mixed $new New option value.
+	 * @return void
+	 */
+	public function on_settings_updated( $old, $new ): void {
+		$extract = static function ( $value ): array {
+			$ids = ( is_array( $value ) && isset( $value['right_of_withdrawal']['excluded_collection_ids'] ) )
+				? (array) $value['right_of_withdrawal']['excluded_collection_ids']
+				: array();
+			$ids = array_map( 'strval', $ids );
+			sort( $ids );
+			return $ids;
+		};
+
+		if ( $extract( $old ) !== $extract( $new ) ) {
+			Exclusions::flush_cache();
+			Exclusions::rebuild_cache();
+		}
+	}
+
+	/**
+	 * Admin action: re-send the customer and/or merchant notification email for
+	 * a logged request.
+	 *
+	 * The email is rebuilt from the stored log row, so the "Received at:"
+	 * timestamp reflects when the withdrawal was originally requested — not the
+	 * moment it was re-sent. The per-recipient sent flags are updated with the
+	 * new outcome so the log reflects reality.
+	 *
+	 * @return void
+	 */
+	public function resend_emails(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0;
+		check_admin_referer( 'sceu_resend_emails_' . $id );
+
+		$which = isset( $_GET['which'] ) ? sanitize_key( wp_unslash( $_GET['which'] ) ) : 'both';
+		if ( ! in_array( $which, array( 'both', 'customer', 'merchant' ), true ) ) {
+			$which = 'both';
+		}
+
+		$row = $id ? LogTable::find( $id ) : null;
+		if ( ! $row ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log' ) );
+			exit;
+		}
+
+		$ctx     = $this->ctx_from_row( $row );
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		$results = array();
+		if ( 'merchant' !== $which ) {
+			$ok                              = CustomerEmail::send( $ctx );
+			$payload['customer_email_sent']  = (bool) $ok;
+			$results[]                       = (bool) $ok;
+		}
+		if ( 'customer' !== $which ) {
+			$ok                              = MerchantEmail::send( $ctx );
+			$payload['merchant_email_sent']  = (bool) $ok;
+			$results[]                       = (bool) $ok;
+		}
+
+		LogTable::update_payload( $id, $payload );
+
+		$all_ok = ! empty( $results ) && ! in_array( false, $results, true );
+		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&resent=' . ( $all_ok ? 'ok' : 'fail' ) ) );
+		exit;
+	}
+
+	/**
+	 * Rebuild the email context array from a stored log row, so a notification
+	 * can be re-sent exactly as it first went out.
+	 *
+	 * The "Received at:" timestamp is derived from the row's original
+	 * `created_at`, formatted in the site's date/time format — so a re-sent
+	 * email remains a faithful receipt of when the request was made.
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return array<string, mixed>
+	 */
+	private function ctx_from_row( array $row ): array {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		$merchant_to = sanitize_email( (string) ( $payload['merchant_to'] ?? '' ) );
+		if ( '' === $merchant_to || ! is_email( $merchant_to ) ) {
+			$merchant_to = $this->effective_merchant_email();
+		}
+
+		$format = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+
+		return array(
+			'request_id'     => (string) ( $payload['request_id'] ?? '' ),
+			// Original request time, not "now".
+			'timestamp'      => mysql2date( $format, (string) ( $row['created_at'] ?? '' ) ),
+			'customer_name'  => (string) ( $row['customer_name'] ?? '' ),
+			'customer_email' => (string) ( $row['customer_email'] ?? '' ),
+			'ip_address'     => (string) ( $row['ip_address'] ?? '' ),
+			'reason'         => (string) ( $payload['reason'] ?? '' ),
+			'orders'         => isset( $payload['orders'] ) && is_array( $payload['orders'] ) ? $payload['orders'] : array(),
+			'merchant_email' => $merchant_to,
+			'store_name'     => MerchantInfo::store_name(),
+		);
+	}
+
+	/**
+	 * Effective merchant notification email: the configured value, else the
+	 * resolved SureCart store default. Mirrors the REST controller's resolver,
+	 * used only as a fallback for old rows that predate storing the recipient.
+	 *
+	 * @return string
+	 */
+	private function effective_merchant_email(): string {
+		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
+		if ( '' !== $configured && is_email( $configured ) ) {
+			return $configured;
+		}
+		return MerchantInfo::notification_email();
+	}
+
+	/**
+	 * Admin action: permanently delete a log row (GDPR erasure / test cleanup).
+	 *
+	 * The log is append-only for normal use; deletion is deliberate, gated to
+	 * admins + nonce, and frees the order to be requested again.
+	 *
+	 * @return void
+	 */
+	public function delete_log(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0;
+		check_admin_referer( 'sceu_delete_log_' . $id );
+
+		if ( $id ) {
+			LogTable::delete( $id );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&deleted=1' ) );
+		exit;
 	}
 
 	/**
@@ -231,6 +446,30 @@ class Module implements ModuleInterface {
 	 */
 	public function register_block(): void {
 		register_block_type( SCEU_DIR . 'blocks/right-of-withdrawal' );
+		register_block_type( SCEU_DIR . 'blocks/withdrawal-form' );
+	}
+
+	/**
+	 * Render the public withdrawal form via shortcode (for non-block-editor
+	 * sites). Shares one renderer with the block so markup + assets match.
+	 *
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
+	 * @return string
+	 */
+	public function render_shortcode( $atts ): string {
+		$atts = shortcode_atts(
+			array(
+				'heading'         => '',
+				'intro'           => '',
+				'submit_label'    => '',
+				'confirm_label'   => '',
+				'success_message' => '',
+			),
+			is_array( $atts ) ? $atts : array(),
+			'sceu_withdrawal_form'
+		);
+
+		return PublicForm::render( $atts );
 	}
 
 	/**
@@ -251,10 +490,23 @@ class Module implements ModuleInterface {
 		header( 'Content-Disposition: attachment; filename=withdrawal-requests-' . gmdate( 'Ymd-His' ) . '.csv' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'reason', 'status' ) );
+		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'withdrawing', 'reason', 'status' ) );
 		foreach ( $rows as $row ) {
 			$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
 			$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
+
+			// Explicit per-order item detail (mirrors the admin table).
+			$detail = '';
+			if ( is_array( $payload ) && ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) ) {
+				$parts = array();
+				foreach ( $payload['orders'] as $order ) {
+					$ref     = (string) ( $order['number'] ?? $order['id'] ?? '' );
+					$summary = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::merchant_items_summary( $order );
+					$parts[] = 'Order ' . $ref . ': ' . $summary;
+				}
+				$detail = implode( ' | ', $parts );
+			}
+
 			fputcsv(
 				$out,
 				array_map(
@@ -268,6 +520,7 @@ class Module implements ModuleInterface {
 						$row['customer_email'] ?? '',
 						$row['ip_address'] ?? '',
 						$row['order_ids'] ?? '',
+						$detail,
 						$reason,
 						$row['status'] ?? '',
 					)

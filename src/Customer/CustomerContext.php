@@ -523,6 +523,21 @@ class CustomerContext {
 	}
 
 	/**
+	 * Public entry point to normalise an arbitrary SureCart order object into the
+	 * flat shape the withdrawal form uses (id, number, line_items with product_id,
+	 * etc.). Used by the guest (public-form) lookup, which fetches an order by
+	 * number rather than through the logged-in customer. The normalisation helpers
+	 * are stateless with respect to the customer, so this is safe to call on any
+	 * order.
+	 *
+	 * @param mixed $order Order model object.
+	 * @return array<string, mixed>|null
+	 */
+	public function normalize_order_object( $order ): ?array {
+		return $this->normalise_order( $order );
+	}
+
+	/**
 	 * Normalise a single order object into a flat array for the form.
 	 *
 	 * @param mixed $order Order model.
@@ -558,7 +573,114 @@ class CustomerContext {
 			'refunded'      => is_numeric( $refunded_amount ) && (int) $refunded_amount > 0,
 			'total_display' => $this->format_money( $amount, (string) $currency ),
 			'summary'       => $this->extract_line_summary( $order ),
+			'line_items'    => $this->normalise_line_items( $order, (string) $currency ),
 		);
+	}
+
+	/**
+	 * Normalise an order's line items for partial withdrawal: each carries an id,
+	 * display name, purchased quantity, and a per-unit price string. Returns an
+	 * empty array when no line-item detail is available (the order is then
+	 * offered as a whole-order withdrawal).
+	 *
+	 * @param mixed  $order    Order model.
+	 * @param string $currency Order currency code.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function normalise_line_items( $order, string $currency ): array {
+		$items = $this->line_items_for( $order );
+		if ( empty( $items ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $items as $line ) {
+			$id = (string) ( $this->prop( $line, 'id' ) ?? '' );
+			if ( '' === $id ) {
+				continue;
+			}
+
+			$name = $this->line_item_name( $line );
+			if ( '' === $name ) {
+				$name = __( 'Item', 'surecart-eu-helper' );
+			}
+
+			$qty = (int) ( $this->prop( $line, 'quantity' ) ?? 1 );
+			if ( $qty < 1 ) {
+				$qty = 1;
+			}
+
+			// Per-unit amount: the price amount, else the line subtotal/total ÷ qty.
+			$price = $this->prop( $line, 'price' );
+			$unit  = $this->prop( $price, 'amount' );
+			if ( ! is_numeric( $unit ) ) {
+				$line_total = $this->prop( $line, 'subtotal_amount' );
+				if ( ! is_numeric( $line_total ) ) {
+					$line_total = $this->prop( $line, 'total_amount' );
+				}
+				$unit = ( is_numeric( $line_total ) && $qty > 0 ) ? ( (float) $line_total / $qty ) : null;
+			}
+
+			$product = $this->prop( $price, 'product' );
+			$image   = $this->extract_product_image( $product );
+
+			// Product id rides along on the expand we already do (price.product);
+			// captured here so product-level exclusions cost no extra API calls.
+			$product_id = (string) ( $this->prop( $product, 'id' ) ?? '' );
+
+			$out[] = array(
+				'id'           => $id,
+				'product_id'   => $product_id,
+				'name'         => $name,
+				'quantity'     => $qty,
+				'unit_display' => ( null !== $unit ) ? $this->format_money( $unit, $currency ) : '',
+				'image'        => $image['src'],
+				'image_alt'    => '' !== $image['alt'] ? $image['alt'] : $name,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Pull a small product thumbnail for the line-item list, tolerating shapes.
+	 * SureCart's product exposes `line_item_image` (a thumbnail built for exactly
+	 * this), then `preview_image`, then `image_url`. Returns src + alt (empty when
+	 * the product has no image).
+	 *
+	 * @param mixed $product Product model/array.
+	 * @return array{src: string, alt: string}
+	 */
+	private function extract_product_image( $product ): array {
+		$empty = array(
+			'src' => '',
+			'alt' => '',
+		);
+		if ( empty( $product ) ) {
+			return $empty;
+		}
+
+		foreach ( array( 'line_item_image', 'preview_image' ) as $key ) {
+			$img = $this->prop( $product, $key );
+			$src = $this->prop( $img, 'src' );
+			if ( is_string( $src ) && '' !== $src ) {
+				$alt = $this->prop( $img, 'alt' );
+				return array(
+					'src' => $src,
+					'alt' => is_string( $alt ) ? $alt : '',
+				);
+			}
+		}
+
+		$url = $this->prop( $product, 'image_url' );
+		if ( is_string( $url ) && '' !== $url ) {
+			return array(
+				'src' => $url,
+				'alt' => '',
+			);
+		}
+
+		return $empty;
 	}
 
 	/**

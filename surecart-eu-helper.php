@@ -3,20 +3,21 @@
  * Plugin Name:       SureCart EU Helper
  * Plugin URI:        https://wpcrafter.com/
  * Description:       Modular helper that adds EU merchant-compliance features to SureCart stores. Module 1: Right of Withdrawal — a customer-area block + form letting EU consumers request withdrawal/cancellation/refund of recent orders, with merchant + customer notifications and an on-site request log.
- * Version:           1.0.4
+ * Version:           1.5.7
  * Requires at least: 6.6
  * Requires PHP:      7.4
  * Author:            SureCart Team
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       surecart-eu-helper
+ * Domain Path:       /languages
  *
  * @package SureCartEuHelper
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SCEU_VERSION', '1.0.4' );
+define( 'SCEU_VERSION', '1.5.7' );
 define( 'SCEU_FILE', __FILE__ );
 define( 'SCEU_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SCEU_URL', plugin_dir_url( __FILE__ ) );
@@ -42,6 +43,18 @@ spl_autoload_register(
 
 // Global, namespace-free helper functions (safe to call from block render.php).
 require_once SCEU_DIR . 'src/helpers.php';
+
+/**
+ * Load translations from the plugin's /languages folder (where Loco Translate
+ * and WPML save them). The plugin slug matches the text domain, so WordPress
+ * also just-in-time loads translations from wp-content/languages/plugins/.
+ */
+add_action(
+	'init',
+	function () {
+		load_plugin_textdomain( 'surecart-eu-helper', false, dirname( plugin_basename( SCEU_FILE ) ) . '/languages' );
+	}
+);
 
 /**
  * Activation: create the withdrawal log table.
