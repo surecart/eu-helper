@@ -37,6 +37,16 @@ body.toplevel_page_sceu-settings #wpfooter {
 	--sceu-radius: 6px;
 	--sceu-radius-lg: 8px;
 
+	/*
+	 * Re-theme @wordpress/components (toggles, checkboxes, radios, primary
+	 * buttons, focus rings, token fields) from the WP-admin
+	 */
+	--wp-admin-theme-color: var( --sceu-primary );
+	--wp-admin-theme-color-darker-10: #2f6c45;
+	--wp-admin-theme-color-darker-20: #285d3b;
+	--wp-admin-theme-color-darker-10: color-mix( in srgb, var( --sceu-primary ) 88%, #000 );
+	--wp-admin-theme-color-darker-20: color-mix( in srgb, var( --sceu-primary ) 78%, #000 );
+
 	/* Fill the admin content area edge-to-edge. */
 	margin: 0 0 0 -20px;
 	background: var( --sceu-bg );
