@@ -22,7 +22,7 @@
     "success_message": { "type": "string", "default": "" }
   },
   "version": "1.5.7",
-  "editorScript": "file:./editor.js",
+  "editorScript": "file:./index.js",
   "editorStyle": "sceu-withdrawal-form",
   "style": "sceu-withdrawal-form",
   "render": "file:./render.php"

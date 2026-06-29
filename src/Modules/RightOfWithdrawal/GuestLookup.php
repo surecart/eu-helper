@@ -140,8 +140,14 @@ class GuestLookup {
 		$lines    = isset( $norm['line_items'] ) && is_array( $norm['line_items'] ) ? $norm['line_items'] : array();
 		$excluded = Exclusions::excluded_set();
 
-		// No line-item detail → offer the whole order.
+		// No line-item detail → offer the whole order. With no per-line product ids
+		// we can't test it against the exclusion set; offered by default (same
+		// filter as the logged-in path) so a store can withhold un-verifiable orders.
 		if ( empty( $lines ) ) {
+			/** This filter is documented in Withdrawals::withdrawable_orders(). */
+			if ( ! apply_filters( 'sceu_offer_order_without_line_items', true, $norm, (bool) $excluded ) ) {
+				return null;
+			}
 			$norm['line_items']  = array();
 			$norm['whole_order'] = true;
 			return $norm;

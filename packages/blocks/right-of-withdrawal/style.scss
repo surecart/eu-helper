@@ -11,9 +11,10 @@
 .sceu-row--scheme-auto {
 	--sceu-text: currentColor;
 	--sceu-surface: transparent;
-	--sceu-border: rgba( 127, 127, 127, 0.3 );
-	--sceu-field-border: rgba( 127, 127, 127, 0.45 );
+	--sceu-border: rgba(127, 127, 127, 0.3);
+	--sceu-field-border: rgba(127, 127, 127, 0.45);
 }
+
 .sceu-row--scheme-auto .sceu-row__intro {
 	opacity: 0.72;
 }
@@ -24,8 +25,8 @@
 	--sceu-text: #16181d;
 	--sceu-muted: #5f6470;
 	--sceu-surface: #ffffff;
-	--sceu-border: rgba( 0, 0, 0, 0.1 );
-	--sceu-field-border: rgba( 0, 0, 0, 0.22 );
+	--sceu-border: rgba(0, 0, 0, 0.1);
+	--sceu-field-border: rgba(0, 0, 0, 0.22);
 }
 
 .sceu-row--scheme-dark,
@@ -39,8 +40,8 @@ body.surecart-theme-dark .sceu-modal--auto {
 	--sceu-text: #f4f5f7;
 	--sceu-muted: #a9aeb8;
 	--sceu-surface: #1a1c20;
-	--sceu-border: rgba( 255, 255, 255, 0.12 );
-	--sceu-field-border: rgba( 255, 255, 255, 0.28 );
+	--sceu-border: rgba(255, 255, 255, 0.12);
+	--sceu-field-border: rgba(255, 255, 255, 0.28);
 }
 
 /* The auto default dims the intro via opacity (it has no muted colour of its
@@ -51,7 +52,7 @@ body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
 
 /* ---- Block container ---- */
 .sceu-row {
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 }
 
 /* The Interactivity API toggles the real `hidden` attribute via
@@ -62,10 +63,10 @@ body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
 }
 
 .sceu-row--card {
-	background: var( --sceu-surface );
-	border: 1px solid var( --sceu-border );
+	background: var(--sceu-surface);
+	border: 1px solid var(--sceu-border);
 	border-radius: 12px;
-	padding: clamp( 16px, 3vw, 22px );
+	padding: clamp(16px, 3vw, 22px);
 }
 
 .sceu-row--plain {
@@ -95,12 +96,12 @@ body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
    the theme's (light-mode) colour on a dark page. */
 .sceu-row .sceu-row__heading {
 	margin: 0;
-	color: var( --sceu-text, currentColor );
+	color: var(--sceu-text, currentColor);
 }
 
 .sceu-row__intro {
 	margin: 0.3em 0 0;
-	color: var( --sceu-muted, currentColor );
+	color: var(--sceu-muted, currentColor);
 	line-height: 1.5;
 }
 
@@ -129,30 +130,30 @@ body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
 .wp-block-button__link.sceu-btn--primary {
 	padding: 9px 15px;
 	font-size: 14px;
-    font-weight: 500;
-    line-height: 1.2;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
+	font-weight: 500;
+	line-height: 1.2;
+	border-radius: 8px;
+	cursor: pointer;
+	text-decoration: none;
 	border: none;
-	background-color: var( --sceu-primary, var( --sc-color-primary-500, var( --wp--preset--color--primary, #111418 ) ) );
-	color: var( --sceu-primary-text, var( --sc-color-primary-text, #ffffff ) );
+	background-color: var(--sceu-primary, var(--sc-color-primary-500, var(--wp--preset--color--primary, #111418)));
+	color: var(--sceu-primary-text, var(--sc-color-primary-text, #ffffff));
 }
 
 .sceu-btn--secondary {
 	padding: 9px 15px;
 	background: transparent;
-	color: var( --sceu-text );
-	border: 1px solid var( --sceu-field-border );
+	color: var(--sceu-text);
+	border: 1px solid var(--sceu-field-border);
 }
 
 .sceu-btn--primary:hover,
 .sceu-form__submit:hover {
-	filter: brightness( 0.93 );
+	filter: brightness(0.93);
 }
 
 .sceu-btn--secondary:hover {
-	background: var( --sceu-border );
+	background: var(--sceu-border);
 }
 
 .sceu-form__submit[disabled] {
@@ -174,24 +175,29 @@ body.surecart-theme-dark .sceu-row--scheme-auto .sceu-row__intro {
 .sceu-badge--received {
 	color: #8a6d00;
 }
+
 .sceu-badge--resolved {
 	color: #137333;
 }
+
 .sceu-badge--rejected {
 	color: #a50e0e;
 }
+
 .sceu-row--scheme-dark .sceu-badge--received,
 .sceu-modal--dark .sceu-badge--received,
 body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--received,
 body.surecart-theme-dark .sceu-modal--auto .sceu-badge--received {
 	color: #f0c674;
 }
+
 .sceu-row--scheme-dark .sceu-badge--resolved,
 .sceu-modal--dark .sceu-badge--resolved,
 body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--resolved,
 body.surecart-theme-dark .sceu-modal--auto .sceu-badge--resolved {
 	color: #6bd193;
 }
+
 .sceu-row--scheme-dark .sceu-badge--rejected,
 .sceu-modal--dark .sceu-badge--rejected,
 body.surecart-theme-dark .sceu-row--scheme-auto .sceu-badge--rejected,
@@ -203,7 +209,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 .sceu-row__panel {
 	margin-top: 1em;
 	padding: 1.25em;
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 	border-radius: 8px;
 }
 
@@ -226,7 +232,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 .sceu-field__input {
 	width: 100%;
 	padding: 0.5em 0.65em;
-	border: 1px solid var( --sceu-field-border );
+	border: 1px solid var(--sceu-field-border);
 	border-radius: 6px;
 	font: inherit;
 	color: inherit;
@@ -247,14 +253,15 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
    under .sceu-row (0,2,0) so the block wins — mirrors the public .sceu-wf form. */
 .sceu-row .sceu-field__label,
 .sceu-row .sceu-orders__head {
-	color: var( --sceu-text, currentColor );
+	color: var(--sceu-text, currentColor);
 }
+
 .sceu-row .sceu-field__input,
 .sceu-row .sceu-item__input,
 .sceu-row .sceu-step {
-	color: var( --sceu-text, currentColor );
+	color: var(--sceu-text, currentColor);
 	background: transparent;
-	border-color: var( --sceu-field-border );
+	border-color: var(--sceu-field-border);
 }
 
 .sceu-orders {
@@ -265,7 +272,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 
 .sceu-orders__item {
 	padding: 0.65em 0.8em;
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 	border-radius: 6px;
 }
 
@@ -283,7 +290,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 .sceu-items {
 	margin: 0.75em 0 0.25em;
 	padding-top: 0.6em;
-	border-top: 1px solid var( --sceu-border );
+	border-top: 1px solid var(--sceu-border);
 	display: flex;
 	flex-direction: column;
 	gap: 0.5em;
@@ -308,7 +315,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	flex: none;
 	object-fit: cover;
 	border-radius: 4px;
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 }
 
 .sceu-item__text {
@@ -337,10 +344,10 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 .sceu-step {
 	width: 30px;
 	height: 30px;
-	border: 1px solid var( --sceu-field-border );
+	border: 1px solid var(--sceu-field-border);
 	border-radius: 6px;
 	background: transparent;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	font-size: 16px;
 	line-height: 1;
 	cursor: pointer;
@@ -363,7 +370,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	padding: 0;
 	border: 0;
 	overflow: hidden;
-	clip: rect( 0 0 0 0 );
+	clip: rect(0 0 0 0);
 	white-space: nowrap;
 }
 
@@ -387,7 +394,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	box-sizing: border-box;
 	text-align: center;
 	padding: 0 0.25em;
-	border: 1px solid var( --sceu-field-border );
+	border: 1px solid var(--sceu-field-border);
 	border-radius: 6px;
 	font: inherit;
 	line-height: normal;
@@ -449,13 +456,13 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	border: none;
 	cursor: pointer;
 	font: inherit;
-	color: var( --sceu-muted, currentColor );
+	color: var(--sceu-muted, currentColor);
 	padding: 0.5em 0.3em;
 }
 
 .sceu-row__confirmation {
 	padding: 1em 1.25em;
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 	border-radius: 8px;
 }
 
@@ -467,7 +474,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 }
 
 .sceu-requests__item {
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 	border-radius: 8px;
 	padding: 0.7em 0.9em;
 }
@@ -481,7 +488,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 
 .sceu-requests__date {
 	font-size: 0.85em;
-	color: var( --sceu-muted, currentColor );
+	color: var(--sceu-muted, currentColor);
 	margin-top: 0.3em;
 }
 
@@ -497,7 +504,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	gap: 0.4em 1em;
 }
 
-.sceu-review__summary > div {
+.sceu-review__summary>div {
 	display: contents;
 }
 
@@ -519,7 +526,7 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	align-items: flex-start;
 	justify-content: center;
 	padding: 5vh 1rem;
-	background: rgba( 0, 0, 0, 0.55 );
+	background: rgba(0, 0, 0, 0.55);
 	overflow-y: auto;
 }
 
@@ -528,13 +535,13 @@ body.sceu-modal-open {
 }
 
 .sceu-modal__dialog {
-	background: var( --sceu-surface, #fff );
-	color: var( --sceu-text, #16181d );
+	background: var(--sceu-surface, #fff);
+	color: var(--sceu-text, #16181d);
 	width: 100%;
 	max-width: 520px;
 	border-radius: 14px;
 	padding: 1.5em 1.6em 1.7em;
-	box-shadow: 0 12px 40px rgba( 0, 0, 0, 0.3 );
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
 }
 
 .sceu-modal__head {
@@ -559,9 +566,9 @@ body.sceu-modal-open {
 	height: 32px;
 	padding: 0;
 	border-radius: 8px;
-	border: 1px solid var( --sceu-border );
+	border: 1px solid var(--sceu-border);
 	background: transparent;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -571,16 +578,17 @@ body.sceu-modal-open {
 }
 
 .sceu-modal__close:hover {
-	filter: brightness( 0.95 );
+	filter: brightness(0.95);
 }
 
-@media ( prefers-reduced-motion: no-preference ) {
+@media (prefers-reduced-motion: no-preference) {
 	.sceu-modal__dialog {
 		animation: sceu-modal-in 0.18s ease-out;
 	}
+
 	@keyframes sceu-modal-in {
 		from {
-			transform: translateY( 10px );
+			transform: translateY(10px);
 			opacity: 0;
 		}
 	}

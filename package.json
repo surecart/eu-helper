@@ -1,0 +1,15 @@
+{
+	"name": "surecart-eu-helper",
+	"private": true,
+	"description": "Build tooling for SureCart EU Helper blocks. @wordpress/scripts auto-discovers every block.json under packages/blocks and compiles to build/.",
+	"scripts": {
+		"start": "WP_EXPERIMENTAL_MODULES=true wp-scripts start --webpack-src-dir=packages",
+		"build": "WP_EXPERIMENTAL_MODULES=true wp-scripts build --webpack-src-dir=packages",
+		"plugin-zip": "bin/build-zip.sh",
+		"lint:js": "wp-scripts lint-js packages",
+		"format": "wp-scripts format packages"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "^30"
+	}
+}

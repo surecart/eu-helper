@@ -68,11 +68,41 @@ This plugin is a guest in SureCart's house. It should feel native, never bolted-
 
 ## Architecture
 
-- **No build step.** Runs as-is when dropped in `wp-content/plugins/`. There is **no
-  Composer, no npm, no bundler**. A hand-rolled PSR-4 autoloader in
-  `surecart-eu-helper.php` maps `SureCartEuHelper\Foo\Bar` → `src/Foo/Bar.php` (with a
-  traversal-safe class-name regex). Assets are plain CSS/JS, enqueued directly; blocks ship
-  pre-built. Don't add a toolchain.
+- **Blocks are built; PHP and runtime assets are not.** A hand-rolled PSR-4 autoloader in
+  `surecart-eu-helper.php` maps `SureCartEuHelper\Foo\Bar` → `src/Foo/Bar.php` (traversal-safe
+  class-name regex); the admin `assets/*.js` and the public `withdrawal-form.js`/`.css` are
+  plain files enqueued directly — do **not** route them through a bundler. **Blocks** follow
+  the standard `@wordpress/scripts` convention: each block's source lives in
+  `packages/blocks/<name>/` (`block.json`, `index.js` editor entry, `edit.js` editor component,
+  `editor.scss`, `style.scss`, `view.js` Interactivity module, `render.php`; plus `icon.js` when
+  the inserter icon is custom SVG), with the shared inspector field in
+  `packages/blocks/shared/field.js`. Blocks are authored SureCart-style and **metadata-driven**:
+  `block.json` is the single source of truth for `name`/`title`/`category`/`attributes`, and the
+  `index.js` entry only declares JS-only `settings` (`icon`, `edit`, `save`) and registers via the
+  shared `packages/blocks/register-block.js` helper (`registerBlocks([{ metadata, settings }])`,
+  which hands the raw `block.json` metadata to `registerBlockType` and injects the text domain) —
+  never `registerBlockType( '<hard-coded-name>', … )`, and never restating `name`/`category`/`icon`
+  in JS. `npm run build`
+  (`wp-scripts build --webpack-src-dir=packages`) auto-discovers every `block.json` and
+  compiles to **`build/blocks/<name>/`** (mirroring the source tree). `Module::register_block()`
+  registers blocks by **scanning `build/blocks/*/`** for `block.json` — adding a block needs no
+  PHP, webpack, or ignore changes, just a new source folder. The **admin settings app** is the
+  one non-block entry: `webpack.config.js` extends the default config to also build
+  `packages/admin/settings/index.js` → `build/admin/settings.js` (+ `settings.asset.php`). **It
+  must preserve both halves of the `@wordpress/scripts` config array** — `[ scriptConfig,
+  moduleConfig ]`: the admin entry is added only to the script config, and the `moduleConfig`
+  (`experiments.outputModule`) is passed through untouched because it's what compiles block
+  `viewScriptModule` entries (the Interactivity `view.js`). Collapsing the array to just the
+  script config builds the editor fine but silently drops `view.js`, so interactive blocks render
+  yet every click no-ops. This builds a
+  React app (`@wordpress/components`) that `Admin\SettingsPage` mounts when built (falling back
+  to the server-rendered Settings API form otherwise) and saves through `Admin\SettingsController`
+  REST + the shared `Admin\SettingsSanitizer`. `build/` is a generated artifact, gitignored wholesale; the release/QA workflows run
+  `npm ci && npm run build` and stage into `.release/` (not `build/`) before zipping, so the
+  shipped plugin drops in and runs with no toolchain — only contributors working from a clone
+  build. View modules and styles **are** compiled now (that's the convention); keep `view.js`
+  authored as a raw Interactivity API module and block CSS as plain SCSS so the diff stays a
+  representation change, not a rewrite.
 - **Singleton + module registry.** `Plugin::instance()->init()` registers modules
   (`ModuleRegistry`) and boots only the enabled ones. Each feature is a self-contained module
   under `src/Modules/<Name>/` implementing `ModuleInterface`
