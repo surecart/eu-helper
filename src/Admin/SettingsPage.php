@@ -128,6 +128,7 @@ class SettingsPage {
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
 				'i18n'      => array(
 					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
+					'error'     => __( 'Couldn’t search products. Please try again.', 'surecart-eu-helper' ),
 					/* translators: %s: product name. */
 					'remove'    => __( 'Remove %s', 'surecart-eu-helper' ),
 					/* translators: %d: number of matching products found. */
@@ -672,11 +673,15 @@ class SettingsPage {
 					$labels       = Exclusions::product_labels();
 					?>
 					<div class="sceu-excl" data-sceu-excl>
-						<input type="search" class="sceu-excl__search regular-text"
-							placeholder="<?php echo esc_attr__( 'Search products by name…', 'surecart-eu-helper' ); ?>"
-							autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>"
-							role="combobox" aria-expanded="false" aria-autocomplete="list"
-							aria-controls="<?php echo esc_attr( $id_attr ); ?>-results" />
+						<span class="sceu-excl__field">
+							<input type="search" class="sceu-excl__search regular-text"
+								placeholder="<?php echo esc_attr__( 'Search products by name…', 'surecart-eu-helper' ); ?>"
+								autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>"
+								role="combobox" aria-expanded="false" aria-autocomplete="list"
+								aria-controls="<?php echo esc_attr( $id_attr ); ?>-results" />
+							<button type="button" class="sceu-excl__clear" aria-label="<?php echo esc_attr__( 'Clear search', 'surecart-eu-helper' ); ?>" hidden>&times;</button>
+							<span class="sceu-excl__spinner" aria-hidden="true"></span>
+						</span>
 						<ul class="sceu-excl__results" id="<?php echo esc_attr( $id_attr ); ?>-results" role="listbox" hidden></ul>
 						<span class="screen-reader-text" data-sceu-excl-status aria-live="polite"></span>
 						<ul class="sceu-excl__chips">

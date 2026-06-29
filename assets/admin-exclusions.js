@@ -19,10 +19,11 @@
 	}
 
 	function initPicker( root ) {
-		var search  = root.querySelector( '.sceu-excl__search' );
-		var results = root.querySelector( '.sceu-excl__results' );
-		var chips   = root.querySelector( '.sceu-excl__chips' );
-		var tpl     = root.querySelector( '.sceu-excl__template' );
+		var search   = root.querySelector( '.sceu-excl__search' );
+		var results  = root.querySelector( '.sceu-excl__results' );
+		var chips    = root.querySelector( '.sceu-excl__chips' );
+		var tpl      = root.querySelector( '.sceu-excl__template' );
+		var clearBtn = root.querySelector( '.sceu-excl__clear' );
 		if ( ! search || ! results || ! chips || ! tpl ) {
 			return;
 		}
@@ -42,6 +43,41 @@
 
 		function announce( msg ) {
 			if ( status ) { status.textContent = msg || ''; }
+		}
+
+		// Toggle the in-input spinner + aria-busy while a request is in flight.
+		function setLoading( on ) {
+			root.classList.toggle( 'is-loading', !! on );
+			if ( on ) {
+				search.setAttribute( 'aria-busy', 'true' );
+			} else {
+				search.removeAttribute( 'aria-busy' );
+			}
+			syncRightSlot();
+		}
+
+		// Right-slot owner: spinner while loading, clear (×) when the field has
+		// text and is idle, nothing when empty. CSS hides the clear while loading.
+		function syncRightSlot() {
+			if ( ! clearBtn ) { return; }
+			var loading = root.classList.contains( 'is-loading' );
+			clearBtn.hidden = loading || '' === search.value;
+		}
+
+		// Distinct from "no results": the request itself failed, so say so rather
+		// than implying the search simply found nothing.
+		function renderError() {
+			results.innerHTML = '';
+			options = [];
+			active = -1;
+			var li = document.createElement( 'li' );
+			li.className = 'sceu-excl__result is-error';
+			li.setAttribute( 'aria-disabled', 'true' );
+			li.textContent = i18n.error || 'Couldn’t search products. Please try again.';
+			results.appendChild( li );
+			announce( li.textContent );
+			results.hidden = false;
+			search.setAttribute( 'aria-expanded', 'true' );
 		}
 
 		// ARIA combobox: collapse the listbox and reset its state.
@@ -84,6 +120,7 @@
 			addChip( item.id, item.name );
 			search.value = '';
 			clearResults();
+			syncRightSlot();
 			search.focus();
 		}
 
@@ -146,33 +183,59 @@
 
 		var doSearch = debounce( function () {
 			var q = search.value.trim();
-			if ( q.length < 2 ) { clearResults(); return; }
+			if ( q.length < 2 ) { setLoading( false ); clearResults(); return; }
 
 			var key = q.toLowerCase();
-			if ( cache[ key ] ) { renderResults( cache[ key ] ); return; }
+			if ( cache[ key ] ) { setLoading( false ); renderResults( cache[ key ] ); return; }
 
 			// Supersede any request still in flight for an earlier keystroke.
 			if ( controller ) { controller.abort(); }
 			controller = ( typeof AbortController !== 'undefined' ) ? new AbortController() : null;
+			var mine = controller; // identity check so only the latest request clears state.
 
+			setLoading( true );
 			fetch( cfg.searchUrl + '?q=' + encodeURIComponent( q ), {
 				headers: { 'X-WP-Nonce': cfg.nonce },
 				credentials: 'same-origin',
 				signal: controller ? controller.signal : undefined
 			} )
-				.then( function ( r ) { return r.ok ? r.json() : []; } )
+				.then( function ( r ) {
+					// A failed route (e.g. 404) is an error, not an empty result —
+					// surface it rather than masking it as "No matching products".
+					if ( ! r.ok ) { throw new Error( 'http_' + r.status ); }
+					return r.json();
+				} )
 				.then( function ( items ) {
 					var list = Array.isArray( items ) ? items : [];
 					cache[ key ] = list;
+					if ( controller !== mine ) { return; } // a newer request is in flight.
+					setLoading( false );
 					renderResults( list );
 				} )
 				.catch( function ( e ) {
-					if ( e && 'AbortError' === e.name ) { return; } // superseded — ignore.
-					clearResults();
+					if ( e && 'AbortError' === e.name ) { return; } // superseded — newer request owns the spinner.
+					if ( controller !== mine ) { return; }
+					setLoading( false );
+					renderError();
 				} );
 		}, 350 );
 
 		search.addEventListener( 'input', doSearch );
+		// Update the clear (×) visibility immediately, not on the debounced search.
+		search.addEventListener( 'input', syncRightSlot );
+
+		if ( clearBtn ) {
+			// mousedown would blur the input first; prevent it so focus stays put.
+			clearBtn.addEventListener( 'mousedown', function ( e ) { e.preventDefault(); } );
+			clearBtn.addEventListener( 'click', function () {
+				if ( controller ) { controller.abort(); }
+				search.value = '';
+				setLoading( false );
+				clearResults();
+				syncRightSlot();
+				search.focus();
+			} );
+		}
 		// Combobox keyboard model: arrows move the highlight, Enter picks it,
 		// Escape closes. Enter also never submits the settings form.
 		search.addEventListener( 'keydown', function ( e ) {

@@ -122,7 +122,22 @@ class Withdrawals {
 			$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
 
 			// No line-item detail → offer the whole order (unless already taken).
+			// With no per-line product ids we can't test this order against the
+			// exclusion set, so by default we still offer it (never silently narrow
+			// the statutory right). A store that has configured exclusions can opt
+			// to withhold such un-verifiable orders via this filter.
 			if ( empty( $lines ) ) {
+				/**
+				 * Whether to offer an order that has no line-item detail (so its
+				 * products can't be checked against the exclusion set).
+				 *
+				 * @param bool                 $offer             Default true.
+				 * @param array<string, mixed> $order             The order.
+				 * @param bool                 $exclusions_active Whether any exclusion is configured.
+				 */
+				if ( ! apply_filters( 'sceu_offer_order_without_line_items', true, $order, (bool) $excluded ) ) {
+					continue;
+				}
 				$order['line_items'] = array();
 				$order['whole_order'] = true;
 				$out[]                = $order;
