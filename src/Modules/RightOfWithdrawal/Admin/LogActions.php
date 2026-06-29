@@ -155,37 +155,97 @@ class LogActions {
 	/**
 	 * Admin action: best-effort sync of pending requests against SureCart.
 	 *
-	 * For each pending request, if every order it covers now looks
-	 * refunded/cancelled in SureCart, mark the request resolved. SureCart does
-	 * not always surface refunds on the order, so this is a convenience, not a
-	 * guarantee — the merchant can always set status manually.
+	 * For each pending request we classify every order it covers (none / partial /
+	 * full refund, where cancelled/void counts as full):
+	 *
+	 *  - Every order fully refunded/cancelled → mark the request **resolved** (an
+	 *    unambiguous outcome).
+	 *  - Any refund present but not all full (a partial refund, or a mix) → leave
+	 *    the status alone and **flag it for review**. A partial refund cannot be
+	 *    safely attributed to one of several pending requests on the same order
+	 *    (SureCart refunds are amount-based and carry no per-line detail), so the
+	 *    plugin surfaces it for the merchant rather than guessing.
+	 *  - No refund anywhere → untouched.
+	 *
+	 * SureCart does not always surface refunds, so this remains a convenience, not
+	 * a guarantee — the merchant can always set status manually.
 	 *
 	 * @return void
 	 */
 	public function sync_log(): void {
 		$this->guard( 'sceu_sync_log' );
 
-		$synced = 0;
+		$resolved = 0;
+		$flagged  = 0;
 		foreach ( LogTable::rows_by_status( Withdrawals::STATUS_RECEIVED ) as $row ) {
 			$ids = json_decode( (string) ( $row['order_ids'] ?? '[]' ), true );
 			if ( ! is_array( $ids ) || empty( $ids ) ) {
 				continue;
 			}
-			$all_done = true;
+
+			$all_full = true;
+			$any      = false;
 			foreach ( $ids as $order_id ) {
-				if ( ! $this->order_looks_refunded( (string) $order_id ) ) {
-					$all_done = false;
-					break;
+				$state = $this->order_refund_state( (string) $order_id );
+				if ( 'none' !== $state ) {
+					$any = true;
+				}
+				if ( 'full' !== $state ) {
+					$all_full = false;
 				}
 			}
-			if ( $all_done ) {
+
+			if ( $all_full ) {
 				LogTable::update_status( (int) $row['id'], Withdrawals::STATUS_RESOLVED );
-				++$synced;
+				++$resolved;
+			} elseif ( $any ) {
+				// Partial/mixed refund: record a review flag without changing status.
+				if ( $this->flag_for_review( $row ) ) {
+					++$flagged;
+				}
 			}
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&synced=' . $synced ) );
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'    => 'sceu-withdrawal-log',
+					'synced'  => $resolved,
+					'flagged' => $flagged,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
 		exit;
+	}
+
+	/**
+	 * Mark a pending request as having a refund detected that needs the merchant's
+	 * review (a partial or mixed refund the sync won't auto-resolve). Stores a
+	 * `refund_review` flag in the row's JSON payload, merged with what's there.
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return bool True when the flag was newly set; false if already flagged or no id.
+	 */
+	private function flag_for_review( array $row ): bool {
+		$id = (int) ( $row['id'] ?? 0 );
+		if ( ! $id ) {
+			return false;
+		}
+
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		// Idempotent: don't re-flag (and don't inflate the banner count) on repeat syncs.
+		if ( ! empty( $payload['refund_review'] ) ) {
+			return false;
+		}
+
+		$payload['refund_review'] = true;
+		LogTable::update_payload( $id, $payload );
+		return true;
 	}
 
 	/**
@@ -306,30 +366,113 @@ class LogActions {
 	}
 
 	/**
-	 * Best-effort: does this order appear refunded/cancelled in SureCart?
+	 * Classify an order's refund state in SureCart: 'none', 'partial', or 'full'.
+	 *
+	 * The authoritative refund totals live on the **charge** — a refunded order
+	 * keeps its `paid` status (SureCart has no `refunded`/`partially_refunded`
+	 * order status; "Partially Refunded" is only a derived display label). The
+	 * Order model does not carry the charge, but a checkout has exactly one
+	 * successful charge, reachable by checkout id
+	 * (`Charge::where( [ 'checkout_ids' => [ … ] ] )`). A cancelled/void order is
+	 * treated as 'full'. The checkout's own `refunded_amount` is a last-resort
+	 * fallback for when the charge can't be read.
+	 *
+	 * Fails closed: any unknown/error state resolves to 'none' so a SureCart change
+	 * degrades to "do nothing" rather than a wrong status change.
 	 *
 	 * @param string $order_id Order id.
-	 * @return bool
+	 * @return string One of 'none', 'partial', 'full'.
 	 */
-	private function order_looks_refunded( string $order_id ): bool {
+	private function order_refund_state( string $order_id ): string {
 		if ( '' === $order_id || ! class_exists( '\SureCart\Models\Order' ) ) {
-			return false;
+			return 'none';
 		}
 		try {
 			$order = \SureCart\Models\Order::with( array( 'checkout' ) )->find( $order_id );
 		} catch ( \Throwable $e ) {
-			return false;
+			return 'none';
 		}
 		if ( is_wp_error( $order ) || empty( $order ) || ! is_object( $order ) ) {
-			return false;
+			return 'none';
 		}
 
+		// Cancelled/void orders are terminal — treat as a full withdrawal outcome.
 		if ( Withdrawals::is_terminal_status( (string) ( $order->status ?? '' ) ) ) {
-			return true;
+			return 'full';
 		}
 
-		$checkout = $order->checkout ?? null;
-		$refunded = is_object( $checkout ) ? ( $checkout->refunded_amount ?? 0 ) : 0;
-		return is_numeric( $refunded ) && (int) $refunded > 0;
+		// Resolve the checkout (object when expanded, else the id), then read the
+		// authoritative refund totals off its charge.
+		$checkout    = is_object( $order->checkout ?? null ) ? $order->checkout : null;
+		$checkout_id = $checkout
+			? (string) ( $checkout->id ?? '' )
+			: ( is_string( $order->checkout ?? null ) ? (string) $order->checkout : (string) ( $order->checkout_id ?? '' ) );
+
+		$state = $this->charge_refund_state( $checkout_id );
+		if ( null !== $state ) {
+			return $state;
+		}
+
+		// Last-resort fallback: the checkout itself sometimes carries a refunded
+		// total. Call it 'full' when it covers the order total, else 'partial'.
+		$refunded = $checkout && is_numeric( $checkout->refunded_amount ?? null ) ? (int) $checkout->refunded_amount : 0;
+		if ( $refunded > 0 ) {
+			$total = $checkout && is_numeric( $checkout->total_amount ?? null ) ? (int) $checkout->total_amount : 0;
+			return ( $total > 0 && $refunded >= $total ) ? 'full' : 'partial';
+		}
+
+		return 'none';
+	}
+
+	/**
+	 * Refund state derived from a checkout's charge(s): 'none', 'partial', 'full',
+	 * or null when it cannot be determined (no checkout id, no charge, or an API
+	 * error) so the caller can fall back. A checkout normally has a single charge;
+	 * we aggregate defensively in case of more than one.
+	 *
+	 * @param string $checkout_id Checkout id.
+	 * @return string|null
+	 */
+	private function charge_refund_state( string $checkout_id ): ?string {
+		if ( '' === $checkout_id || ! class_exists( '\SureCart\Models\Charge' ) ) {
+			return null;
+		}
+		try {
+			$charges = \SureCart\Models\Charge::where( array( 'checkout_ids' => array( $checkout_id ) ) )->get();
+		} catch ( \Throwable $e ) {
+			return null;
+		}
+		if ( is_wp_error( $charges ) ) {
+			return null;
+		}
+
+		$list = is_object( $charges ) && isset( $charges->data )
+			? $charges->data
+			: ( is_array( $charges ) ? $charges : array() );
+		if ( empty( $list ) ) {
+			return null;
+		}
+
+		$amount   = 0;
+		$refunded = 0;
+		$fully    = false;
+		foreach ( $list as $charge ) {
+			if ( ! is_object( $charge ) ) {
+				continue;
+			}
+			$amount   += is_numeric( $charge->amount ?? null ) ? (int) $charge->amount : 0;
+			$refunded += is_numeric( $charge->refunded_amount ?? null ) ? (int) $charge->refunded_amount : 0;
+			if ( ! empty( $charge->fully_refunded ) ) {
+				$fully = true;
+			}
+		}
+
+		if ( $refunded <= 0 && ! $fully ) {
+			return 'none';
+		}
+		if ( $fully || ( $amount > 0 && $refunded >= $amount ) ) {
+			return 'full';
+		}
+		return 'partial';
 	}
 }

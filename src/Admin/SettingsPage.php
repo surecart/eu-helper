@@ -780,8 +780,25 @@ class SettingsPage {
 					<?php if ( isset( $_GET['synced'] ) ) : ?>
 						<div class="sceu-notice sceu-notice--info">
 							<?php
+							$synced_count  = (int) $_GET['synced'];
+							$flagged_count = isset( $_GET['flagged'] ) ? (int) $_GET['flagged'] : 0;
 							/* translators: %d: number of requests marked resolved. */
-							echo esc_html( sprintf( __( 'Sync complete. %d request(s) marked resolved.', 'surecart-eu-helper' ), (int) $_GET['synced'] ) );
+							echo esc_html( sprintf( __( 'Sync complete. %d request(s) marked resolved.', 'surecart-eu-helper' ), $synced_count ) );
+							if ( $flagged_count > 0 ) {
+								echo ' ';
+								echo esc_html(
+									sprintf(
+										/* translators: %d: number of requests flagged for review. */
+										_n(
+											'%d request has a partial refund flagged for review — set its status manually.',
+											'%d requests have a partial refund flagged for review — set their status manually.',
+											$flagged_count,
+											'surecart-eu-helper'
+										),
+										$flagged_count
+									)
+								);
+							}
 							?>
 						</div>
 					<?php endif; ?>
@@ -800,7 +817,7 @@ class SettingsPage {
 							<?php echo esc_html__( 'Export CSV', 'surecart-eu-helper' ); ?>
 						</a>
 					</div>
-					<p class="sceu-field__help" style="margin:0 0 1.5em;"><?php echo esc_html__( 'Sync checks SureCart for refunded/cancelled orders and marks matching requests resolved. SureCart does not always report refunds on the order, so set status manually when needed.', 'surecart-eu-helper' ); ?></p>
+					<p class="sceu-field__help" style="margin:0 0 1.5em;"><?php echo esc_html__( 'Sync checks SureCart for refunds and cancellations. Fully refunded or cancelled orders are marked resolved. A partial refund is flagged for review instead of resolved — it can\'t be matched to a specific request, so set the status manually. SureCart does not always report refunds, so set status manually when needed.', 'surecart-eu-helper' ); ?></p>
 
 					<div class="sceu-card sceu-card--table">
 						<form method="get">

@@ -84,6 +84,11 @@ class GuestController {
 					'type'     => 'array',
 					'required' => false,
 				),
+				'grecaptcha_token' => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_text_field',
+				),
 			)
 		);
 
@@ -150,6 +155,14 @@ class GuestController {
 		if ( $this->is_bot( $request ) ) {
 			// Pretend success without doing anything.
 			return new \WP_REST_Response( array( 'success' => true ), 200 );
+		}
+
+		// Optional reCAPTCHA v3 (reuses SureCart's keys). Only enforced when the
+		// merchant enabled it AND SureCart's keys are configured — otherwise this
+		// is a no-op, so a misconfiguration never blocks legitimate submitters.
+		if ( \SureCartEuHelper\Modules\RightOfWithdrawal\Recaptcha::active()
+			&& ! \SureCartEuHelper\Modules\RightOfWithdrawal\Recaptcha::verify( (string) $request->get_param( 'grecaptcha_token' ) ) ) {
+			return new \WP_Error( 'sceu_recaptcha', __( 'We could not verify your request. Please reload the page and try again.', 'surecart-eu-helper' ), array( 'status' => 403 ) );
 		}
 
 		$email  = sanitize_email( (string) $request->get_param( 'email' ) );

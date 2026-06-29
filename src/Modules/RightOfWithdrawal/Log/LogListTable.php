@@ -253,6 +253,18 @@ class LogListTable extends \WP_List_Table {
 
 		$out = '<strong>' . esc_html( $label ) . '</strong>';
 
+		// A partial/mixed refund the Sync detected but won't auto-resolve. Only
+		// meaningful while the request is still pending; a resolved/declined
+		// request has already been actioned, so the prompt would be noise.
+		if ( 'received' === $status ) {
+			$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
+			if ( is_array( $payload ) && ! empty( $payload['refund_review'] ) ) {
+				$tip  = __( 'Sync found a partial refund for this order in SureCart. It was not resolved automatically because a partial refund can\'t be matched to a specific request — review and set the status manually.', 'surecart-eu-helper' );
+				$out .= ' <span title="' . esc_attr( $tip ) . '" style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:#fdf3dd;color:#8a6d00;margin-left:6px;">'
+					. esc_html__( 'Refund detected — review', 'surecart-eu-helper' ) . '</span>';
+			}
+		}
+
 		$actions = array(
 			'resolved' => __( 'Mark resolved', 'surecart-eu-helper' ),
 			'rejected' => __( 'Mark declined', 'surecart-eu-helper' ),

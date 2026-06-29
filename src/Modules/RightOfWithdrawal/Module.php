@@ -131,6 +131,15 @@ class Module implements ModuleInterface {
 				'label' => __( 'Excluded products', 'surecart-eu-helper' ),
 				'help'  => __( 'Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections.', 'surecart-eu-helper' ),
 			),
+			array(
+				'key'            => 'recaptcha_enabled',
+				'section'        => 'security',
+				'type'           => 'toggle',
+				'label'          => __( 'Spam protection (reCAPTCHA v3)', 'surecart-eu-helper' ),
+				'checkbox_label' => __( 'Protect the public Withdrawal Request Form with reCAPTCHA v3', 'surecart-eu-helper' ),
+				'default'        => false,
+				'help'           => __( 'Reuses your SureCart reCAPTCHA v3 keys (SureCart → Settings → Spam Protection & Security) to screen the logged-out withdrawal form against bots. It has no effect until those keys are configured in SureCart. The form always uses a honeypot, a nonce, and per-IP rate limiting regardless of this setting.', 'surecart-eu-helper' ),
+			),
 		);
 	}
 
@@ -158,6 +167,10 @@ class Module implements ModuleInterface {
 			'exclusions'    => array(
 				'title'       => __( 'Product exclusions', 'surecart-eu-helper' ),
 				'description' => __( 'Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods.', 'surecart-eu-helper' ),
+			),
+			'security'      => array(
+				'title'       => __( 'Spam protection', 'surecart-eu-helper' ),
+				'description' => __( 'Optional bot protection for the public (logged-out) Withdrawal Request Form, reusing SureCart\'s reCAPTCHA.', 'surecart-eu-helper' ),
 			),
 		);
 	}

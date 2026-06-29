@@ -13,6 +13,7 @@
 namespace SureCartEuHelper\Modules\RightOfWithdrawal\Form;
 
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\GuestController;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Recaptcha;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -77,6 +78,24 @@ class PublicForm {
 		wp_enqueue_style( self::HANDLE );
 		wp_enqueue_script( self::HANDLE );
 
+		// Optional spam protection: reuse SureCart's reCAPTCHA v3 when the merchant
+		// enabled it here and SureCart's keys are configured. The script defines
+		// window.grecaptcha; the form executes it just before a submit.
+		$recaptcha = null;
+		if ( Recaptcha::active() ) {
+			wp_enqueue_script(
+				'sceu-recaptcha',
+				'https://www.google.com/recaptcha/api.js?render=' . rawurlencode( Recaptcha::site_key() ),
+				array(),
+				null, // Google's URL — no version query.
+				true
+			);
+			$recaptcha = array(
+				'siteKey' => Recaptcha::site_key(),
+				'action'  => Recaptcha::ACTION,
+			);
+		}
+
 		$copy = wp_parse_args( array_filter( $atts, 'strlen' ), self::defaults() );
 
 		wp_localize_script(
@@ -86,6 +105,8 @@ class PublicForm {
 				'lookupUrl' => rest_url( GuestController::NAMESPACE . GuestController::LOOKUP_ROUTE ),
 				'submitUrl' => rest_url( GuestController::NAMESPACE . GuestController::SUBMIT_ROUTE ),
 				'nonce'     => wp_create_nonce( 'wp_rest' ),
+				// Present only when reCAPTCHA is active for this form; null otherwise.
+				'recaptcha' => $recaptcha,
 				'confirmLabel'   => $copy['confirm_label'],
 				'successMessage' => $copy['success_message'],
 				// Unverified (free-text) path: no confirmation email is sent, so the
