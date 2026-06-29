@@ -4,6 +4,7 @@
 /.distignore
 /.claude
 /.release
+/bin
 /tests
 /docs
 .DS_Store
@@ -14,7 +15,7 @@
 # Build tooling & JS sources are dev-only. The COMPILED output (build/blocks/*) ships
 # and is NOT excluded; the sources that produce it are.
 /node_modules
-/assets/src
+/packages
 /package.json
 /package-lock.json
 /webpack.config.js

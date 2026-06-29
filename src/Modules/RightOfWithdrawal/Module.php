@@ -216,7 +216,7 @@ class Module implements ModuleInterface {
 	/**
 	 * Register every built block by scanning the compiled `build/blocks/` output.
 	 *
-	 * Block sources live in `assets/src/blocks/<name>/` and are compiled by
+	 * Block sources live in `packages/blocks/<name>/` and are compiled by
 	 * @wordpress/scripts into `build/blocks/<name>/` (block.json + index.js +
 	 * generated index.asset.php for wp-* deps/translations, the extracted
 	 * stylesheets, and any view module). Each compiled `block.json` declares its

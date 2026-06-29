@@ -19,7 +19,7 @@ jobs:
           cache: npm
 
       # Compile the blocks into build/blocks/* (block.json auto-discovered from
-      # assets/src/blocks). The staged folder below includes this build/ output.
+      # packages/blocks). The staged folder below includes this build/ output.
       - name: Build blocks
         run: |
           npm ci

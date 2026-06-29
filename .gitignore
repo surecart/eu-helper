@@ -3,7 +3,7 @@
 /vendor
 
 # Build artifacts. Compiled blocks land in /build (block.json auto-discovered from
-# assets/src/blocks and built by `npm run build`); regenerated locally and in CI.
+# packages/blocks and built by `npm run build`); regenerated locally and in CI.
 /build
 /dist
 /.release

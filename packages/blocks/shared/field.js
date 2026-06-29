@@ -7,22 +7,22 @@
  */
 import { TextControl, TextareaControl } from '@wordpress/components';
 
-export default function AttrField( {
+export default function AttrField({
 	attr,
 	label,
 	attributes,
 	setAttributes,
 	defaults,
 	textarea = false,
-} ) {
+}) {
 	const Control = textarea ? TextareaControl : TextControl;
 
 	return (
 		<Control
-			label={ label }
-			value={ attributes[ attr ] || '' }
-			placeholder={ defaults[ attr ] }
-			onChange={ ( value ) => setAttributes( { [ attr ]: value } ) }
+			label={label}
+			value={attributes[attr] || ''}
+			placeholder={defaults[attr]}
+			onChange={(value) => setAttributes({ [attr]: value })}
 		/>
 	);
 }
