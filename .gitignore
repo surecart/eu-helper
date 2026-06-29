@@ -2,14 +2,16 @@
 /node_modules
 /vendor
 
-# Build artifacts
+# Build artifacts. Compiled blocks land in /build (block.json auto-discovered from
+# packages/blocks and built by `npm run build`); regenerated locally and in CI.
 /build
 /dist
+/.release
 *.zip
 
-# Lock files (no Composer/npm build step in this plugin)
+# Lock files. package-lock.json IS committed (npm ci needs it for reproducible builds);
+# Composer/yarn are unused here.
 /composer.lock
-/package-lock.json
 /yarn.lock
 
 # Environment & secrets

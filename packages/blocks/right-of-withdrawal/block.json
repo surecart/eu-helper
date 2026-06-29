@@ -4,7 +4,6 @@
   "name": "surecart-eu-helper/right-of-withdrawal",
   "title": "EU Right of Withdrawal",
   "category": "surecart-customer-dashboard",
-  "icon": "shield-alt",
   "description": "Shows EU consumers a withdrawal notice + button in their customer area. Renders only for eligible logged-in SureCart customers.",
   "textdomain": "surecart-eu-helper",
   "keywords": ["surecart", "eu", "withdrawal", "refund", "consumer"],
@@ -35,9 +34,9 @@
     "confirmationMessage": { "type": "string", "default": "" }
   },
   "version": "1.5.8",
-  "editorScript": "file:./editor.js",
-  "editorStyle": "file:./editor.css",
-  "style": "file:./view.css",
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./index.css",
+  "style": "file:./style-index.css",
   "viewScriptModule": "file:./view.js",
   "render": "file:./render.php"
 }
