@@ -173,6 +173,19 @@
 	margin: 0.6em 0 0;
 }
 
+/* Per-field validation message, shown directly below the input it refers to. */
+.sceu-wf .sceu-form-control__error {
+	color: #a50e0e;
+	margin: 0.35em 0 0;
+	font-size: 0.875em;
+}
+
+/* Invalid field outline — scoped under .sceu-wf so it beats the theme's input
+   border rule (which sets the colour at 0,1,1; this wins at 0,2,1). */
+.sceu-wf .sceu-wf__input[aria-invalid="true"] {
+	border-color: #d63638;
+}
+
 /* Visually hidden but announced by screen readers (quantity live region). */
 .sceu-wf .sceu-sr-only {
 	position: absolute;
@@ -344,6 +357,7 @@ body.surecart-theme-dark .sceu-wf {
 	color: #f4f5f7;
 }
 
-body.surecart-theme-dark .sceu-wf__error {
+body.surecart-theme-dark .sceu-wf__error,
+body.surecart-theme-dark .sceu-wf .sceu-form-control__error {
 	color: #f08a8a;
 }
