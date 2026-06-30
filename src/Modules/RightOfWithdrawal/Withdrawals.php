@@ -83,6 +83,105 @@ class Withdrawals {
 	}
 
 	/**
+	 * Whether reactivating a request (moving it back into a live state) would
+	 * over-claim one of its orders — i.e. push the total live (received + resolved)
+	 * requested units past what was purchased, once this request's units count
+	 * again. Mirrors the availability rule the customer form enforces, but scoped
+	 * by order (not user) so it also covers guest requests and the admin "Reset to
+	 * pending" path.
+	 *
+	 * @param array<string, mixed> $row The log row being reactivated (ARRAY_A).
+	 * @return string|null Null when safe; a human-readable reason when it would
+	 *                     over-claim.
+	 */
+	public static function reactivation_conflict( array $row ): ?string {
+		$row_id    = (int) ( $row['id'] ?? 0 );
+		$order_ids = json_decode( (string) ( $row['order_ids'] ?? '[]' ), true );
+		$order_ids = is_array( $order_ids ) ? array_map( 'strval', $order_ids ) : array();
+		if ( empty( $order_ids ) ) {
+			return null; // Nothing to check against.
+		}
+
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+
+		// This request's units per line item, and the purchased cap per line item.
+		$this_items  = array();
+		$purchased   = array();
+		$whole_order = empty( $payload['items'] ) || ! is_array( $payload['items'] );
+		if ( ! $whole_order ) {
+			foreach ( $payload['items'] as $it ) {
+				$lid = (string) ( $it['line_item_id'] ?? '' );
+				$qty = (int) ( $it['quantity'] ?? 0 );
+				if ( '' !== $lid && $qty > 0 ) {
+					$this_items[ $lid ] = ( $this_items[ $lid ] ?? 0 ) + $qty;
+				}
+			}
+		}
+		if ( ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) ) {
+			foreach ( $payload['orders'] as $order ) {
+				$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
+				foreach ( $lines as $line ) {
+					$lid = (string) ( $line['id'] ?? '' );
+					$cap = (int) ( $line['purchased'] ?? 0 );
+					if ( '' !== $lid && $cap > 0 ) {
+						$purchased[ $lid ] = $cap;
+					}
+				}
+			}
+		}
+
+		// Sum the live (received + resolved) units already claimed against the same
+		// orders by every OTHER request.
+		$existing_items = array();
+		$existing_whole = false;
+		foreach ( self::blocking_statuses() as $status ) {
+			foreach ( LogTable::rows_by_status( $status ) as $other ) {
+				if ( (int) ( $other['id'] ?? 0 ) === $row_id ) {
+					continue;
+				}
+				$other_oids = json_decode( (string) ( $other['order_ids'] ?? '[]' ), true );
+				$other_oids = is_array( $other_oids ) ? array_map( 'strval', $other_oids ) : array();
+				if ( ! array_intersect( $other_oids, $order_ids ) ) {
+					continue; // Unrelated order.
+				}
+				$other_payload = json_decode( (string) ( $other['payload'] ?? '{}' ), true );
+				if ( ! empty( $other_payload['items'] ) && is_array( $other_payload['items'] ) ) {
+					foreach ( $other_payload['items'] as $it ) {
+						$lid = (string) ( $it['line_item_id'] ?? '' );
+						$qty = (int) ( $it['quantity'] ?? 0 );
+						if ( '' !== $lid && $qty > 0 ) {
+							$existing_items[ $lid ] = ( $existing_items[ $lid ] ?? 0 ) + $qty;
+						}
+					}
+				} else {
+					$existing_whole = true; // A whole-order claim consumes everything.
+				}
+			}
+		}
+
+		$reason = __( 'Those units are already covered by current pending or completed requests for this order. Resolve, decline, or delete the other request(s) first.', 'surecart-eu-helper' );
+
+		// A whole-order reactivation conflicts with any existing live claim; a
+		// pre-existing whole-order claim conflicts with any reactivation.
+		if ( $existing_whole || ( $whole_order && ! empty( $existing_items ) ) ) {
+			return $reason;
+		}
+
+		// Per-line: existing + this request must not exceed what was purchased.
+		foreach ( $this_items as $lid => $qty ) {
+			$cap = (int) ( $purchased[ $lid ] ?? 0 );
+			if ( $cap > 0 && ( (int) ( $existing_items[ $lid ] ?? 0 ) + $qty ) > $cap ) {
+				return $reason;
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Orders the customer can still withdraw from. Recent orders, minus refunded/
 	 * cancelled ones, with each line item annotated with the quantity still
 	 * available ("remaining" = purchased − already requested). Items with nothing
