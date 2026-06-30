@@ -18,15 +18,21 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Request lifecycle statuses:
- *  - received: submitted, awaiting the merchant.
+ *  - unverified: a guest free-text request whose email + order number did NOT
+ *    match a real order. The merchant must verify who it is before actioning it,
+ *    so it sits in front of the normal flow and is never offered a one-click
+ *    "Mark resolved". From here it advances to `received` (verified & accepted)
+ *    or `rejected` (declined). It never carries order/item detail.
+ *  - received: submitted and verified, awaiting the merchant.
  *  - resolved: the merchant has handled it (refunded/cancelled). Done.
  *  - rejected: the merchant declined it; the order may be requested again.
  */
 class Withdrawals {
 
-	const STATUS_RECEIVED = 'received';
-	const STATUS_RESOLVED = 'resolved';
-	const STATUS_REJECTED = 'rejected';
+	const STATUS_UNVERIFIED = 'unverified';
+	const STATUS_RECEIVED   = 'received';
+	const STATUS_RESOLVED   = 'resolved';
+	const STATUS_REJECTED   = 'rejected';
 
 	/**
 	 * Statuses that should block an order from being requested again.
@@ -347,6 +353,8 @@ class Withdrawals {
 	 */
 	public static function status_label( string $status ): string {
 		switch ( $status ) {
+			case self::STATUS_UNVERIFIED:
+				return __( 'Unverified', 'surecart-eu-helper' );
 			case self::STATUS_RESOLVED:
 				return __( 'Completed', 'surecart-eu-helper' );
 			case self::STATUS_REJECTED:
