@@ -38,13 +38,31 @@ class GuestLookup {
 	public static function find_order( string $email, string $number ): ?array {
 		$email  = strtolower( trim( $email ) );
 		$number = trim( $number );
-		if ( '' === $email || '' === $number || ! class_exists( '\SureCart\Models\Order' ) ) {
+		if ( '' === $email || '' === $number
+			|| ! class_exists( '\SureCart\Models\Order' )
+			|| ! class_exists( '\SureCart\Models\Customer' ) ) {
 			return null;
 		}
 
+		// Resolve the customer(s) by email, then fetch their orders by `customer_ids`
+		// (SureCart's `query` is a fuzzy name/email search, not an order-number
+		// match). The email→customer step also gates access to the order.
+		$customers = self::customers_for_email( $email );
+		if ( empty( $customers ) ) {
+			return null;
+		}
+		$customer_ids = array_values( array_unique( array_column( $customers, 'id' ) ) );
+
+		// Scope to the withdrawal window so the result set stays small and aligned
+		// with eligibility (mirrors CustomerContext::recent_orders()).
+		$conditions = array( 'customer_ids' => $customer_ids );
+		$lookback   = (int) Settings::get( 'right_of_withdrawal', 'lookback_days', 14 );
+		if ( $lookback > 0 ) {
+			$conditions['created_at'] = array( 'gte' => time() - ( $lookback * DAY_IN_SECONDS ) );
+		}
+
 		try {
-			// `query` searches order numbers (fuzzy), so we exact-match below.
-			$orders = \SureCart\Models\Order::where( array( 'query' => $number ) )
+			$orders = \SureCart\Models\Order::where( $conditions )
 				->with( array( 'checkout', 'checkout.line_items', 'line_item.price', 'price.product' ) )
 				->get();
 		} catch ( \Throwable $e ) {
@@ -63,15 +81,79 @@ class GuestLookup {
 				continue; // Not the exact order number.
 			}
 			if ( 0 !== strcasecmp( self::order_email( $order ), $email ) ) {
-				continue; // Email doesn't match this order.
+				continue; // Email doesn't match this order (defence in depth).
 			}
 			if ( ! self::within_lookback( $order ) ) {
 				continue; // Outside the withdrawal window — treat as not found.
 			}
-			return self::annotate( $order );
+
+			$matched = self::annotate( $order );
+			if ( null !== $matched ) {
+				// Link the request to the customer that owns this order. An email can
+				// map to both a live and a test customer, so pick the one whose mode
+				// matches the order.
+				$matched['customer_id'] = self::pick_customer_id( $customers, $order );
+			}
+			return $matched;
 		}
 
 		return null;
+	}
+
+	/**
+	 * SureCart customers whose email exactly matches, each tagged with its mode.
+	 * The customer `query` filter searches name + email fuzzily, so we re-check the
+	 * email exactly here. A person can have more than one record (e.g. a live and a
+	 * test customer).
+	 *
+	 * @param string $email Lower-cased, trimmed email.
+	 * @return array<int, array{id: string, live: bool}>
+	 */
+	private static function customers_for_email( string $email ): array {
+		try {
+			$customers = \SureCart\Models\Customer::where( array( 'query' => $email ) )->get();
+		} catch ( \Throwable $e ) {
+			return array();
+		}
+
+		if ( is_wp_error( $customers ) || ! is_array( $customers ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $customers as $customer ) {
+			if ( is_object( $customer )
+				&& ! empty( $customer->id )
+				&& 0 === strcasecmp( trim( (string) ( $customer->email ?? '' ) ), $email ) ) {
+				$out[] = array(
+					'id'   => (string) $customer->id,
+					'live' => ! empty( $customer->live_mode ),
+				);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Pick the customer id that owns an order: the candidate whose mode matches the
+	 * order's live/test mode, else the first. Empty when there are no candidates.
+	 *
+	 * @param array<int, array{id: string, live: bool}> $customers Candidates.
+	 * @param object                                    $order     Matched order.
+	 * @return string
+	 */
+	private static function pick_customer_id( array $customers, $order ): string {
+		if ( empty( $customers ) ) {
+			return '';
+		}
+		$order_live = ! empty( $order->live_mode );
+		foreach ( $customers as $candidate ) {
+			if ( $candidate['live'] === $order_live ) {
+				return $candidate['id'];
+			}
+		}
+		return $customers[0]['id'];
 	}
 
 	/**
@@ -115,6 +197,25 @@ class GuestLookup {
 	}
 
 	/**
+	 * The customer's name from the order's checkout (inherited name, else
+	 * first + last). Empty when none.
+	 *
+	 * @param object $order Order model.
+	 * @return string
+	 */
+	private static function order_customer_name( $order ): string {
+		$checkout = $order->checkout ?? null;
+		if ( ! is_object( $checkout ) ) {
+			return '';
+		}
+		$name = trim( (string) ( $checkout->inherited_name ?? '' ) );
+		if ( '' === $name ) {
+			$name = trim( (string) ( $checkout->first_name ?? '' ) . ' ' . (string) ( $checkout->last_name ?? '' ) );
+		}
+		return $name;
+	}
+
+	/**
 	 * Normalise + annotate a matched order for the withdrawal picker: drop
 	 * excluded products, set each remaining quantity, and mark whole-order when
 	 * there's no line-item detail. Returns null when nothing is withdrawable
@@ -136,6 +237,10 @@ class GuestLookup {
 		if ( Withdrawals::is_terminal_status( (string) ( $norm['status'] ?? '' ) ) ) {
 			return null;
 		}
+
+		// Carry the customer name so the verified request shows it in the log (the
+		// id is resolved in find_order, where the candidate customers are known).
+		$norm['customer_name'] = self::order_customer_name( $order );
 
 		$lines    = isset( $norm['line_items'] ) && is_array( $norm['line_items'] ) ? $norm['line_items'] : array();
 		$excluded = Exclusions::excluded_set();
