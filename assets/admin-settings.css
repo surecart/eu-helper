@@ -185,9 +185,13 @@ body.toplevel_page_sceu-settings #wpfooter {
 	border-bottom: 1px solid var(--sceu-gray-200);
 }
 
-/* Rendered via in_admin_header; flush-left to match the shell below. */
+/* Rendered via in_admin_header; flush-left to match the shell below. Sticks just
+   under the WP admin bar while the page scrolls. */
 .sceu-app__bar--global {
 	margin: 0 0 0 -20px;
+	position: sticky;
+	top: var(--wp-admin--admin-bar--height, 32px);
+	z-index: 100;
 }
 
 @media screen and (max-width: 782px) {
@@ -294,9 +298,11 @@ body.toplevel_page_sceu-settings #wpfooter {
 }
 
 /* ---- Body: nav + content ---- */
+/* flex-start (not stretch) lets the nav keep its own viewport-tall height so it
+   can stick while the taller content column scrolls. */
 .sceu-app__body {
 	display: flex;
-	align-items: stretch;
+	align-items: flex-start;
 }
 
 .sceu-app__nav {
@@ -305,7 +311,11 @@ body.toplevel_page_sceu-settings #wpfooter {
 	background: var(--sceu-surface);
 	border-right: 1px solid var(--sceu-gray-200);
 	padding: 14px 12px;
-	min-height: calc(100vh - 56px - 32px);
+	/* Stick below the sticky header (admin bar + 56px header). */
+	position: sticky;
+	top: calc(var(--wp-admin--admin-bar--height, 32px) + 56px);
+	height: calc(100vh - var(--wp-admin--admin-bar--height, 32px) - 56px);
+	overflow-y: auto;
 }
 
 .sceu-nav__item {
@@ -976,4 +986,95 @@ body.sceu-fullbleed #wpfooter {
 /* Right-align the snackbar(s) within the fixed container so they hug the edge. */
 .sceu-app__snackbars .components-snackbar {
 	margin-left: auto;
+}
+
+/* ==========================================================================
+   Responsive: settings shell on tablet/phone (WP's 782px admin breakpoint).
+   The 248px side nav would cramp the content column on narrow screens, so the
+   body stacks and the nav becomes a horizontal, scrollable tab strip that
+   sticks just under the header instead of running down the side.
+   ========================================================================== */
+@media screen and (max-width: 782px) {
+	/* stretch (not flex-start) so the nav strip + content fill the full width. */
+	.sceu-app__body {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	/* WP's mobile admin bar is a fixed 46px bar; pin the header just below it.
+	   (Use an explicit value rather than --wp-admin--admin-bar--height, which
+	   isn't reliably updated to 46px at this breakpoint, so the header doesn't
+	   slip under the admin bar when both are on screen.) */
+	.sceu-app__bar--global {
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		display: flex;
+		flex-direction: row;
+		width: 100%;
+		height: auto;
+		gap: 4px;
+		padding: 8px 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		/* Sit directly beneath the sticky header (46px admin bar + 56px header). */
+		top: 102px;
+		z-index: 99;
+	}
+
+	/* Tabs keep their width and don't wrap; the strip scrolls horizontally. */
+	.sceu-app__nav .sceu-nav__item {
+		flex: none;
+		margin-bottom: 0;
+		white-space: nowrap;
+	}
+
+	.sceu-app__content {
+		padding: 20px 16px;
+	}
+
+	.sceu-app__bar {
+		padding: 0 16px;
+	}
+
+	/* Skeleton mirrors the stacked layout so nothing jumps when React mounts. */
+	.sceu-skel__body {
+		flex-direction: column;
+	}
+
+	.sceu-skel__nav {
+		flex-direction: row;
+		width: auto;
+		padding: 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+	}
+
+	.sceu-skel__nav-item {
+		width: 120px;
+		flex: none;
+	}
+}
+
+/* At <=600px WordPress switches the admin bar to position:absolute and removes
+   the page's top padding (html.wp-toolbar padding-top: 0), so the bar overlaps
+   the top of the content and scrolls away with the page. A header pinned at
+   top:0 would sit *under* the higher-z-index admin bar and hide the brand, and
+   the bar is glued to the content-flow top so margin/padding can't separate
+   them. So at this size we drop the header out of the sticky flow and offset it
+   by the bar height — it rides down with the bar and scrolls off cleanly — and
+   pin only the tab strip, which reaches the top long after the bar is gone and
+   so never collides with it. */
+@media screen and (max-width: 600px) {
+	.sceu-app__bar--global {
+		position: relative;
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		top: 0;
+	}
 }
