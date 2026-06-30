@@ -83,6 +83,48 @@ class Withdrawals {
 	}
 
 	/**
+	 * Whether re-activating a declined request would over-withdraw any line item.
+	 *
+	 * A declined ("rejected") request's quantities don't count against
+	 * availability, so the customer may have re-requested the same units in the
+	 * meantime. Resetting the declined request back to "pending" would then put
+	 * the same physical unit into two pending requests. This compares the row's
+	 * own per-item quantities against what's already blocked (received/resolved,
+	 * which excludes this still-rejected row) and the originally purchased
+	 * quantity recorded in the payload. Computed from stored data only — no
+	 * SureCart calls. Returns false for legacy/whole-order rows that carry no
+	 * per-item purchased quantity (nothing to compare).
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return bool
+	 */
+	public static function reactivation_would_overdraw( array $row ): bool {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) || empty( $payload['orders'] ) || ! is_array( $payload['orders'] ) ) {
+			return false;
+		}
+
+		$already = self::requested_quantities( (int) ( $row['user_id'] ?? 0 ) )['items'];
+
+		foreach ( $payload['orders'] as $order ) {
+			$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
+			foreach ( $lines as $line ) {
+				$lid       = (string) ( $line['id'] ?? '' );
+				$qty       = (int) ( $line['quantity'] ?? 0 );
+				$purchased = (int) ( $line['purchased'] ?? 0 );
+				if ( '' === $lid || $qty < 1 || $purchased < 1 ) {
+					continue;
+				}
+				if ( ( $already[ $lid ] ?? 0 ) + $qty > $purchased ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Orders the customer can still withdraw from. Recent orders, minus refunded/
 	 * cancelled ones, with each line item annotated with the quantity still
 	 * available ("remaining" = purchased − already requested). Items with nothing

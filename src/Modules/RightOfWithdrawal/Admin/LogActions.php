@@ -33,6 +33,7 @@ class LogActions {
 		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
 		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
 		add_action( 'admin_post_sceu_delete_log', array( $this, 'delete_log' ) );
+		add_action( 'admin_post_sceu_anonymize_log', array( $this, 'anonymize_log' ) );
 		add_action( 'admin_post_sceu_resend_emails', array( $this, 'resend_emails' ) );
 	}
 
@@ -133,7 +134,34 @@ class LogActions {
 	}
 
 	/**
+	 * Admin action: anonymise a log row — strip the personal data (name, email,
+	 * IP, reason) but keep the transactional record. The data-minimisation
+	 * alternative to permanent deletion for requests that became transactions.
+	 *
+	 * @return void
+	 */
+	public function anonymize_log(): void {
+		$id = $this->request_id();
+		$this->guard( 'sceu_anonymize_log_' . $id );
+
+		if ( $id ) {
+			LogTable::anonymize( $id );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&anonymized=1' ) );
+		exit;
+	}
+
+	/**
 	 * Admin action: change a request's status.
+	 *
+	 * Resetting a declined request back to "pending" is guarded: a declined
+	 * request's quantities no longer count against availability, so re-activating
+	 * it while the customer has re-requested the same units would let the same
+	 * physical unit sit in two pending requests (risking a double refund). When
+	 * the reset would push any line item's pending+resolved total past what was
+	 * purchased, we refuse and tell the merchant to delete the stale request
+	 * instead.
 	 *
 	 * @return void
 	 */
@@ -145,6 +173,16 @@ class LogActions {
 		$status  = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
 		$allowed = array( Withdrawals::STATUS_RECEIVED, Withdrawals::STATUS_RESOLVED, Withdrawals::STATUS_REJECTED );
 		if ( $id && in_array( $status, $allowed, true ) ) {
+			$row = LogTable::find( $id );
+			if (
+				$row
+				&& Withdrawals::STATUS_RECEIVED === $status
+				&& Withdrawals::STATUS_REJECTED === (string) ( $row['status'] ?? '' )
+				&& Withdrawals::reactivation_would_overdraw( $row )
+			) {
+				wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&overdraw=1' ) );
+				exit;
+			}
 			LogTable::update_status( $id, $status );
 		}
 

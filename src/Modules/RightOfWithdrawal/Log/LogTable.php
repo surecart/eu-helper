@@ -232,6 +232,64 @@ class LogTable {
 	}
 
 	/**
+	 * Anonymise a row: strip the personal data the log itself stores — the
+	 * customer name, email, IP address, and the free-text reason — while
+	 * preserving the transactional record (which order and items were withdrawn,
+	 * the timestamp, and the request's status).
+	 *
+	 * This is the data-minimisation counterpart to {@see self::delete()}. A
+	 * withdrawal that became a transaction can generate commercial/tax records
+	 * that may need to be retained, so a merchant can remove the personal data
+	 * without destroying the audit trail; hard delete remains available for full
+	 * GDPR erasure. The pseudonymous foreign keys (user_id, customer_id,
+	 * order_ids) are kept as the transactional linkage. Idempotent.
+	 *
+	 * @param int $id Row id.
+	 * @return bool True on success (incl. an already-anonymised row).
+	 */
+	public static function anonymize( int $id ): bool {
+		global $wpdb;
+
+		$row = self::find( $id );
+		if ( null === $row ) {
+			return false;
+		}
+
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+		$payload['reason']        = '';
+		$payload['anonymized']    = true;
+		$payload['anonymized_at'] = current_time( 'mysql' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return false !== $wpdb->update(
+			self::table_name(),
+			array(
+				'customer_name'  => '',
+				'customer_email' => '',
+				'ip_address'     => '',
+				'payload'        => wp_json_encode( $payload ),
+			),
+			array( 'id' => $id ),
+			array( '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Whether a row has been anonymised (its personal data stripped).
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return bool
+	 */
+	public static function is_anonymized( array $row ): bool {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		return is_array( $payload ) && ! empty( $payload['anonymized'] );
+	}
+
+	/**
 	 * Permanently delete a row (for GDPR erasure / test cleanup). The log is
 	 * otherwise append-only; this is not part of the normal workflow.
 	 *

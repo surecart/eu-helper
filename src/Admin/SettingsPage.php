@@ -231,18 +231,19 @@ class SettingsPage {
 		$this->log_table = new LogListTable();
 		add_filter( 'manage_' . $this->log_hook . '_columns', array( $this, 'log_table_columns' ) );
 
-		// Process the "Delete permanently" bulk action before the page renders.
-		$this->maybe_handle_bulk_delete();
+		// Process the "Delete permanently" / "Anonymize" bulk actions before render.
+		$this->maybe_handle_bulk_action();
 	}
 
 	/**
-	 * Handle the "Delete permanently" bulk action: verify nonce + capability,
-	 * delete the checked rows, redirect with a count.
+	 * Handle the log's bulk actions ("Delete permanently" and "Anonymize"): verify
+	 * nonce + capability, apply to the checked rows, redirect with a count.
 	 *
 	 * @return void
 	 */
-	private function maybe_handle_bulk_delete(): void {
-		if ( ! $this->log_table || 'delete' !== $this->log_table->current_action() ) {
+	private function maybe_handle_bulk_action(): void {
+		$action = $this->log_table ? $this->log_table->current_action() : '';
+		if ( 'delete' !== $action && 'anonymize' !== $action ) {
 			return;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -252,15 +253,20 @@ class SettingsPage {
 		check_admin_referer( 'bulk-withdrawal_requests' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above.
-		$ids     = isset( $_REQUEST['ids'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['ids'] ) ) : array();
-		$deleted = 0;
+		$ids   = isset( $_REQUEST['ids'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['ids'] ) ) : array();
+		$count = 0;
 		foreach ( $ids as $id ) {
-			if ( $id && LogTable::delete( $id ) ) {
-				++$deleted;
+			if ( ! $id ) {
+				continue;
+			}
+			$ok = 'anonymize' === $action ? LogTable::anonymize( $id ) : LogTable::delete( $id );
+			if ( $ok ) {
+				++$count;
 			}
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=' . self::LOG_PAGE . '&deleted=' . $deleted ) );
+		$arg = 'anonymize' === $action ? 'anonymized' : 'deleted';
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::LOG_PAGE . '&' . $arg . '=' . $count ) );
 		exit;
 	}
 
@@ -552,6 +558,28 @@ class SettingsPage {
 					<?php // phpcs:disable WordPress.Security.NonceVerification.Recommended ?>
 					<?php if ( isset( $_GET['updated'] ) ) : ?>
 						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></div>
+					<?php endif; ?>
+					<?php if ( isset( $_GET['overdraw'] ) ) : ?>
+						<div class="sceu-notice sceu-notice--warning"><?php echo esc_html__( 'This request could not be reset to pending: the customer has since requested those items again, so re-activating it would withdraw more than was purchased. Delete this declined request instead.', 'surecart-eu-helper' ); ?></div>
+					<?php endif; ?>
+					<?php if ( isset( $_GET['anonymized'] ) && (int) $_GET['anonymized'] > 0 ) : ?>
+						<?php $sceu_anon = (int) $_GET['anonymized']; ?>
+						<div class="sceu-notice sceu-notice--success">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d: number of requests anonymized. */
+									_n(
+										'Personal data removed from %d request. The transactional record was kept.',
+										'Personal data removed from %d requests. The transactional records were kept.',
+										$sceu_anon,
+										'surecart-eu-helper'
+									),
+									$sceu_anon
+								)
+							);
+							?>
+						</div>
 					<?php endif; ?>
 					<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 					<?php if ( isset( $_GET['deleted'] ) && (int) $_GET['deleted'] > 0 ) : ?>
