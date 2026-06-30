@@ -144,7 +144,20 @@ class LogActions {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- guarded above.
 		$status  = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
 		$allowed = array( Withdrawals::STATUS_RECEIVED, Withdrawals::STATUS_RESOLVED, Withdrawals::STATUS_REJECTED );
-		if ( $id && in_array( $status, $allowed, true ) ) {
+		$row     = ( $id && in_array( $status, $allowed, true ) ) ? LogTable::find( $id ) : null;
+
+		if ( $row ) {
+			$current  = (string) ( $row['status'] ?? '' );
+			$blocking = Withdrawals::blocking_statuses();
+			// Reactivating (non-live → live) re-adds the request's units, so
+			// revalidate availability to avoid over-claiming the order. Other
+			// transitions only remove units or keep the total, so they're unconditional.
+			$reactivating = in_array( $status, $blocking, true ) && ! in_array( $current, $blocking, true );
+			if ( $reactivating && null !== Withdrawals::reactivation_conflict( $row ) ) {
+				wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&status_error=overclaim' ) );
+				exit;
+			}
+
 			LogTable::update_status( $id, $status );
 		}
 
