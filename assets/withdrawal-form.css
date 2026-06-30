@@ -84,6 +84,11 @@
 }
 
 .sceu-wf .sceu-wf__submit {
+	/* inline-flex + centring so the in-flight spinner (::before) sits centred
+	   beside the label instead of dropping to the text baseline. */
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	font: inherit;
 	cursor: pointer;
 	padding: 0.6em 1.2em;

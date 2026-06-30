@@ -37,7 +37,11 @@ class GuestLookup {
 	 */
 	public static function find_order( string $email, string $number ): ?array {
 		$email  = strtolower( trim( $email ) );
-		$number = trim( $number );
+		// Tolerate a leading "#" and surrounding spaces — order numbers are often
+		// shown as "#TEST-0010", so a customer may copy the hash. Stored numbers
+		// never include it. (A bare/partial number like "0010" is left to fail, to
+		// avoid ambiguous matches.)
+		$number = trim( ltrim( trim( $number ), '#' ) );
 		if ( '' === $email || '' === $number
 			|| ! class_exists( '\SureCart\Models\Order' )
 			|| ! class_exists( '\SureCart\Models\Customer' ) ) {
