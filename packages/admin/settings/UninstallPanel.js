@@ -4,12 +4,22 @@
  */
 import { ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import SaveButton from './SaveButton';
 
-export default function UninstallPanel({ removeData, onChange }) {
+export default function UninstallPanel({
+	removeData,
+	onChange,
+	onSave,
+	saving,
+	dirty,
+}) {
 	return (
 		<section className="sceu-panel is-active">
 			<div className="sceu-panel__head">
-				<h2 className="sceu-panel__title">{__('Uninstall', 'surecart-eu-helper')}</h2>
+				<h2 className="sceu-panel__title">
+					{__('Uninstall', 'surecart-eu-helper')}
+				</h2>
+				<SaveButton onClick={onSave} saving={saving} dirty={dirty} />
 			</div>
 			<div className="sceu-card sceu-card--compact">
 				<ToggleControl

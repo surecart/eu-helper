@@ -17,11 +17,13 @@ body.toplevel_page_sceu-settings #wpfooter {
 	display: none;
 }
 
-.sceu-app {
+/* Also applied to the in_admin_header brand bar (rendered outside .sceu-app). */
+.sceu-app,
+.sceu-app__bar--global {
 	/* SureCart design tokens (values from the SureCart component library). */
 	--sceu-primary: #388051;
 	--sceu-primary-text: #ffffff;
-	--sceu-primary-soft: rgba( 56, 128, 81, 0.1 );
+	--sceu-primary-soft: rgba(56, 128, 81, 0.1);
 	--sceu-border: #dce0e6;
 	--sceu-line: #eef0f2;
 	--sceu-bg: #f8fafb;
@@ -41,24 +43,133 @@ body.toplevel_page_sceu-settings #wpfooter {
 	 * Re-theme @wordpress/components (toggles, checkboxes, radios, primary
 	 * buttons, focus rings, token fields) from the WP-admin
 	 */
-	--wp-admin-theme-color: var( --sceu-primary );
+	--wp-admin-theme-color: var(--sceu-primary);
 	--wp-admin-theme-color-darker-10: #2f6c45;
 	--wp-admin-theme-color-darker-20: #285d3b;
-	--wp-admin-theme-color-darker-10: color-mix( in srgb, var( --sceu-primary ) 88%, #000 );
-	--wp-admin-theme-color-darker-20: color-mix( in srgb, var( --sceu-primary ) 78%, #000 );
-
-	/* Fill the admin content area edge-to-edge. */
-	margin: 0 0 0 -20px;
-	background: var( --sceu-bg );
-	min-height: calc( 100vh - 32px );
-	color: var( --sceu-text );
-	font-size: 14px;
-	line-height: 1.5;
+	--wp-admin-theme-color-darker-10: color-mix(
+		in srgb,
+		var(--sceu-primary) 88%,
+		#000
+	);
+	--wp-admin-theme-color-darker-20: color-mix(
+		in srgb,
+		var(--sceu-primary) 78%,
+		#000
+	);
 }
 
-@media screen and ( max-width: 782px ) {
+.sceu-app {
+	/* Fill the admin content area edge-to-edge. */
+	margin: 0 0 0 -20px;
+	background: var(--sceu-bg);
+	min-height: calc(100vh - 32px);
+	color: var(--sceu-text);
+	font-size: 14px;
+	line-height: 1.5;
+	clear: both; /* Drop below WP's floated Screen Options tab. */
+}
+
+@media screen and (max-width: 782px) {
 	.sceu-app {
 		margin-left: -10px;
+	}
+}
+
+/* ---- Skeleton loader (shown until the React app mounts) ---- */
+.sceu-skel {
+	background: linear-gradient(
+		90deg,
+		var(--sceu-gray-200) 25%,
+		var(--sceu-line) 37%,
+		var(--sceu-gray-200) 63%
+	);
+	background-size: 400% 100%;
+	border-radius: var(--sceu-radius);
+	animation: sceu-skel-shimmer 1.4s ease infinite;
+}
+
+@keyframes sceu-skel-shimmer {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0 50%;
+	}
+}
+
+.sceu-skel__bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 24px;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-skel__badge {
+	width: 26px;
+	height: 26px;
+	flex: none;
+}
+
+.sceu-skel__title {
+	width: 180px;
+	height: 14px;
+}
+
+.sceu-skel__body {
+	display: flex;
+	align-items: stretch;
+}
+
+.sceu-skel__nav {
+	width: 248px;
+	flex: none;
+	padding: 18px 12px;
+	border-right: 1px solid var(--sceu-gray-200);
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.sceu-skel__nav-item {
+	height: 20px;
+	border-radius: var(--sceu-radius);
+}
+
+.sceu-skel__content {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 28px 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.sceu-skel__heading {
+	width: 240px;
+	height: 22px;
+	margin-bottom: 8px;
+}
+
+.sceu-skel__text {
+	width: 100%;
+	max-width: 520px;
+	height: 12px;
+}
+
+.sceu-skel__text--short {
+	max-width: 360px;
+}
+
+.sceu-skel__card {
+	height: 88px;
+	margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sceu-skel {
+		animation: none;
 	}
 }
 
@@ -70,8 +181,23 @@ body.toplevel_page_sceu-settings #wpfooter {
 	gap: 1em;
 	height: 56px;
 	padding: 0 24px;
-	background: var( --sceu-surface );
-	border-bottom: 1px solid var( --sceu-gray-200 );
+	background: var(--sceu-surface);
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+/* Rendered via in_admin_header; flush-left to match the shell below. Sticks just
+   under the WP admin bar while the page scrolls. */
+.sceu-app__bar--global {
+	margin: 0 0 0 -20px;
+	position: sticky;
+	top: var(--wp-admin--admin-bar--height, 32px);
+	z-index: 100;
+}
+
+@media screen and (max-width: 782px) {
+	.sceu-app__bar--global {
+		margin-left: -10px;
+	}
 }
 
 .sceu-app__brand {
@@ -88,9 +214,9 @@ body.toplevel_page_sceu-settings #wpfooter {
 	width: 26px;
 	height: 26px;
 	font-size: 16px;
-	color: var( --sceu-primary-text );
-	background: var( --sceu-primary );
-	border-radius: var( --sceu-radius );
+	color: var(--sceu-primary-text);
+	background: var(--sceu-primary);
+	border-radius: var(--sceu-radius);
 	flex: none;
 }
 
@@ -101,19 +227,19 @@ body.toplevel_page_sceu-settings #wpfooter {
 	font-weight: 600;
 	font-size: 14px;
 	line-height: 1.4;
-	color: var( --sceu-gray-900 );
+	color: var(--sceu-gray-900);
 }
 
 .sceu-app__sep {
 	font-size: 14px;
 	line-height: 1.4;
-	color: var( --sceu-gray-400 );
+	color: var(--sceu-gray-400);
 }
 
 .sceu-app__crumb {
 	font-size: 14px;
 	line-height: 1.4;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -121,21 +247,29 @@ body.toplevel_page_sceu-settings #wpfooter {
 
 /* Version, shown as a bordered pill to mirror SureCart's header actions. */
 .sceu-app__meta {
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 	font-size: 12px;
 	font-weight: 500;
 	line-height: 1;
 	flex: none;
 	padding: 6px 10px;
 	background: #fff;
-	border: 1px solid var( --sceu-gray-200 );
-	border-radius: var( --sceu-radius );
+	border: 1px solid var(--sceu-gray-200);
+	border-radius: var(--sceu-radius);
 }
 
 /* ---- Icons (inline SVG, line style — matches SureCart's nav glyphs) ---- */
 .sceu-app__badge .sceu-icon {
 	width: 16px;
 	height: 16px;
+}
+
+/* Dashicon badge glyph (React app), sized to the badge. */
+.sceu-app__badge .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	line-height: 16px;
 }
 
 .sceu-nav__icon {
@@ -151,7 +285,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 .sceu-panel__title .sceu-icon {
 	width: 1.05em;
 	height: 1.05em;
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 }
 
 .sceu-icon {
@@ -164,18 +298,24 @@ body.toplevel_page_sceu-settings #wpfooter {
 }
 
 /* ---- Body: nav + content ---- */
+/* flex-start (not stretch) lets the nav keep its own viewport-tall height so it
+   can stick while the taller content column scrolls. */
 .sceu-app__body {
 	display: flex;
-	align-items: stretch;
+	align-items: flex-start;
 }
 
 .sceu-app__nav {
 	width: 248px;
 	flex: none;
-	background: var( --sceu-surface );
-	border-right: 1px solid var( --sceu-gray-200 );
+	background: var(--sceu-surface);
+	border-right: 1px solid var(--sceu-gray-200);
 	padding: 14px 12px;
-	min-height: calc( 100vh - 56px - 32px );
+	/* Stick below the sticky header (admin bar + 56px header). */
+	position: sticky;
+	top: calc(var(--wp-admin--admin-bar--height, 32px) + 56px);
+	height: calc(100vh - var(--wp-admin--admin-bar--height, 32px) - 56px);
+	overflow-y: auto;
 }
 
 .sceu-nav__item {
@@ -184,24 +324,40 @@ body.toplevel_page_sceu-settings #wpfooter {
 	gap: 10px;
 	padding: 9px 12px;
 	margin-bottom: 2px;
-	border-radius: var( --sceu-radius );
+	border-radius: var(--sceu-radius);
 	text-decoration: none;
 	font-size: 14px;
 	font-weight: 400;
 	color: #45505f;
 }
 
+/* Hover previews the active treatment — green text + icon (no filled box). */
 .sceu-nav__item:hover {
-	color: var( --sceu-gray-900 );
+	color: var(--sceu-primary);
+}
+
+.sceu-nav__item:hover .dashicons {
+	color: var(--sceu-primary);
+}
+
+/* Drop WP's default link focus ring on click; keyboard users keep :focus-visible. */
+.sceu-nav__item:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.sceu-nav__item:focus-visible {
+	outline: 2px solid var(--sceu-primary);
+	outline-offset: -2px;
 }
 
 /* Active item: colour change only (matches SureCart — no filled box). */
 .sceu-nav__item.is-active {
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 }
 
 .sceu-nav__item.is-active .dashicons {
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 }
 
 .sceu-nav__item .dashicons {
@@ -235,7 +391,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 	justify-content: space-between;
 	gap: 1em;
 	padding-bottom: 0.9em;
-	border-bottom: 1px solid var( --sceu-gray-200 );
+	border-bottom: 1px solid var(--sceu-gray-200);
 }
 
 .sceu-panel__title {
@@ -248,14 +404,14 @@ body.toplevel_page_sceu-settings #wpfooter {
 	width: 1.1em;
 	height: 1.1em;
 	font-size: 1.1em;
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 }
 
 /* ---- Plugin-level Uninstall section (always visible, below the panels) ---- */
 .sceu-uninstall {
 	margin-top: 2.5em;
 	padding-top: 0.5em;
-	border-top: 1px solid var( --sceu-gray-200 );
+	border-top: 1px solid var(--sceu-gray-200);
 }
 
 /* ---- Sub-section heading (SureCart groups settings into titled cards) ---- */
@@ -268,12 +424,12 @@ body.toplevel_page_sceu-settings #wpfooter {
 	padding: 0;
 	font-size: 1.1em;
 	font-weight: 600;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 }
 
 .sceu-section__desc {
 	margin: 0.25em 0 0;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	font-size: 1em;
 	line-height: 1.5;
 }
@@ -288,12 +444,12 @@ body.toplevel_page_sceu-settings #wpfooter {
 	padding: 0;
 	font-size: 1.3em;
 	font-weight: 600;
-	color: var( --sceu-gray-900 );
+	color: var(--sceu-gray-900);
 }
 
 .sceu-panel__desc {
 	margin: 1em 0 1.5em;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	max-width: 70ch;
 }
 
@@ -303,7 +459,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 	max-width: 100%;
 	background: #fcf6e6;
 	border: 1px solid #f0d999;
-	border-radius: var( --sceu-radius );
+	border-radius: var(--sceu-radius);
 	padding: 0.85em 1em;
 	margin: 0 0 1.25em;
 	font-size: 0.9em;
@@ -314,10 +470,10 @@ body.toplevel_page_sceu-settings #wpfooter {
 /* ---- Card ---- */
 .sceu-card {
 	max-width: 100%;
-	background: var( --sceu-surface );
-	border: 1px solid var( --sceu-gray-200 );
-	border-radius: var( --sceu-radius-lg );
-	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.04 );
+	background: var(--sceu-surface);
+	border: 1px solid var(--sceu-gray-200);
+	border-radius: var(--sceu-radius-lg);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 	padding: 1.5em;
 }
 
@@ -333,13 +489,13 @@ body.toplevel_page_sceu-settings #wpfooter {
 .sceu-field__label {
 	display: block;
 	font-weight: 500;
-	color: var( --sceu-label );
+	color: var(--sceu-label);
 	margin: 0 0 0.4em;
 }
 
 .sceu-field__help {
 	margin: 0.45em 0 0;
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 	font-size: 0.875em;
 	line-height: 1.5;
 }
@@ -356,10 +512,10 @@ body.toplevel_page_sceu-settings #wpfooter {
 	max-width: 30em;
 	min-height: 2.6em;
 	padding: 0.45em 0.7em;
-	border: 1px solid var( --sceu-border );
-	border-radius: var( --sceu-radius );
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
 	background: #fff;
-	color: var( --sceu-gray-700 );
+	color: var(--sceu-gray-700);
 	font-size: 1em;
 	box-shadow: none;
 }
@@ -369,18 +525,18 @@ body.toplevel_page_sceu-settings #wpfooter {
 	width: 7em;
 	min-height: 2.6em;
 	padding: 0.45em 0.7em;
-	border: 1px solid var( --sceu-border );
-	border-radius: var( --sceu-radius );
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
 	background: #fff;
-	color: var( --sceu-gray-700 );
+	color: var(--sceu-gray-700);
 	font-size: 1em;
 }
 
 .sceu-app .sceu-field__control input:focus,
 .sceu-app .sceu-field__control select:focus,
 .sceu-app .sceu-field__control textarea:focus {
-	border-color: var( --sceu-primary );
-	box-shadow: 0 0 0 1px var( --sceu-primary );
+	border-color: var(--sceu-primary);
+	box-shadow: 0 0 0 1px var(--sceu-primary);
 	outline: none;
 }
 
@@ -389,7 +545,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 	align-items: center;
 	gap: 0.5em;
 	margin: 0 0 0.5em;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 }
 
 /* ---- Toggle switch ---- */
@@ -405,7 +561,7 @@ body.toplevel_page_sceu-settings #wpfooter {
 	display: inline-block;
 	width: 2.6em;
 	height: 1.5em;
-	background: var( --sceu-gray-200 );
+	background: var(--sceu-gray-200);
 	border-radius: 999px;
 	transition: background 0.15s ease;
 	flex: none;
@@ -415,24 +571,24 @@ body.toplevel_page_sceu-settings #wpfooter {
 	position: absolute;
 	top: 2px;
 	left: 2px;
-	width: calc( 1.5em - 4px );
-	height: calc( 1.5em - 4px );
+	width: calc(1.5em - 4px);
+	height: calc(1.5em - 4px);
 	background: #fff;
 	border-radius: 50%;
-	box-shadow: 0 1px 2px rgba( 0, 0, 0, 0.2 );
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 	transition: transform 0.15s ease;
 }
 
 .sceu-switch__input:checked + .sceu-switch__track {
-	background: var( --sceu-primary );
+	background: var(--sceu-primary);
 }
 
 .sceu-switch__input:checked + .sceu-switch__track .sceu-switch__thumb {
-	transform: translateX( 1.1em );
+	transform: translateX(1.1em);
 }
 
 .sceu-switch__input:focus-visible + .sceu-switch__track {
-	box-shadow: 0 0 0 2px var( --sceu-primary );
+	box-shadow: 0 0 0 2px var(--sceu-primary);
 }
 
 /* ---- Toggle field (SureCart layout: switch left, label + help to the right,
@@ -461,7 +617,7 @@ body.toplevel_page_sceu-settings #wpfooter {
    identical to every other field label on the page. */
 .sceu-toggle__label {
 	font-weight: 500;
-	color: var( --sceu-label );
+	color: var(--sceu-label);
 	line-height: 1.4;
 }
 
@@ -478,20 +634,20 @@ body.toplevel_page_sceu-settings #wpfooter {
 	cursor: pointer;
 	padding: 0.55em 1.3em;
 	border: none;
-	border-radius: var( --sceu-radius );
-	background: var( --sceu-primary );
-	color: var( --sceu-primary-text );
+	border-radius: var(--sceu-radius);
+	background: var(--sceu-primary);
+	color: var(--sceu-primary-text);
 	text-decoration: none;
 }
 
 .sceu-btn--primary:hover {
-	filter: brightness( 0.95 );
-	color: var( --sceu-primary-text );
+	filter: brightness(0.95);
+	color: var(--sceu-primary-text);
 	text-decoration: none;
 }
 
 .sceu-btn--primary:focus-visible {
-	outline: 2px solid var( --sceu-primary );
+	outline: 2px solid var(--sceu-primary);
 	outline-offset: 2px;
 }
 
@@ -502,16 +658,16 @@ body.toplevel_page_sceu-settings #wpfooter {
 	font-weight: 500;
 	cursor: pointer;
 	padding: 0.45em 1em;
-	border: 1px solid var( --sceu-border );
-	border-radius: var( --sceu-radius );
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
 	background: #fff;
-	color: var( --sceu-gray-700 );
+	color: var(--sceu-gray-700);
 	text-decoration: none;
 }
 
 .sceu-btn--secondary:hover {
 	background: #f6f7f8;
-	color: var( --sceu-gray-900 );
+	color: var(--sceu-gray-900);
 }
 
 /* ---- Collection checklist (exclusions) ---- */
@@ -533,11 +689,11 @@ body.toplevel_page_sceu-settings #wpfooter {
 	align-items: center;
 	gap: 0.5em;
 	margin: 0;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 }
 
 .sceu-checklist__count {
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 	font-size: 0.85em;
 }
 
@@ -572,6 +728,11 @@ body.sceu-fullbleed #wpfooter {
 	max-width: none;
 }
 
+/* Content already sits below the Screen Options strip, so trim the top padding. */
+.sceu-app--page .sceu-app__content {
+	padding-top: 12px;
+}
+
 .sceu-app--page .sceu-panel__head {
 	margin-bottom: 1.5em;
 }
@@ -580,7 +741,7 @@ body.sceu-fullbleed #wpfooter {
 .sceu-notice {
 	position: relative;
 	border: 1px solid;
-	border-radius: var( --sceu-radius );
+	border-radius: var(--sceu-radius);
 	padding: 0.85em 2.6em 0.85em 1em;
 	margin: 0 0 1.25em;
 	font-size: 0.95em;
@@ -603,14 +764,14 @@ body.sceu-fullbleed #wpfooter {
 	font-size: 1.1em;
 	line-height: 1;
 	cursor: pointer;
-	border-radius: var( --sceu-radius );
+	border-radius: var(--sceu-radius);
 	opacity: 0.6;
 }
 
 .sceu-notice__dismiss:hover,
 .sceu-notice__dismiss:focus {
 	opacity: 1;
-	background: rgba( 0, 0, 0, 0.06 );
+	background: rgba(0, 0, 0, 0.06);
 }
 
 .sceu-notice--success {
@@ -655,49 +816,77 @@ body.sceu-fullbleed #wpfooter {
 .sceu-app .wp-list-table thead th,
 .sceu-app .wp-list-table tfoot th {
 	background: #f9fafb;
-	color: var( --sceu-text );
+	color: var(--sceu-text);
 	font-weight: 600;
-	border-bottom: 1px solid var( --sceu-gray-200 );
+	border-bottom: 1px solid var(--sceu-gray-200);
 	border-top: 0;
 	padding: 12px 16px;
 }
 
+/* The header/footer select-all cell is a <td id="cb">, not a <th> — match the
+   band background + border so it doesn't show as a white notch. */
+.sceu-app .wp-list-table thead td.check-column,
+.sceu-app .wp-list-table tfoot td.check-column {
+	background: #f9fafb;
+	border-top: 0;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
 .sceu-app .wp-list-table tbody td {
 	padding: 14px 16px;
-	border-top: 1px solid var( --sceu-line );
-	color: var( --sceu-text );
+	border-top: 1px solid var(--sceu-line);
+	color: var(--sceu-text);
 	font-size: 0.95em;
 	line-height: 1.45;
 	vertical-align: top;
 }
 
-.sceu-app .wp-list-table tbody tr:first-child td {
+/* The body checkbox cell is a <th>, not a <td> — give it the row separator too. */
+.sceu-app .wp-list-table tbody th.check-column {
+	border-top: 1px solid var(--sceu-line);
+	vertical-align: top;
+}
+
+.sceu-app .wp-list-table tbody tr:first-child td,
+.sceu-app .wp-list-table tbody tr:first-child th.check-column {
 	border-top: 0;
 }
 
 /* Clean white rows (override WP's "striped" greys) so each entry reads clearly
    against the card; only the header band is tinted. */
 .sceu-app .wp-list-table tbody tr,
-.sceu-app .wp-list-table.striped > tbody > :nth-child( odd ) {
+.sceu-app .wp-list-table.striped > tbody > :nth-child(odd) {
 	background: #fff;
 }
 
 .sceu-app .wp-list-table tbody tr:hover,
-.sceu-app .wp-list-table.striped > tbody > :nth-child( odd ):hover {
+.sceu-app .wp-list-table.striped > tbody > :nth-child(odd):hover {
 	background: #f6f8fa;
 }
 
 .sceu-app .wp-list-table .no-items td {
 	padding: 2.5em 16px;
 	text-align: center;
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 }
 
 .sceu-app .wp-list-table .description {
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 }
 
+/* Show the top bulk-actions control; the redundant top pager is hidden below. */
 .sceu-app .tablenav.top {
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-app .tablenav.top:empty,
+.sceu-app .tablenav.top .tablenav-pages {
 	display: none;
 }
 
@@ -707,9 +896,8 @@ body.sceu-fullbleed #wpfooter {
 	margin: 0;
 	padding: 10px 16px;
 	display: flex;
-	justify-content: flex-end;
 	align-items: center;
-	border-top: 1px solid var( --sceu-gray-200 );
+	border-top: 1px solid var(--sceu-gray-200);
 }
 
 .sceu-app .tablenav.bottom br.clear {
@@ -721,9 +909,14 @@ body.sceu-fullbleed #wpfooter {
 	float: none;
 }
 
+/* WP convention: bulk actions on the left, item count / pager on the right. */
+.sceu-app .tablenav.bottom .tablenav-pages {
+	margin-left: auto;
+}
+
 .sceu-app .tablenav .displaying-num {
 	margin: 0;
-	color: var( --sceu-gray-500 );
+	color: var(--sceu-gray-500);
 }
 
 .sceu-app .wp-list-table .row-actions {
@@ -738,7 +931,7 @@ body.sceu-fullbleed #wpfooter {
 }
 
 .sceu-app .wp-list-table .row-actions a {
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 }
 
 .sceu-app .wp-list-table .row-actions .delete a,
@@ -748,7 +941,7 @@ body.sceu-fullbleed #wpfooter {
 
 .sceu-app .wp-list-table details summary {
 	cursor: pointer;
-	color: var( --sceu-primary );
+	color: var(--sceu-primary);
 	font-size: 0.85em;
 }
 
@@ -767,4 +960,121 @@ body.sceu-fullbleed #wpfooter {
 	margin-top: 20px;
 	display: flex;
 	justify-content: flex-start;
+}
+
+/* Center the spinner with the label (the WP Spinner's own margins offset it). */
+.sceu-app__actions .components-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.sceu-app__actions .components-button .components-spinner {
+	margin: 0;
+	flex: 0 0 auto;
+}
+
+/* Float the save/result toast bottom-right of the viewport. */
+.sceu-app__snackbars {
+	position: fixed;
+	right: 16px;
+	bottom: 16px;
+	z-index: 100000;
+}
+
+/* Right-align the snackbar(s) within the fixed container so they hug the edge. */
+.sceu-app__snackbars .components-snackbar {
+	margin-left: auto;
+}
+
+/* ==========================================================================
+   Responsive: settings shell on tablet/phone (WP's 782px admin breakpoint).
+   The 248px side nav would cramp the content column on narrow screens, so the
+   body stacks and the nav becomes a horizontal, scrollable tab strip that
+   sticks just under the header instead of running down the side.
+   ========================================================================== */
+@media screen and (max-width: 782px) {
+	/* stretch (not flex-start) so the nav strip + content fill the full width. */
+	.sceu-app__body {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	/* WP's mobile admin bar is a fixed 46px bar; pin the header just below it.
+	   (Use an explicit value rather than --wp-admin--admin-bar--height, which
+	   isn't reliably updated to 46px at this breakpoint, so the header doesn't
+	   slip under the admin bar when both are on screen.) */
+	.sceu-app__bar--global {
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		display: flex;
+		flex-direction: row;
+		width: 100%;
+		height: auto;
+		gap: 4px;
+		padding: 8px 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		/* Sit directly beneath the sticky header (46px admin bar + 56px header). */
+		top: 102px;
+		z-index: 99;
+	}
+
+	/* Tabs keep their width and don't wrap; the strip scrolls horizontally. */
+	.sceu-app__nav .sceu-nav__item {
+		flex: none;
+		margin-bottom: 0;
+		white-space: nowrap;
+	}
+
+	.sceu-app__content {
+		padding: 20px 16px;
+	}
+
+	.sceu-app__bar {
+		padding: 0 16px;
+	}
+
+	/* Skeleton mirrors the stacked layout so nothing jumps when React mounts. */
+	.sceu-skel__body {
+		flex-direction: column;
+	}
+
+	.sceu-skel__nav {
+		flex-direction: row;
+		width: auto;
+		padding: 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+	}
+
+	.sceu-skel__nav-item {
+		width: 120px;
+		flex: none;
+	}
+}
+
+/* At <=600px WordPress switches the admin bar to position:absolute and removes
+   the page's top padding (html.wp-toolbar padding-top: 0), so the bar overlaps
+   the top of the content and scrolls away with the page. A header pinned at
+   top:0 would sit *under* the higher-z-index admin bar and hide the brand, and
+   the bar is glued to the content-flow top so margin/padding can't separate
+   them. So at this size we drop the header out of the sticky flow and offset it
+   by the bar height — it rides down with the bar and scrolls off cleanly — and
+   pin only the tab strip, which reaches the top long after the bar is gone and
+   so never collides with it. */
+@media screen and (max-width: 600px) {
+	.sceu-app__bar--global {
+		position: relative;
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		top: 0;
+	}
 }

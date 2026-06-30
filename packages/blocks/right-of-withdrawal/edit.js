@@ -58,20 +58,58 @@ export default function edit({ attributes: a, setAttributes: set }) {
 						label={__('Heading style', 'surecart-eu-helper')}
 						value={a.headingLevel || 'h3'}
 						options={[
-							{ value: 'h2', label: __('Heading 2 (large)', 'surecart-eu-helper') },
-							{ value: 'h3', label: __('Heading 3', 'surecart-eu-helper') },
-							{ value: 'h4', label: __('Heading 4', 'surecart-eu-helper') },
-							{ value: 'h5', label: __('Heading 5', 'surecart-eu-helper') },
-							{ value: 'h6', label: __('Heading 6', 'surecart-eu-helper') },
-							{ value: 'p', label: __('Normal text', 'surecart-eu-helper') },
+							{
+								value: 'h2',
+								label: __(
+									'Heading 2 (large)',
+									'surecart-eu-helper'
+								),
+							},
+							{
+								value: 'h3',
+								label: __('Heading 3', 'surecart-eu-helper'),
+							},
+							{
+								value: 'h4',
+								label: __('Heading 4', 'surecart-eu-helper'),
+							},
+							{
+								value: 'h5',
+								label: __('Heading 5', 'surecart-eu-helper'),
+							},
+							{
+								value: 'h6',
+								label: __('Heading 6', 'surecart-eu-helper'),
+							},
+							{
+								value: 'p',
+								label: __('Normal text', 'surecart-eu-helper'),
+							},
 						]}
 						onChange={(v) => set({ headingLevel: v })}
 					/>
-					{field('intro', __('Explanation', 'surecart-eu-helper'), true)}
-					{field('buttonLabel', __('Button label', 'surecart-eu-helper'))}
-					{field('modalTitle', __('Form title', 'surecart-eu-helper'))}
-					{field('confirmButtonLabel', __('Confirm button label', 'surecart-eu-helper'))}
-					{field('confirmationMessage', __('Confirmation message', 'surecart-eu-helper'), true)}
+					{field(
+						'intro',
+						__('Explanation', 'surecart-eu-helper'),
+						true
+					)}
+					{field(
+						'buttonLabel',
+						__('Button label', 'surecart-eu-helper')
+					)}
+					{field(
+						'modalTitle',
+						__('Form title', 'surecart-eu-helper')
+					)}
+					{field(
+						'confirmButtonLabel',
+						__('Confirm button label', 'surecart-eu-helper')
+					)}
+					{field(
+						'confirmationMessage',
+						__('Confirmation message', 'surecart-eu-helper'),
+						true
+					)}
 				</PanelBody>
 				<PanelBody
 					title={__('Appearance', 'surecart-eu-helper')}
@@ -81,9 +119,21 @@ export default function edit({ attributes: a, setAttributes: set }) {
 						label={__('Color scheme', 'surecart-eu-helper')}
 						value={a.colorScheme || 'auto'}
 						options={[
-							{ value: 'auto', label: __('Auto (match theme)', 'surecart-eu-helper') },
-							{ value: 'light', label: __('Light', 'surecart-eu-helper') },
-							{ value: 'dark', label: __('Dark', 'surecart-eu-helper') },
+							{
+								value: 'auto',
+								label: __(
+									'Auto (match theme)',
+									'surecart-eu-helper'
+								),
+							},
+							{
+								value: 'light',
+								label: __('Light', 'surecart-eu-helper'),
+							},
+							{
+								value: 'dark',
+								label: __('Dark', 'surecart-eu-helper'),
+							},
 						]}
 						onChange={(v) => set({ colorScheme: v })}
 					/>
@@ -91,8 +141,17 @@ export default function edit({ attributes: a, setAttributes: set }) {
 						label={__('Container', 'surecart-eu-helper')}
 						value={a.container || 'card'}
 						options={[
-							{ value: 'card', label: __('Card (bordered)', 'surecart-eu-helper') },
-							{ value: 'none', label: __('Borderless', 'surecart-eu-helper') },
+							{
+								value: 'card',
+								label: __(
+									'Card (bordered)',
+									'surecart-eu-helper'
+								),
+							},
+							{
+								value: 'none',
+								label: __('Borderless', 'surecart-eu-helper'),
+							},
 						]}
 						onChange={(v) => set({ container: v })}
 					/>
@@ -104,7 +163,9 @@ export default function edit({ attributes: a, setAttributes: set }) {
 						<HeadingTag className="sceu-row__heading">
 							{a.heading || DEFAULTS.heading}
 						</HeadingTag>
-						<p className="sceu-row__intro">{a.intro || DEFAULTS.intro}</p>
+						<p className="sceu-row__intro">
+							{a.intro || DEFAULTS.intro}
+						</p>
 					</div>
 					<div className="sceu-row__actions">
 						<button

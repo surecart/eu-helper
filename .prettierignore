@@ -1,0 +1,7 @@
+# Generated / vendored — never format these.
+build/
+node_modules/
+vendor/
+.release/
+languages/
+*.min.js

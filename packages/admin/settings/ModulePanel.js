@@ -3,9 +3,19 @@
  */
 import { ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import Field from './field';
+import Field from './Field';
+import SaveButton from './SaveButton';
 
-export default function ModulePanel({ module, values, enabled, onField, onEnable }) {
+export default function ModulePanel({
+	module,
+	values,
+	enabled,
+	onField,
+	onEnable,
+	onSave,
+	saving,
+	dirty,
+}) {
 	const sections = module.sections || {};
 	const grouped = {};
 	(module.fields || []).forEach((f) => {
@@ -23,13 +33,16 @@ export default function ModulePanel({ module, values, enabled, onField, onEnable
 		<section className="sceu-panel is-active">
 			<div className="sceu-panel__head">
 				<h2 className="sceu-panel__title">{module.label}</h2>
+				<SaveButton onClick={onSave} saving={saving} dirty={dirty} />
 			</div>
 			{module.description && (
 				<p className="sceu-panel__desc">{module.description}</p>
 			)}
 			{module.disclaimer && (
 				<p className="sceu-card__note">
-					<strong>{__('Your responsibility', 'surecart-eu-helper')}:</strong>{' '}
+					<strong>
+						{__('Your responsibility', 'surecart-eu-helper')}:
+					</strong>{' '}
 					{module.disclaimer}
 				</p>
 			)}
@@ -51,9 +64,13 @@ export default function ModulePanel({ module, values, enabled, onField, onEnable
 					<div key={skey}>
 						{sec.title && (
 							<div className="sceu-section__head">
-								<h3 className="sceu-section__title">{sec.title}</h3>
+								<h3 className="sceu-section__title">
+									{sec.title}
+								</h3>
 								{sec.description && (
-									<p className="sceu-section__desc">{sec.description}</p>
+									<p className="sceu-section__desc">
+										{sec.description}
+									</p>
 								)}
 							</div>
 						)}

@@ -62,6 +62,18 @@
 		} ).catch( function () { return { ok: false, status: 0, data: {} }; } );
 	}
 
+	// Pick the message to show when a request fails. Prefer the server's own
+	// message, but when the body is empty or unparseable (e.g. a 403 served by a
+	// cache/edge layer without a JSON body) fall back by status: an expired nonce
+	// (403) is by far the most common cause, so steer the visitor to reload rather
+	// than show a dead-end "something went wrong".
+	function rejectionMessage( res ) {
+		if ( res.data && res.data.message ) { return res.data.message; }
+		if ( res.status === 403 ) { return t( 'sessionExpired', 'Your session expired. Please reload the page and try again.' ); }
+		if ( res.status === 429 ) { return t( 'tooMany', 'Too many attempts. Please wait a few minutes and try again.' ); }
+		return t( 'genericError', 'Something went wrong. Please try again.' );
+	}
+
 	function initForm( root ) {
 		var lookupForm = root.querySelector( '.sceu-wf__lookup' );
 		var result     = root.querySelector( '[data-sceu-result]' );
@@ -80,15 +92,60 @@
 			btn.setAttribute( 'aria-busy', on ? 'true' : 'false' );
 		}
 
+		// Bottom region: server/request-level errors (session expired, rate limit,
+		// "not found" handling). Per-field client validation is shown under each
+		// field by validateLookup(), so this no longer touches per-field state.
 		function showLookupError( msg ) {
 			if ( ! errorEl ) { return; }
 			errorEl.textContent = msg;
 			errorEl.hidden = ! msg;
-			// Mark the fields invalid so SR users hear the error when they return to them.
-			lookupForm.querySelectorAll( '[name="email"], [name="order_number"]' ).forEach( function ( input ) {
-				if ( msg ) { input.setAttribute( 'aria-invalid', 'true' ); }
-				else { input.removeAttribute( 'aria-invalid' ); }
+		}
+
+		// Per-field error helper: each input points (aria-describedby) at its own
+		// error node; toggling text + aria-invalid keeps the message and the field's
+		// state in sync for assistive tech.
+		function setFieldError( input, msg ) {
+			if ( ! input ) { return; }
+			var id = input.getAttribute( 'aria-describedby' );
+			var el = id ? lookupForm.querySelector( '#' + id ) : null;
+			if ( el ) {
+				el.textContent = msg || '';
+				el.hidden = ! msg;
+			}
+			if ( msg ) { input.setAttribute( 'aria-invalid', 'true' ); }
+			else { input.removeAttribute( 'aria-invalid' ); }
+		}
+
+		// Client-side validation driven by the inputs' own native constraints
+		// (required + type=email) via the Constraint Validation API. We read
+		// `validity` and render the message ourselves so it sits below the field and
+		// matches the form styling, instead of the browser's unstyled bubble. The
+		// server still re-validates everything — this only improves the UX.
+		function validateLookup() {
+			var checks = [
+				[ lookupForm.querySelector( '[name="email"]' ), {
+					valueMissing: t( 'emailRequired', 'Please enter your email address.' ),
+					typeMismatch: t( 'emailInvalid', 'Please enter a valid email address.' )
+				} ],
+				[ lookupForm.querySelector( '[name="order_number"]' ), {
+					valueMissing: t( 'orderRequired', 'Please enter your order number.' )
+				} ]
+			];
+			var firstInvalid = null;
+			checks.forEach( function ( pair ) {
+				var input = pair[0];
+				var msgs = pair[1];
+				if ( ! input ) { return; }
+				var v = input.validity;
+				var msg = v.valueMissing ? msgs.valueMissing : ( v.typeMismatch ? msgs.typeMismatch : '' );
+				setFieldError( input, msg );
+				if ( msg && ! firstInvalid ) { firstInvalid = input; }
 			} );
+			if ( firstInvalid ) {
+				try { firstInvalid.focus(); } catch ( e ) {}
+				return false;
+			}
+			return true;
 		}
 
 		function clearResult() { result.innerHTML = ''; result.hidden = true; }
@@ -143,8 +200,8 @@
 			state.orderNumber = ( lookupForm.querySelector( '[name="order_number"]' ) || {} ).value || '';
 			state.hp          = ( lookupForm.querySelector( '[name="hp"]' ) || {} ).value || '';
 
-			if ( ! state.email || ! state.orderNumber ) {
-				showLookupError( t( 'genericError', 'Please enter your email and order number.' ) );
+			// Native required/type constraints, surfaced as styled per-field messages.
+			if ( ! validateLookup() ) {
 				return;
 			}
 
@@ -155,7 +212,7 @@
 				.then( function ( res ) {
 					setLoading( btn, false );
 					if ( res.status === 429 || res.status === 403 ) {
-						showLookupError( ( res.data && res.data.message ) || t( 'genericError', 'Please try again.' ) );
+						showLookupError( rejectionMessage( res ) );
 						return;
 					}
 					if ( res.data && res.data.found && res.data.order ) {
@@ -267,7 +324,7 @@
 					setLoading( confirm, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }
 					else {
-						err.textContent = ( res.data && res.data.message ) || t( 'genericError', 'Something went wrong. Please try again.' );
+						err.textContent = rejectionMessage( res );
 						err.hidden = false;
 					}
 				} );
@@ -303,7 +360,7 @@
 				} ).then( function ( res ) {
 					setLoading( send, false );
 					if ( res.ok && res.data && res.data.success ) { success( res.data ); }
-					else { err.textContent = ( res.data && res.data.message ) || t( 'genericError', 'Something went wrong. Please try again.' ); err.hidden = false; }
+					else { err.textContent = rejectionMessage( res ); err.hidden = false; }
 				} );
 			} );
 

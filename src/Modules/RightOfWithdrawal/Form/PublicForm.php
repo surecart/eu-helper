@@ -98,6 +98,13 @@ class PublicForm {
 
 		$copy = wp_parse_args( array_filter( $atts, 'strlen' ), self::defaults() );
 
+		// Convenience prefill: a logged-in visitor's orders are keyed to their
+		// account email, so seed the lookup field with it. Kept editable (not
+		// readonly) — they may have checked out as a guest under another address.
+		// WP's own email is used (not a SureCart model lookup) to keep this render
+		// path cheap; the server still re-validates email + order on submit.
+		$prefill_email = is_user_logged_in() ? (string) wp_get_current_user()->user_email : '';
+
 		wp_localize_script(
 			self::HANDLE,
 			'sceuWF',
@@ -132,6 +139,14 @@ class PublicForm {
 					'decLabel'    => __( 'Decrease quantity of %s', 'surecart-eu-helper' ),
 					'orderLabel'  => __( 'Order', 'surecart-eu-helper' ),
 					'genericError' => __( 'Something went wrong. Please try again.', 'surecart-eu-helper' ),
+					// Per-field validation (shown below the relevant input), driven by
+					// the inputs' native required/type constraints. Own keys, never
+					// 'genericError' — reusing it once surfaced the wrong copy here.
+					'emailRequired' => __( 'Please enter your email address.', 'surecart-eu-helper' ),
+					'emailInvalid'  => __( 'Please enter a valid email address.', 'surecart-eu-helper' ),
+					'orderRequired' => __( 'Please enter your order number.', 'surecart-eu-helper' ),
+					'sessionExpired' => __( 'Your session expired. Please reload the page and try again.', 'surecart-eu-helper' ),
+					'tooMany'        => __( 'Too many attempts. Please wait a few minutes and try again.', 'surecart-eu-helper' ),
 					'nothingChosen' => __( 'Please choose at least one item, or use the description box.', 'surecart-eu-helper' ),
 				),
 			)
@@ -154,8 +169,9 @@ class PublicForm {
 						<span class="sceu-form-control__required" aria-hidden="true">*</span>
 					</label>
 					<div class="sceu-form-control__input">
-						<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" autocomplete="email" required aria-required="true" aria-describedby="sceu-wf-error" />
+						<input class="sceu-wf__input" type="email" id="sceu-wf-email" name="email" value="<?php echo esc_attr( $prefill_email ); ?>" autocomplete="email" required aria-required="true" aria-describedby="sceu-wf-email-error" />
 					</div>
+					<p class="sceu-form-control__error" id="sceu-wf-email-error" role="alert" hidden></p>
 				</div>
 				<div class="sceu-form-control sceu-form-control--has-label">
 					<label class="sceu-form-control__label" for="sceu-wf-number">
@@ -163,8 +179,9 @@ class PublicForm {
 						<span class="sceu-form-control__required" aria-hidden="true">*</span>
 					</label>
 					<div class="sceu-form-control__input">
-						<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required aria-required="true" aria-describedby="sceu-wf-error" />
+						<input class="sceu-wf__input" type="text" id="sceu-wf-number" name="order_number" autocomplete="off" required aria-required="true" aria-describedby="sceu-wf-number-error" />
 					</div>
+					<p class="sceu-form-control__error" id="sceu-wf-number-error" role="alert" hidden></p>
 				</div>
 				<div class="sceu-wf__hp" aria-hidden="true">
 					<label><?php echo esc_html__( 'Leave this field empty', 'surecart-eu-helper' ); ?>

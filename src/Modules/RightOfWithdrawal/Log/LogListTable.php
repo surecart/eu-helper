@@ -38,6 +38,7 @@ class LogListTable extends \WP_List_Table {
 	 */
 	public function get_columns(): array {
 		return array(
+			'cb'             => '<input type="checkbox" />',
 			'created_at'     => __( 'Date', 'surecart-eu-helper' ),
 			'customer_name'  => __( 'Customer', 'surecart-eu-helper' ),
 			'customer_email' => __( 'Email', 'surecart-eu-helper' ),
@@ -50,12 +51,34 @@ class LogListTable extends \WP_List_Table {
 	}
 
 	/**
+	 * Row-selection checkbox (enables the bulk actions).
+	 *
+	 * @param array<string, mixed> $item Row.
+	 * @return string
+	 */
+	public function column_cb( $item ): string {
+		return sprintf( '<input type="checkbox" name="ids[]" value="%d" />', (int) ( $item['id'] ?? 0 ) );
+	}
+
+	/**
+	 * Bulk actions offered above/below the table.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function get_bulk_actions(): array {
+		return array(
+			'delete' => __( 'Delete permanently', 'surecart-eu-helper' ),
+		);
+	}
+
+	/**
 	 * Prepare items for display.
 	 *
 	 * @return void
 	 */
 	public function prepare_items(): void {
-		$per_page     = 20;
+		// Honour the "Requests per page" Screen Option (per-user), default 20.
+		$per_page     = $this->get_items_per_page( 'sceu_log_per_page', 20 );
 		$current_page = $this->get_pagenum();
 		$total        = LogTable::count();
 
@@ -69,7 +92,13 @@ class LogListTable extends \WP_List_Table {
 			)
 		);
 
-		$this->_column_headers = array( $this->get_columns(), array(), array() );
+		// Columns / hidden (from Screen Options) / sortable / primary.
+		$this->_column_headers = array(
+			$this->get_columns(),
+			get_hidden_columns( $this->screen ),
+			array(),
+			'created_at',
+		);
 	}
 
 	/**

@@ -228,6 +228,17 @@ class GuestController {
 		);
 
 		$ctx = $this->build_ctx( $email, $name, $reason, array( $order_payload ), $selected['flat'], true );
+
+		// Link the verified request to its SureCart customer (so the log row links
+		// like the logged-in flow), and prefer the customer's real name over the
+		// generic "Customer" fallback when the visitor didn't type one.
+		if ( ! empty( $order['customer_id'] ) ) {
+			$ctx['customer_id'] = (string) $order['customer_id'];
+		}
+		if ( '' === $name && ! empty( $order['customer_name'] ) ) {
+			$ctx['customer_name'] = (string) $order['customer_name'];
+		}
+
 		$this->dispatch( $ctx, true );
 
 		return new \WP_REST_Response(
@@ -376,7 +387,7 @@ class GuestController {
 		LogTable::insert(
 			array(
 				'user_id'        => 0,
-				'customer_id'    => '',
+				'customer_id'    => (string) ( $ctx['customer_id'] ?? '' ),
 				'customer_name'  => $ctx['customer_name'],
 				'customer_email' => $ctx['customer_email'],
 				'ip_address'     => $ctx['ip_address'],

@@ -62,14 +62,30 @@ export default function edit({ attributes: a, setAttributes: set }) {
 					initialOpen={true}
 				>
 					{field('heading', __('Heading', 'surecart-eu-helper'))}
-					{field('intro', __('Intro text', 'surecart-eu-helper'), true)}
-					{field('submit_label', __('Lookup button label', 'surecart-eu-helper'))}
-					{field('confirm_label', __('Confirm button label', 'surecart-eu-helper'))}
-					{field('success_message', __('Success message', 'surecart-eu-helper'), true)}
+					{field(
+						'intro',
+						__('Intro text', 'surecart-eu-helper'),
+						true
+					)}
+					{field(
+						'submit_label',
+						__('Lookup button label', 'surecart-eu-helper')
+					)}
+					{field(
+						'confirm_label',
+						__('Confirm button label', 'surecart-eu-helper')
+					)}
+					{field(
+						'success_message',
+						__('Success message', 'surecart-eu-helper'),
+						true
+					)}
 				</PanelBody>
 			</InspectorControls>
 			<div {...blockProps}>
-				<h3 className="sceu-wf__heading">{a.heading || DEFAULTS.heading}</h3>
+				<h3 className="sceu-wf__heading">
+					{a.heading || DEFAULTS.heading}
+				</h3>
 				<p className="sceu-wf__intro">{a.intro || DEFAULTS.intro}</p>
 				<PreviewField
 					label={__('Email address', 'surecart-eu-helper')}
@@ -80,7 +96,8 @@ export default function edit({ attributes: a, setAttributes: set }) {
 					type="text"
 				/>
 				<button type="button" className="sceu-wf__submit" disabled>
-					{a.submit_label || __('Find my order', 'surecart-eu-helper')}
+					{a.submit_label ||
+						__('Find my order', 'surecart-eu-helper')}
 				</button>
 				<p className="sceu-wf__preview-note">
 					{__(
