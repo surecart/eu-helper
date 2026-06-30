@@ -100,7 +100,13 @@ function readSelection(root) {
 		// Whole-order orders have no item rows: a checked box selects them.
 		if (rows.length === 0) {
 			if (checked) {
-				orders.push({ id: orderId, label, meta, whole: true, items: [] });
+				orders.push({
+					id: orderId,
+					label,
+					meta,
+					whole: true,
+					items: [],
+				});
 			}
 			return;
 		}
@@ -184,7 +190,9 @@ const { state, actions } = store('surecart-eu-helper', {
 			if ('review' === ctx.panel) {
 				return ctx.reviewTitle;
 			}
-			return 'requests' === ctx.panel ? ctx.requestsTitle : ctx.modalTitle;
+			return 'requests' === ctx.panel
+				? ctx.requestsTitle
+				: ctx.modalTitle;
 		},
 		get showItems() {
 			const ctx = getContext();
@@ -202,13 +210,22 @@ const { state, actions } = store('surecart-eu-helper', {
 			return (getContext().item.qty || 0) <= 0;
 		},
 		get itemQtyLabel() {
-			return (state.i18n.qtyLabel || '%s').replace('%s', getContext().item.name);
+			return (state.i18n.qtyLabel || '%s').replace(
+				'%s',
+				getContext().item.name
+			);
 		},
 		get incLabel() {
-			return (state.i18n.incLabel || '%s').replace('%s', getContext().item.name);
+			return (state.i18n.incLabel || '%s').replace(
+				'%s',
+				getContext().item.name
+			);
 		},
 		get decLabel() {
-			return (state.i18n.decLabel || '%s').replace('%s', getContext().item.name);
+			return (state.i18n.decLabel || '%s').replace(
+				'%s',
+				getContext().item.name
+			);
 		},
 		get itemAnnounce() {
 			const item = getContext().item;
@@ -328,10 +345,12 @@ const { state, actions } = store('surecart-eu-helper', {
 					const itemsText = o.whole
 						? state.i18n.entireOrder
 						: o.items
-							.map(function (it) {
-								return it.qty > 1 ? it.qty + '× ' + it.name : it.name;
-							})
-							.join(', ');
+								.map(function (it) {
+									return it.qty > 1
+										? it.qty + '× ' + it.name
+										: it.name;
+								})
+								.join(', ');
 					return o.label + ' — ' + itemsText;
 				})
 				.join('\n');
@@ -451,10 +470,11 @@ const { state, actions } = store('surecart-eu-helper', {
 								return Object.assign({}, li, {
 									max,
 									qty: 0,
-									availText: state.i18n.availableTemplate.replace(
-										'%d',
-										String(max)
-									),
+									availText:
+										state.i18n.availableTemplate.replace(
+											'%d',
+											String(max)
+										),
 								});
 							})
 							.filter(function (li) {

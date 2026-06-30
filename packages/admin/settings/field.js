@@ -10,8 +10,8 @@ import {
 	RadioControl,
 } from '@wordpress/components';
 import { boot } from './boot';
-import ProductExclusions from './controls/product-exclusions';
-import CollectionExclusions from './controls/collection-exclusions';
+import ProductExclusions from './controls/ProductExclusions';
+import CollectionExclusions from './controls/CollectionExclusions';
 
 export default function Field({ field, value, moduleValues, onChange }) {
 	const { key, type, label, help, options = [] } = field;
@@ -44,7 +44,9 @@ export default function Field({ field, value, moduleValues, onChange }) {
 					label={label}
 					help={help}
 					placeholder={
-						'merchant_email' === key ? boot.merchantEmailPlaceholder : undefined
+						'merchant_email' === key
+							? boot.merchantEmailPlaceholder
+							: undefined
 					}
 					value={value ?? ''}
 					onChange={(v) => onChange(key, v)}
@@ -82,6 +84,8 @@ export default function Field({ field, value, moduleValues, onChange }) {
 		case 'collection_exclusions':
 			return (
 				<CollectionExclusions
+					label={label}
+					help={help}
 					selected={Array.isArray(value) ? value : []}
 					onChange={(v) => onChange(key, v)}
 				/>
@@ -89,6 +93,8 @@ export default function Field({ field, value, moduleValues, onChange }) {
 		case 'product_exclusions':
 			return (
 				<ProductExclusions
+					label={label}
+					help={help}
 					ids={Array.isArray(value) ? value : []}
 					labels={moduleValues.excluded_product_labels || {}}
 					onChange={(nextIds, nextLabels) => {

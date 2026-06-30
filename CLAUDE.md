@@ -13,12 +13,18 @@ PHP 7.4+, WordPress 6.6+, hard dependency on the SureCart plugin.
    idiom. This codebase is internally consistent; new code should be indistinguishable from
    what's there. When a change spans modules, trace the call path before touching anything.
 2. **Smallest change that's correct.** Prefer surgical edits over refactors. Don't introduce
-   new patterns, libraries, or abstractions when an existing one fits — there is no build
-   step and no Composer/npm dependency to lean on (see below).
+   new patterns, libraries, or abstractions when an existing one fits — runtime code pulls in
+   no Composer packages and no bundled npm libraries (only WordPress's own `@wordpress/*`,
+   provided as externals), so reach for what's already here.
 3. **Preserve safe-degradation.** Every SureCart API touch and every public endpoint already
    fails closed. Keep it that way; never remove a guard, nonce, capability check, or
    `try/catch` to "simplify".
 4. **State outcomes honestly.** If something is untested or skipped, say so.
+5. **Built JS needs `npm run build`; PHP and `assets/` don't.** After editing anything under
+   `packages/` (a block or the admin settings app), run `npm run build` — the runtime loads
+   the compiled `build/` output, *not* the source, so an unbuilt edit shows no change in the
+   browser. PHP and the hand-enqueued `assets/*.js|.css` load directly and need no build. (New
+   JS follows the compact-spacing rule in Coding standards; `npm run format` normalises it.)
 
 ---
 
@@ -95,9 +101,14 @@ This plugin is a guest in SureCart's house. It should feel native, never bolted-
   `viewScriptModule` entries (the Interactivity `view.js`). Collapsing the array to just the
   script config builds the editor fine but silently drops `view.js`, so interactive blocks render
   yet every click no-ops. This builds a
-  React app (`@wordpress/components`) that `Admin\SettingsPage` mounts when built (falling back
-  to the server-rendered Settings API form otherwise) and saves through `Admin\SettingsController`
-  REST + the shared `Admin\SettingsSanitizer`. `build/` is a generated artifact, gitignored wholesale; the release/QA workflows run
+  React app (`@wordpress/components`) that `Admin\SettingsPage` mounts and that is now the **only**
+  settings UI — there is no server-rendered fallback form; when `build/admin/settings.js` is absent
+  (a source clone that skipped `npm run build`) the page shows a short "build required" notice
+  instead. It saves through `Admin\SettingsController` REST + the shared `Admin\SettingsSanitizer`.
+  Every settings field — including the collection-exclusions checklist (with product counts + a
+  "Refresh excluded product list" action) and the product-exclusions token picker — lives in
+  `packages/admin/settings/` (`field.js` + `controls/`); the shared shell stylesheet
+  `assets/admin-settings.css` still loads on both the settings page and the withdrawal-log page. `build/` is a generated artifact, gitignored wholesale; the release/QA workflows run
   `npm ci && npm run build` and stage into `.release/` (not `build/`) before zipping, so the
   shipped plugin drops in and runs with no toolchain — only contributors working from a clone
   build. View modules and styles **are** compiled now (that's the convention); keep `view.js`
@@ -145,7 +156,17 @@ This plugin is a guest in SureCart's house. It should feel native, never bolted-
 ## Coding standards
 
 - **WordPress Coding Standards by practice** (no phpcs.xml is shipped): tabs for indentation,
-  snake_case functions/vars, PascalCase classes, **Yoda conditions**, full docblocks.
+  snake_case functions/vars, PascalCase classes, **Yoda conditions**, full docblocks. This applies
+  to **PHP**.
+- **JS/JSX uses compact (standard Prettier) spacing, NOT WordPress paren padding.** Write
+  `useState([])`, `if (!text || text.length < 2)`, `[a, b]` — *not* `useState( [] )`,
+  `if ( ! text … )`, `[ a, b ]`. This is enforced by the repo `.prettierrc.js` (it inherits
+  `@wordpress/prettier-config` — tabs, single quotes, 80 cols, es5 trailing commas, `arrowParens:
+  always` — but sets **`parenSpacing: false`**, the one WordPress-specific option that pads the
+  inside of parens/brackets). The same config drives both `npm run format` and `npm run lint:js`
+  (the `@wordpress/eslint-plugin` prettier rule merges it over its defaults), so they never
+  disagree. React component **identifiers** stay PascalCase; component **files** are PascalCase
+  (`ModulePanel.js`), entry/data files stay lowercase (`index.js`, `boot.js`).
 - **Escape on output, sanitize on input.** `esc_html()` / `esc_attr()` / `esc_url()` /
   `esc_html__()` at output; `sanitize_email()` / `sanitize_text_field( wp_unslash( … ) )` /
   `sanitize_textarea_field` at input. REST args declare `sanitize_callback`.

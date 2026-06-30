@@ -13,6 +13,7 @@ use SureCartEuHelper\Modules\ModuleRegistry;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\AdminController;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogListTable;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -28,11 +29,32 @@ class SettingsPage {
 	const LOG_PAGE = 'sceu-withdrawal-log';
 
 	/**
+	 * Per-user screen option storing the log table's "per page" choice.
+	 */
+	const LOG_PER_PAGE = 'sceu_log_per_page';
+
+	/**
 	 * Module registry.
 	 *
 	 * @var ModuleRegistry
 	 */
 	private $registry;
+
+	/**
+	 * The withdrawal-log page hook (returned by add_submenu_page), used to wire
+	 * its Screen Options on load-{hook}. Empty until the submenu is registered.
+	 *
+	 * @var string
+	 */
+	private $log_hook = '';
+
+	/**
+	 * The log list table, built on the log page's load hook so its columns are
+	 * known to the screen (Screen Options) and reused when the page renders.
+	 *
+	 * @var LogListTable|null
+	 */
+	private $log_table = null;
 
 	/**
 	 * Constructor.
@@ -59,6 +81,8 @@ class SettingsPage {
 		// so the settings UI stays styled and usable even when a module is off.
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_filter( 'admin_body_class', array( $this, 'admin_body_class' ) );
+		// Render the brand bar above #wpbody so the Screen Options tab sits beneath it.
+		add_action( 'in_admin_header', array( $this, 'render_admin_header' ) );
 		$registry = $this->registry;
 		add_action(
 			'rest_api_init',
@@ -67,12 +91,24 @@ class SettingsPage {
 				( new SettingsController( $registry ) )->register_routes();
 			}
 		);
-		add_action( 'admin_post_sceu_refresh_exclusions', array( $this, 'refresh_exclusions' ) );
+
+		// Persist the "per page" Screen Option (core saves it only if a filter allows).
+		add_filter(
+			'set_screen_option_' . self::LOG_PER_PAGE,
+			static function ( $status, $option, $value ) {
+				return max( 1, min( 200, (int) $value ) );
+			},
+			10,
+			3
+		);
 	}
 
 	/**
-	 * Enqueue the settings shell + exclusions-picker assets on the EU Helper
-	 * settings page. Versioned by file mtime so updates are never served stale.
+	 * Enqueue the settings shell + the React settings app. The exclusions picker
+	 * and every field now live in the app (packages/admin/settings); there is no
+	 * server-rendered fallback. The shared shell stylesheet still loads on both
+	 * the settings page and the withdrawal-log page. Versioned by file mtime so
+	 * updates are never served stale.
 	 *
 	 * @param string $hook Current admin page hook.
 	 * @return void
@@ -82,18 +118,39 @@ class SettingsPage {
 			return;
 		}
 
-		// React settings app: when built, it replaces the legacy settings + exclusions
-		// scripts on the settings screen. The withdrawal-log page keeps the plain shell.
-		$app = $this->app_asset();
-		if ( null !== $app && false !== strpos( $hook, self::PAGE ) ) {
-			$settings_css = SCEU_DIR . 'assets/admin-settings.css';
+		// The React app loads only on the settings page, not the log page.
+		$app = ( false !== strpos( $hook, self::PAGE ) ) ? $this->app_asset() : null;
+
+		$shell_deps = array( 'dashicons' );
+		if ( null !== $app ) {
+			$shell_deps[] = 'wp-components';
 			wp_enqueue_style( 'wp-components' );
-			wp_enqueue_style(
-				'sceu-admin-settings',
-				SCEU_URL . 'assets/admin-settings.css',
-				array( 'dashicons', 'wp-components' ),
-				file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
-			);
+		}
+
+		$settings_css = SCEU_DIR . 'assets/admin-settings.css';
+		wp_enqueue_style(
+			'sceu-admin-settings',
+			SCEU_URL . 'assets/admin-settings.css',
+			$shell_deps,
+			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
+		);
+
+		// Make the log page's server-rendered .sceu-notice banners dismissible.
+		$notice_js = SCEU_DIR . 'assets/admin-notice.js';
+		wp_enqueue_script(
+			'sceu-admin-notice',
+			SCEU_URL . 'assets/admin-notice.js',
+			array(),
+			file_exists( $notice_js ) ? (string) filemtime( $notice_js ) : SCEU_VERSION,
+			true
+		);
+		wp_localize_script(
+			'sceu-admin-notice',
+			'sceuNotice',
+			array( 'dismissLabel' => __( 'Dismiss this notice', 'surecart-eu-helper' ) )
+		);
+
+		if ( null !== $app ) {
 			wp_enqueue_script( 'sceu-settings-app', $app['url'], $app['deps'], $app['version'], true );
 			wp_set_script_translations( 'sceu-settings-app', 'surecart-eu-helper' );
 			wp_add_inline_script(
@@ -101,90 +158,7 @@ class SettingsPage {
 				'window.sceuSettingsApp = ' . wp_json_encode( $this->app_bootstrap() ) . ';',
 				'before'
 			);
-			return;
 		}
-
-		$settings_css = SCEU_DIR . 'assets/admin-settings.css';
-		wp_enqueue_style(
-			'sceu-admin-settings',
-			SCEU_URL . 'assets/admin-settings.css',
-			array( 'dashicons' ),
-			file_exists( $settings_css ) ? (string) filemtime( $settings_css ) : SCEU_VERSION
-		);
-		$settings_js = SCEU_DIR . 'assets/admin-settings.js';
-		wp_enqueue_script(
-			'sceu-admin-settings',
-			SCEU_URL . 'assets/admin-settings.js',
-			array(),
-			file_exists( $settings_js ) ? (string) filemtime( $settings_js ) : SCEU_VERSION,
-			true
-		);
-		wp_localize_script(
-			'sceu-admin-settings',
-			'sceuSettings',
-			array(
-				'i18n' => array(
-					'dismiss' => __( 'Dismiss this notice', 'surecart-eu-helper' ),
-				),
-			)
-		);
-
-		$css = SCEU_DIR . 'assets/admin-exclusions.css';
-		$js  = SCEU_DIR . 'assets/admin-exclusions.js';
-		wp_enqueue_style(
-			'sceu-admin-exclusions',
-			SCEU_URL . 'assets/admin-exclusions.css',
-			array(),
-			file_exists( $css ) ? (string) filemtime( $css ) : SCEU_VERSION
-		);
-		wp_enqueue_script(
-			'sceu-admin-exclusions',
-			SCEU_URL . 'assets/admin-exclusions.js',
-			array(),
-			file_exists( $js ) ? (string) filemtime( $js ) : SCEU_VERSION,
-			true
-		);
-		wp_localize_script(
-			'sceu-admin-exclusions',
-			'sceuExclusions',
-			array(
-				'searchUrl' => rest_url( AdminController::NAMESPACE . AdminController::ROUTE ),
-				'nonce'     => wp_create_nonce( 'wp_rest' ),
-				'i18n'      => array(
-					'noResults' => __( 'No matching products', 'surecart-eu-helper' ),
-					'error'     => __( 'Couldn’t search products. Please try again.', 'surecart-eu-helper' ),
-					/* translators: %s: product name. */
-					'remove'    => __( 'Remove %s', 'surecart-eu-helper' ),
-					/* translators: %d: number of matching products found. */
-					'results'   => __( '%d products found', 'surecart-eu-helper' ),
-				),
-			)
-		);
-	}
-
-	/**
-	 * Admin action: rebuild the product-exclusion cache now.
-	 *
-	 * @return void
-	 */
-	public function refresh_exclusions(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
-		}
-		check_admin_referer( 'sceu_refresh_exclusions' );
-
-		$count = count( Exclusions::rebuild_cache() );
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'              => self::PAGE,
-					'exclusions_synced' => $count,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	/**
@@ -213,7 +187,7 @@ class SettingsPage {
 		);
 
 		if ( Settings::is_module_enabled( 'right_of_withdrawal' ) ) {
-			add_submenu_page(
+			$this->log_hook = (string) add_submenu_page(
 				self::PAGE,
 				__( 'Withdrawal Log', 'surecart-eu-helper' ),
 				__( 'Withdrawal Log', 'surecart-eu-helper' ),
@@ -221,7 +195,72 @@ class SettingsPage {
 				self::LOG_PAGE,
 				array( $this, 'render_log_page' )
 			);
+			if ( '' !== $this->log_hook ) {
+				add_action( 'load-' . $this->log_hook, array( $this, 'on_log_load' ) );
+			}
 		}
+	}
+
+	/**
+	 * Wire the log table's Screen Options (per-page + column toggles) on load.
+	 *
+	 * @return void
+	 */
+	public function on_log_load(): void {
+		add_screen_option(
+			'per_page',
+			array(
+				'label'   => __( 'Requests per page', 'surecart-eu-helper' ),
+				'default' => 20,
+				'option'  => self::LOG_PER_PAGE,
+			)
+		);
+
+		// Build the table now so its columns register for the Screen Options toggles.
+		$this->log_table = new LogListTable();
+		add_filter( 'manage_' . $this->log_hook . '_columns', array( $this, 'log_table_columns' ) );
+
+		// Process the "Delete permanently" bulk action before the page renders.
+		$this->maybe_handle_bulk_delete();
+	}
+
+	/**
+	 * Handle the "Delete permanently" bulk action: verify nonce + capability,
+	 * delete the checked rows, redirect with a count.
+	 *
+	 * @return void
+	 */
+	private function maybe_handle_bulk_delete(): void {
+		if ( ! $this->log_table || 'delete' !== $this->log_table->current_action() ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
+		}
+		// WP_List_Table prints this nonce via wp_nonce_field( 'bulk-{plural}' ).
+		check_admin_referer( 'bulk-withdrawal_requests' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- verified above.
+		$ids     = isset( $_REQUEST['ids'] ) ? array_map( 'absint', (array) wp_unslash( $_REQUEST['ids'] ) ) : array();
+		$deleted = 0;
+		foreach ( $ids as $id ) {
+			if ( $id && LogTable::delete( $id ) ) {
+				++$deleted;
+			}
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=' . self::LOG_PAGE . '&deleted=' . $deleted ) );
+		exit;
+	}
+
+	/**
+	 * Expose the log table's columns to the screen so Screen Options can list them.
+	 *
+	 * @param array<string, string> $columns Columns passed by the filter.
+	 * @return array<string, string>
+	 */
+	public function log_table_columns( $columns ): array {
+		return $this->log_table ? $this->log_table->get_columns() : (array) $columns;
 	}
 
 	/**
@@ -334,10 +373,55 @@ class SettingsPage {
 				'primaryText' => \SureCartEuHelper\Merchant\BrandColor::primary_text(),
 			),
 			'merchantEmailPlaceholder' => MerchantInfo::notification_email(),
+			'refreshExclusionsPath'    => AdminController::NAMESPACE . AdminController::ROUTE_REFRESH,
 			'collections'              => class_exists( Exclusions::class ) ? Exclusions::all_collections() : array(),
 			'productLabels'            => class_exists( Exclusions::class ) ? Exclusions::product_labels() : array(),
 			'modules'                  => $modules,
 		);
+	}
+
+	/**
+	 * Render the brand header bar on our admin screens via `in_admin_header`, so
+	 * it sits above #wpbody and the Screen Options tab falls into the strip below.
+	 *
+	 * @return void
+	 */
+	public function render_admin_header(): void {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen ) {
+			return;
+		}
+		$is_log      = false !== strpos( $screen->id, self::LOG_PAGE );
+		$is_settings = ! $is_log && false !== strpos( $screen->id, self::PAGE );
+		if ( ! $is_log && ! $is_settings ) {
+			return;
+		}
+
+		// Tint with the store's SureCart brand colour (badge + accents).
+		$primary = \SureCartEuHelper\Merchant\BrandColor::primary();
+		$ptext   = \SureCartEuHelper\Merchant\BrandColor::primary_text();
+		$style   = '';
+		if ( '' !== $primary ) {
+			$style .= '--sceu-primary:' . $primary . ';';
+			if ( '' !== $ptext ) {
+				$style .= '--sceu-primary-text:' . $ptext . ';';
+			}
+		}
+
+		$crumb = $is_log
+			? __( 'Withdrawal requests', 'surecart-eu-helper' )
+			: __( 'Settings', 'surecart-eu-helper' );
+		?>
+		<header class="sceu-app__bar sceu-app__bar--global" style="<?php echo esc_attr( $style ); ?>">
+			<div class="sceu-app__brand">
+				<span class="sceu-app__badge"><?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
+				<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
+				<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
+				<span class="sceu-app__crumb"><?php echo esc_html( $crumb ); ?></span>
+			</div>
+			<span class="sceu-app__meta">v<?php echo esc_html( SCEU_VERSION ); ?></span>
+		</header>
+		<?php
 	}
 
 	/**
@@ -361,179 +445,44 @@ class SettingsPage {
 			}
 		}
 
-		// When the React app is built, mount it and let it render the whole screen
-		// (it reads window.sceuSettingsApp). Otherwise fall through to the classic
-		// server-rendered Settings API form below.
-		if ( null !== $this->app_asset() ) {
+		// React is the only settings UI; when the build is missing, show a notice.
+		if ( null === $this->app_asset() ) {
 			printf(
-				'<div class="sceu-app" style="%1$s"><div id="sceu-settings-root" class="sceu-app__mount"><p class="sceu-app__loading">%2$s</p></div></div>',
+				'<div class="sceu-app" style="%1$s"><div class="sceu-app__content"><div class="sceu-app__inner"><div class="notice notice-error"><p>%2$s</p></div></div></div></div>',
 				esc_attr( $style ),
-				esc_html__( 'Loading settings…', 'surecart-eu-helper' )
+				esc_html__( 'The EU Helper settings interface has not been built. Run "npm ci && npm run build" in the plugin directory, or install the packaged release.', 'surecart-eu-helper' )
 			);
 			return;
 		}
 
-		$modules     = $this->registry->all();
-		$first_label = '';
-		foreach ( $modules as $sceu_first_module ) {
-			$first_label = $sceu_first_module->label();
-			break;
-		}
-		?>
-		<div class="sceu-app" style="<?php echo esc_attr( $style ); ?>">
-			<header class="sceu-app__bar">
-				<div class="sceu-app__brand">
-					<span class="sceu-app__badge"><?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
-					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
-					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
-					<span class="sceu-app__crumb" data-sceu-crumb><?php echo esc_html( $first_label ); ?></span>
-				</div>
-				<span class="sceu-app__meta">v<?php echo esc_html( SCEU_VERSION ); ?></span>
-			</header>
+		// Skeleton shown until the React app mounts, so the layout doesn't jump.
+		$skeleton = sprintf(
+			'<div class="sceu-app__skeleton" role="status">' .
+				'<span class="screen-reader-text">%1$s</span>' .
+				// Header is rendered separately via in_admin_header.
+				'<div class="sceu-skel__body">' .
+					'<div class="sceu-skel__nav">' .
+						'<span class="sceu-skel sceu-skel__nav-item"></span>' .
+						'<span class="sceu-skel sceu-skel__nav-item"></span>' .
+						'<span class="sceu-skel sceu-skel__nav-item"></span>' .
+					'</div>' .
+					'<div class="sceu-skel__content">' .
+						'<span class="sceu-skel sceu-skel__heading"></span>' .
+						'<span class="sceu-skel sceu-skel__text"></span>' .
+						'<span class="sceu-skel sceu-skel__text sceu-skel__text--short"></span>' .
+						'<div class="sceu-skel sceu-skel__card"></div>' .
+						'<div class="sceu-skel sceu-skel__card"></div>' .
+					'</div>' .
+				'</div>' .
+			'</div>',
+			esc_html__( 'Loading settings…', 'surecart-eu-helper' )
+		);
 
-			<div class="sceu-app__body">
-				<nav class="sceu-app__nav" aria-label="<?php echo esc_attr__( 'EU Helper modules', 'surecart-eu-helper' ); ?>">
-					<?php $sceu_first = true; ?>
-					<?php foreach ( $modules as $id => $module ) : ?>
-						<a class="sceu-nav__item<?php echo $sceu_first ? ' is-active' : ''; ?>"
-							href="#<?php echo esc_attr( $id ); ?>"
-							data-sceu-tab="<?php echo esc_attr( $id ); ?>">
-							<span class="sceu-nav__icon"><?php echo Icons::svg( $this->module_icon( $id, $module ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
-							<?php echo esc_html( $module->label() ); ?>
-						</a>
-						<?php $sceu_first = false; ?>
-					<?php endforeach; ?>
-				</nav>
-
-				<div class="sceu-app__content">
-					<div class="sceu-app__inner">
-					<?php settings_errors(); // Render the Settings API "Settings saved." notice; not auto-shown on top-level menu pages. ?>
-						<?php if ( isset( $_GET['exclusions_synced'] ) ) : // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
-						<div class="notice notice-success is-dismissible"><p>
-							<?php
-							echo esc_html(
-								sprintf(
-									/* translators: %d: number of products resolved from excluded collections. */
-									_n(
-										'Excluded-product list refreshed: %d product is currently in your excluded collections.',
-										'Excluded-product list refreshed: %d products are currently in your excluded collections.',
-										(int) $_GET['exclusions_synced'], // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-										'surecart-eu-helper'
-									),
-									(int) $_GET['exclusions_synced'] // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-								)
-							);
-							?>
-						</p></div>
-					<?php endif; ?>
-
-					<form method="post" action="options.php" class="sceu-settings__form">
-						<?php settings_fields( self::GROUP ); ?>
-
-						<?php $sceu_first = true; ?>
-						<?php foreach ( $modules as $id => $module ) : ?>
-							<?php $enabled = Settings::is_module_enabled( $id ); ?>
-							<section class="sceu-panel<?php echo $sceu_first ? ' is-active' : ''; ?>" data-sceu-panel="<?php echo esc_attr( $id ); ?>" <?php echo $sceu_first ? '' : 'hidden'; ?>>
-								<div class="sceu-panel__head">
-									<h2 class="sceu-panel__title">
-										<?php echo Icons::svg( $this->module_icon( $id, $module ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?>
-										<?php echo esc_html( $module->label() ); ?>
-									</h2>
-									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
-								</div>
-								<?php if ( '' !== $module->description() ) : ?>
-									<p class="sceu-panel__desc"><?php echo esc_html( $module->description() ); ?></p>
-								<?php endif; ?>
-
-								<?php $disclaimer = $module->disclaimer(); ?>
-								<?php if ( '' !== $disclaimer ) : ?>
-									<p class="sceu-card__note">
-										<strong><?php echo esc_html__( 'Your responsibility', 'surecart-eu-helper' ); ?>:</strong>
-										<?php echo esc_html( $disclaimer ); ?>
-									</p>
-								<?php endif; ?>
-
-								<div class="sceu-card sceu-card--compact">
-									<label class="sceu-toggle">
-										<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]" value="0" />
-										<input type="checkbox" class="sceu-switch__input"
-											name="<?php echo esc_attr( Settings::OPTION ); ?>[modules][<?php echo esc_attr( $id ); ?>]"
-											value="1" <?php checked( $enabled ); ?> />
-										<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-										<span class="sceu-toggle__body">
-											<span class="sceu-toggle__label"><?php echo esc_html__( 'Enable module', 'surecart-eu-helper' ); ?></span>
-										</span>
-									</label>
-								</div>
-
-								<?php
-								$sceu_fields   = $module->settings_fields();
-								$sceu_sections = method_exists( $module, 'settings_sections' ) ? $module->settings_sections() : array();
-								$sceu_grouped  = array();
-								foreach ( $sceu_fields as $sceu_f ) {
-									$sceu_grouped[ $sceu_f['section'] ?? '_default' ][] = $sceu_f;
-								}
-								// Section order first, then any ungrouped fields.
-								$sceu_order = array_keys( $sceu_sections );
-								foreach ( array_keys( $sceu_grouped ) as $sceu_k ) {
-									if ( ! in_array( $sceu_k, $sceu_order, true ) ) {
-										$sceu_order[] = $sceu_k;
-									}
-								}
-								foreach ( $sceu_order as $sceu_skey ) :
-									if ( empty( $sceu_grouped[ $sceu_skey ] ) ) {
-										continue;
-									}
-									$sceu_sec = $sceu_sections[ $sceu_skey ] ?? array();
-									?>
-									<?php if ( ! empty( $sceu_sec['title'] ) ) : ?>
-										<div class="sceu-section__head">
-											<h3 class="sceu-section__title"><?php echo esc_html( $sceu_sec['title'] ); ?></h3>
-											<?php if ( ! empty( $sceu_sec['description'] ) ) : ?>
-												<p class="sceu-section__desc"><?php echo esc_html( $sceu_sec['description'] ); ?></p>
-											<?php endif; ?>
-										</div>
-									<?php endif; ?>
-									<div class="sceu-card">
-										<?php foreach ( $sceu_grouped[ $sceu_skey ] as $sceu_field ) : ?>
-											<?php $this->render_field( $id, $sceu_field ); ?>
-										<?php endforeach; ?>
-									</div>
-								<?php endforeach; ?>
-							</section>
-							<?php $sceu_first = false; ?>
-						<?php endforeach; ?>
-
-							<?php $sceu_remove_data = ! empty( Settings::all()['remove_data'] ); ?>
-							<div class="sceu-uninstall">
-								<div class="sceu-panel__head">
-									<h2 class="sceu-panel__title">
-										<?php echo Icons::svg( 'admin-generic' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?>
-										<?php echo esc_html__( 'Uninstall', 'surecart-eu-helper' ); ?>
-									</h2>
-									<button type="submit" class="sceu-btn--primary"><?php echo esc_html__( 'Save', 'surecart-eu-helper' ); ?></button>
-								</div>
-								<p class="sceu-panel__desc"><?php echo esc_html__( 'Change your plugin uninstall settings.', 'surecart-eu-helper' ); ?></p>
-								<div class="sceu-card sceu-card--compact">
-									<label class="sceu-toggle">
-										<input type="hidden" name="<?php echo esc_attr( Settings::OPTION ); ?>[remove_data]" value="0" />
-										<input type="checkbox" class="sceu-switch__input"
-											name="<?php echo esc_attr( Settings::OPTION ); ?>[remove_data]"
-											value="1" <?php checked( $sceu_remove_data ); ?> />
-										<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-										<span class="sceu-toggle__body">
-											<span class="sceu-toggle__label"><?php echo esc_html__( 'Remove Plugin Data', 'surecart-eu-helper' ); ?></span>
-											<span class="sceu-field__help"><?php echo esc_html__( 'Completely remove all plugin data — settings and the withdrawal-request log — when the plugin is deleted. This cannot be undone.', 'surecart-eu-helper' ); ?></span>
-										</span>
-									</label>
-								</div>
-							</div>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-		<?php
+		printf(
+			'<div class="sceu-app" style="%1$s"><div id="sceu-settings-root" class="sceu-app__mount">%2$s</div></div>',
+			esc_attr( $style ),
+			$skeleton // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static skeleton markup; the only dynamic value (SR text) is escaped above.
+		);
 	}
 
 	/**
@@ -556,184 +505,6 @@ class SettingsPage {
 	}
 
 	/**
-	 * Render a single settings field row.
-	 *
-	 * @param string               $module_id Module id.
-	 * @param array<string, mixed> $field     Field schema.
-	 * @return void
-	 */
-	private function render_field( string $module_id, array $field ): void {
-		$key     = $field['key'] ?? '';
-		$type    = $field['type'] ?? 'text';
-		$label   = $field['label'] ?? $key;
-		$help    = $field['help'] ?? '';
-		$default = $field['default'] ?? '';
-		$name    = Settings::OPTION . '[' . $module_id . '][' . $key . ']';
-		$id_attr = 'sceu-' . $module_id . '-' . $key;
-
-		$value = Settings::get( $module_id, $key, $default );
-
-		// Pre-fill merchant email from SureCart when unset.
-		$placeholder = '';
-		if ( 'merchant_email' === $key && ( '' === $value || null === $value ) ) {
-			$placeholder = MerchantInfo::notification_email();
-		}
-
-		// Toggle fields render as a switch row (label left, switch right) with the
-		// explanation below — matching SureCart's toggle style.
-		if ( 'toggle' === $type ) {
-			?>
-			<div class="sceu-field sceu-field--toggle">
-				<label class="sceu-toggle" for="<?php echo esc_attr( $id_attr ); ?>">
-					<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="0" />
-					<input type="checkbox" class="sceu-switch__input" id="<?php echo esc_attr( $id_attr ); ?>"
-						name="<?php echo esc_attr( $name ); ?>" value="1" <?php checked( ! empty( $value ) ); ?> />
-					<span class="sceu-switch__track"><span class="sceu-switch__thumb"></span></span>
-					<span class="sceu-toggle__body">
-						<span class="sceu-toggle__label"><?php echo esc_html( $label ); ?></span>
-						<?php if ( $help ) : ?>
-							<span class="sceu-field__help"><?php echo esc_html( $help ); ?></span>
-						<?php endif; ?>
-					</span>
-				</label>
-			</div>
-			<?php
-			return;
-		}
-		?>
-		<div class="sceu-field sceu-field--<?php echo esc_attr( $type ); ?>">
-			<label class="sceu-field__label" for="<?php echo esc_attr( $id_attr ); ?>"><?php echo esc_html( $label ); ?></label>
-			<div class="sceu-field__control">
-				<?php if ( 'select' === $type || 'radio' === $type ) : ?>
-					<?php foreach ( (array) ( $field['options'] ?? array() ) as $opt ) : ?>
-						<?php if ( 'radio' === $type ) : ?>
-							<label style="display:block;margin-bottom:4px;">
-								<input type="radio" name="<?php echo esc_attr( $name ); ?>"
-									value="<?php echo esc_attr( $opt['value'] ); ?>"
-									<?php checked( $value, $opt['value'] ); ?> />
-								<?php echo esc_html( $opt['label'] ); ?>
-							</label>
-						<?php endif; ?>
-					<?php endforeach; ?>
-					<?php if ( 'select' === $type ) : ?>
-						<select id="<?php echo esc_attr( $id_attr ); ?>" name="<?php echo esc_attr( $name ); ?>">
-							<?php foreach ( (array) ( $field['options'] ?? array() ) as $opt ) : ?>
-								<option value="<?php echo esc_attr( $opt['value'] ); ?>" <?php selected( $value, $opt['value'] ); ?>>
-									<?php echo esc_html( $opt['label'] ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					<?php endif; ?>
-
-				<?php elseif ( 'number' === $type ) : ?>
-					<input type="number" id="<?php echo esc_attr( $id_attr ); ?>"
-						name="<?php echo esc_attr( $name ); ?>"
-						value="<?php echo esc_attr( (string) $value ); ?>"
-						<?php echo isset( $field['min'] ) ? 'min="' . esc_attr( (string) $field['min'] ) . '"' : ''; ?>
-						class="small-text" />
-
-				<?php elseif ( 'email' === $type ) : ?>
-					<input type="email" id="<?php echo esc_attr( $id_attr ); ?>"
-						name="<?php echo esc_attr( $name ); ?>"
-						value="<?php echo esc_attr( (string) $value ); ?>"
-						placeholder="<?php echo esc_attr( $placeholder ); ?>"
-						class="regular-text" />
-
-				<?php elseif ( 'collection_exclusions' === $type ) : ?>
-					<?php
-					$selected_cols = is_array( $value ) ? array_map( 'strval', $value ) : array();
-					$collections   = Exclusions::all_collections();
-					?>
-					<?php if ( empty( $collections ) ) : ?>
-						<p class="description"><?php echo esc_html__( 'No product collections found (or SureCart is unavailable). Create collections in SureCart to exclude products in bulk.', 'surecart-eu-helper' ); ?></p>
-					<?php else : ?>
-						<ul class="sceu-checklist">
-							<?php foreach ( $collections as $col ) : ?>
-								<li class="sceu-checklist__item">
-									<label>
-										<input type="checkbox"
-											name="<?php echo esc_attr( $name ); ?>[]"
-											value="<?php echo esc_attr( $col['id'] ); ?>"
-											<?php checked( in_array( $col['id'], $selected_cols, true ) ); ?> />
-										<span><?php echo esc_html( $col['name'] ); ?></span>
-									</label>
-									<span class="sceu-checklist__count">
-										<?php
-										echo esc_html(
-											sprintf(
-												/* translators: %d: number of products in the collection. */
-												_n( '%d product', '%d products', (int) $col['products_count'], 'surecart-eu-helper' ),
-												(int) $col['products_count']
-											)
-										);
-										?>
-									</span>
-								</li>
-							<?php endforeach; ?>
-						</ul>
-						<p class="sceu-refresh-row">
-							<a class="sceu-btn--secondary"
-								href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=sceu_refresh_exclusions' ), 'sceu_refresh_exclusions' ) ); ?>">
-								<?php echo esc_html__( 'Refresh excluded product list', 'surecart-eu-helper' ); ?>
-							</a>
-						</p>
-						<p class="sceu-field__help"><?php echo esc_html__( 'Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and when you add products to a collection.', 'surecart-eu-helper' ); ?></p>
-					<?php endif; ?>
-
-				<?php elseif ( 'product_exclusions' === $type ) : ?>
-					<?php
-					$selected_ids = is_array( $value ) ? array_map( 'strval', $value ) : array();
-					$labels       = Exclusions::product_labels();
-					?>
-					<div class="sceu-excl" data-sceu-excl>
-						<span class="sceu-excl__field">
-							<input type="search" class="sceu-excl__search regular-text"
-								placeholder="<?php echo esc_attr__( 'Search products by name…', 'surecart-eu-helper' ); ?>"
-								autocomplete="off" aria-label="<?php echo esc_attr__( 'Search products to exclude', 'surecart-eu-helper' ); ?>"
-								role="combobox" aria-expanded="false" aria-autocomplete="list"
-								aria-controls="<?php echo esc_attr( $id_attr ); ?>-results" />
-							<button type="button" class="sceu-excl__clear" aria-label="<?php echo esc_attr__( 'Clear search', 'surecart-eu-helper' ); ?>" hidden>&times;</button>
-							<span class="sceu-excl__spinner" aria-hidden="true"></span>
-						</span>
-						<ul class="sceu-excl__results" id="<?php echo esc_attr( $id_attr ); ?>-results" role="listbox" hidden></ul>
-						<span class="screen-reader-text" data-sceu-excl-status aria-live="polite"></span>
-						<ul class="sceu-excl__chips">
-							<?php foreach ( $selected_ids as $pid ) : ?>
-								<?php $pname = $labels[ $pid ] ?? $pid; ?>
-								<li class="sceu-excl__chip" data-id="<?php echo esc_attr( $pid ); ?>">
-									<span class="sceu-excl__chip-label"><?php echo esc_html( $pname ); ?></span>
-									<?php /* translators: %s: product name. */ ?>
-									<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr( sprintf( __( 'Remove %s', 'surecart-eu-helper' ), $pname ) ); ?>">&times;</button>
-									<input type="hidden" name="<?php echo esc_attr( $name ); ?>[]" value="<?php echo esc_attr( $pid ); ?>" />
-									<input type="hidden" name="<?php echo esc_attr( Settings::OPTION . '[' . $module_id . '][excluded_product_labels][' . $pid . ']' ); ?>" value="<?php echo esc_attr( $pname ); ?>" />
-								</li>
-							<?php endforeach; ?>
-						</ul>
-						<template class="sceu-excl__template">
-							<li class="sceu-excl__chip" data-id="">
-								<span class="sceu-excl__chip-label"></span>
-								<button type="button" class="sceu-excl__remove" aria-label="<?php echo esc_attr__( 'Remove', 'surecart-eu-helper' ); ?>">&times;</button>
-								<input type="hidden" data-name-ids="<?php echo esc_attr( $name ); ?>[]" value="" />
-								<input type="hidden" data-name-labels="<?php echo esc_attr( Settings::OPTION . '[' . $module_id . '][excluded_product_labels]' ); ?>" value="" />
-							</li>
-						</template>
-					</div>
-
-				<?php else : ?>
-					<input type="text" id="<?php echo esc_attr( $id_attr ); ?>"
-						name="<?php echo esc_attr( $name ); ?>"
-						value="<?php echo esc_attr( (string) $value ); ?>"
-						class="regular-text" />
-				<?php endif; ?>
-			</div>
-			<?php if ( $help ) : ?>
-				<p class="sceu-field__help"><?php echo esc_html( $help ); ?></p>
-			<?php endif; ?>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Render the withdrawal-request log viewer.
 	 *
 	 * @return void
@@ -742,7 +513,8 @@ class SettingsPage {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$table = new LogListTable();
+		// Reuse the instance built on load; fall back if that hook didn't run.
+		$table = $this->log_table ?? new LogListTable();
 		$table->prepare_items();
 
 		$primary = \SureCartEuHelper\Merchant\BrandColor::primary();
@@ -756,16 +528,7 @@ class SettingsPage {
 		}
 		?>
 		<div class="sceu-app sceu-app--page" style="<?php echo esc_attr( $style ); ?>">
-			<header class="sceu-app__bar">
-				<div class="sceu-app__brand">
-					<span class="sceu-app__badge"><?php echo Icons::svg( 'shield-alt' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- trusted static SVG. ?></span>
-					<span class="sceu-app__name"><?php echo esc_html__( 'SureCart EU Helper', 'surecart-eu-helper' ); ?></span>
-					<span class="sceu-app__sep" aria-hidden="true">&rsaquo;</span>
-					<span class="sceu-app__crumb"><?php echo esc_html__( 'Withdrawal requests', 'surecart-eu-helper' ); ?></span>
-				</div>
-				<span class="sceu-app__meta">v<?php echo esc_html( SCEU_VERSION ); ?></span>
-			</header>
-
+			<?php // The brand header bar is rendered globally via in_admin_header. ?>
 			<div class="sceu-app__content">
 				<div class="sceu-app__inner sceu-app__inner--wide">
 					<div class="sceu-panel__head">
@@ -779,8 +542,25 @@ class SettingsPage {
 					<?php if ( isset( $_GET['updated'] ) ) : ?>
 						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></div>
 					<?php endif; ?>
-					<?php if ( isset( $_GET['deleted'] ) ) : ?>
-						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request permanently deleted from the log.', 'surecart-eu-helper' ); ?></div>
+					<?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+					<?php if ( isset( $_GET['deleted'] ) && (int) $_GET['deleted'] > 0 ) : ?>
+						<?php $sceu_deleted = (int) $_GET['deleted']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+						<div class="sceu-notice sceu-notice--success">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d: number of requests deleted. */
+									_n(
+										'%d request permanently deleted from the log.',
+										'%d requests permanently deleted from the log.',
+										$sceu_deleted,
+										'surecart-eu-helper'
+									),
+									$sceu_deleted
+								)
+							);
+							?>
+						</div>
 					<?php endif; ?>
 					<?php if ( isset( $_GET['synced'] ) ) : ?>
 						<div class="sceu-notice sceu-notice--info">
@@ -825,7 +605,7 @@ class SettingsPage {
 					<p class="sceu-field__help" style="margin:0 0 1.5em;"><?php echo esc_html__( 'Sync checks SureCart for refunds and cancellations. Fully refunded or cancelled orders are marked resolved. A partial refund is flagged for review instead of resolved — it can\'t be matched to a specific request, so set the status manually. SureCart does not always report refunds, so set status manually when needed.', 'surecart-eu-helper' ); ?></p>
 
 					<div class="sceu-card sceu-card--table">
-						<form method="get">
+						<form method="post">
 							<input type="hidden" name="page" value="<?php echo esc_attr( self::LOG_PAGE ); ?>" />
 							<?php $table->display(); ?>
 						</form>

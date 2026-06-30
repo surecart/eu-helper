@@ -419,6 +419,22 @@ class Module implements ModuleInterface {
 			file_exists( $css ) ? (string) filemtime( $css ) : SCEU_VERSION
 		);
 
+		// Make the server-rendered `.sceu-notice` banners on this page dismissible,
+		// matching the shell standard used across the plugin's admin pages.
+		$notice_js = SCEU_DIR . 'assets/admin-notice.js';
+		wp_enqueue_script(
+			'sceu-admin-notice',
+			SCEU_URL . 'assets/admin-notice.js',
+			array(),
+			file_exists( $notice_js ) ? (string) filemtime( $notice_js ) : SCEU_VERSION,
+			true
+		);
+		wp_localize_script(
+			'sceu-admin-notice',
+			'sceuNotice',
+			array( 'dismissLabel' => __( 'Dismiss this notice', 'surecart-eu-helper' ) )
+		);
+
 		$js = SCEU_DIR . 'assets/admin-einvoicing.js';
 		wp_enqueue_script(
 			'sceu-admin-einvoicing',

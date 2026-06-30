@@ -1,26 +1,39 @@
 <?php
 /**
- * Admin-only REST endpoint backing the product-exclusion picker.
+ * Admin-only REST endpoints for the Right of Withdrawal settings screen:
+ * product search + exclusion-cache refresh. Counterpart to GuestController.
  *
  * @package SureCartEuHelper
  */
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal\Rest;
 
+use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Proxies a name search against SureCart products for the settings-page picker.
- * Admin-only; results are cached briefly so repeated keystrokes don't hammer the
- * SureCart API.
+ * Admin REST controller for the withdrawal settings screen. Every route is gated
+ * on SureCart's product capability (or manage_options).
  */
 class AdminController {
 
-	const NAMESPACE = 'surecart-eu-helper/v1';
-	const ROUTE     = '/product-search';
+	const NAMESPACE     = 'surecart-eu-helper/v1';
+	const ROUTE         = '/product-search';
+	const ROUTE_REFRESH = '/exclusions/refresh';
 
 	/**
-	 * Register the route.
+	 * Shared admin capability gate: SureCart's own product capability (what its
+	 * admin product screens use), falling back to manage_options for plain admins.
+	 *
+	 * @return bool
+	 */
+	public static function can_manage(): bool {
+		return current_user_can( 'edit_sc_products' ) || current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Register the routes.
 	 *
 	 * @return void
 	 */
@@ -31,12 +44,7 @@ class AdminController {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'search' ),
-				'permission_callback' => static function () {
-					// Reads SureCart product data, so gate on SureCart's own
-					// product capability (what its admin product screens use),
-					// falling back to manage_options for plain admins.
-					return current_user_can( 'edit_sc_products' ) || current_user_can( 'manage_options' );
-				},
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
 				'args'                => array(
 					'q' => array(
 						'type'              => 'string',
@@ -46,6 +54,34 @@ class AdminController {
 				),
 			)
 		);
+
+		// Rebuild the exclusion cache in place (the app toasts the result).
+		register_rest_route(
+			self::NAMESPACE,
+			self::ROUTE_REFRESH,
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'refresh_exclusions' ),
+				'permission_callback' => array( __CLASS__, 'can_manage' ),
+			)
+		);
+	}
+
+	/**
+	 * Rebuild the excluded-product cache and report how many products it resolved.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function refresh_exclusions(): \WP_REST_Response {
+		$count = 0;
+		if ( class_exists( Exclusions::class ) ) {
+			try {
+				$count = count( Exclusions::rebuild_cache() );
+			} catch ( \Throwable $e ) {
+				$count = 0;
+			}
+		}
+		return new \WP_REST_Response( array( 'count' => $count ), 200 );
 	}
 
 	/**
