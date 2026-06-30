@@ -199,6 +199,17 @@ class SettingsPage {
 				add_action( 'load-' . $this->log_hook, array( $this, 'on_log_load' ) );
 			}
 		}
+
+		/**
+		 * Let enabled modules attach their own submenu pages under this menu (e.g.
+		 * the E-Invoicing document log). A module hooks this in its boot(), so only
+		 * enabled modules — whose boot() ran — add a page.
+		 *
+		 * @todo Enable back the action when the e-invoicing module is ready for production use.
+		 *
+		 * @param string $parent Parent menu slug.
+		 */
+		// do_action( 'sceu_admin_menu', self::PAGE );
 	}
 
 	/**
