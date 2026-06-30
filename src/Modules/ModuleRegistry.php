@@ -9,6 +9,7 @@ namespace SureCartEuHelper\Modules;
 
 use SureCartEuHelper\Settings;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Module as RightOfWithdrawalModule;
+// use SureCartEuHelper\Modules\EInvoicing\Module as EInvoicingModule;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -57,6 +58,9 @@ class ModuleRegistry {
 		$this->registered = true;
 
 		$this->register( new RightOfWithdrawalModule() );
+
+		// Enable back it when the e-invoicing module is ready for production use.
+		// $this->register( new EInvoicingModule() );
 
 		/**
 		 * Register additional EU Helper modules.

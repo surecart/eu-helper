@@ -1,0 +1,805 @@
+# Copyright (C) SureCart
+# This file is distributed under the same license as the SureCart EU Helper plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: SureCart EU Helper\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language-Team: \n"
+"X-Domain: surecart-eu-helper\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "%1$d of %2$d × %3$s"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "%1$s: withdrawing %2$s of %3$s"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "%d available"
+msgid_plural "%d available"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/SettingsPage.php
+msgid "%d product"
+msgid_plural "%d products"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Admin/SettingsPage.php
+msgid "%d request has a partial refund flagged for review — set its status manually."
+msgid_plural "%d requests have a partial refund flagged for review — set their status manually."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "A customer has submitted a right-of-withdrawal request. Review the order(s) below and process the cancellation/refund in SureCart."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Active"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "All customers"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Appearance"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Apply to"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Auto (match theme)"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Back"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Borderless"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Button label"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Cancel"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Card (bordered)"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Choose how many of each item to withdraw."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Choosing the second option hides the notice from customers who have a VAT/tax number on file, since they are treated as businesses."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Close"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Color scheme"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Completed"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/withdrawal-form/editor.js
+msgid "Confirm button label"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Confirm withdrawal"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Confirm your withdrawal"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Confirmation message"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Container"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Continue"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Customer"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Customer form"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Customer note:"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Customer:"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Customers without a country"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Dark"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Date"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Declined"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Decrease quantity of %s"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Delete permanently"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Describe what you would like to withdraw from"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "EU Helper"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "EU Helper modules"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Eligibility"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Email"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Email address"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Email re-sent. The \"Emails sent\" column shows the current delivery result."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Email was handed off to your site successfully."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Email:"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Emails sent"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Enable module"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Enter the email you ordered with and your order number to start a withdrawal request."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Form/PublicForm.php src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Entire order"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Excluded collections"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Excluded products"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Excluded-product list refreshed: %d product is currently in your excluded collections."
+msgid_plural "Excluded-product list refreshed: %d products are currently in your excluded collections."
+msgstr[0] ""
+msgstr[1] ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Explanation"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Export CSV"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Find my order"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Form display"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Form text"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Form title"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Full order"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/withdrawal-form/editor.js
+msgid "Heading"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading 2 (large)"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading 3"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading 4"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading 5"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading 6"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Heading style"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php
+msgid "Hello %s,"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "How the withdrawal form appears to customers."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "IP address"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "IP address:"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Increase quantity of %s"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Inline (expands within the page)"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Intro text"
+msgstr ""
+
+#: src/Customer/CustomerContext.php
+msgid "Item"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Leave this field empty"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Light"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Look up a different order"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Look-back window (days)"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Lookup button label"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Mark declined"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Mark resolved"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Merchant"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Merchant notification email"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Modal (opens in an accessible dialog)"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "New right-of-withdrawal request"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "No matching products"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "No product collections found (or SureCart is unavailable). Create collections in SureCart to exclude products in bulk."
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Normal text"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Not sent"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Notifications"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Only customers without a VAT number (consumers)"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Open order in SureCart"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Order"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Order %1$s — %2$s"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Email/MerchantEmail.php src/Modules/RightOfWithdrawal/Log/LogListTable.php src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Order %s"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Order number"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Orders"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Orders to process"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Partial"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Withdrawals.php
+msgid "Pending review"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Please choose at least one item, or use the description box."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Please note: it is your responsibility as the merchant to understand and comply with the right-of-withdrawal laws that apply to your business and customers. This feature is provided as a helpful tool to collect and route withdrawal requests — it does not constitute legal advice, and we accept no liability for how it is configured or used. When in doubt, consult a qualified professional."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Please provide your email and order number."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Please review your withdrawal declaration before confirming."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Please select at least one item to withdraw."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Please select at least one order."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php
+msgid "Please select at least one valid item."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Please select at least one valid order."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php
+msgid "Please wait a moment before submitting another request."
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Preview — the live form looks up the order and lets the customer withdraw."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Product exclusions"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a \"Digital downloads\" or \"Perishables\" collection)."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Quantity to withdraw of %s"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Reason"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Reason (optional)"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Rebuilds the cached list of products in the excluded collections. Runs automatically when you save, on a schedule, and when you add products to a collection."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Received at:"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Refresh excluded product list"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Remove"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php
+msgid "Request a withdrawal"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Request permanently deleted from the log."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Request reference:"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Refund detected — review"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Request status updated."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Resend"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Reset to pending"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Module.php
+msgid "Right of Withdrawal"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Save"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Search products by name…"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Search products to exclude"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Select the orders you want to withdraw from"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Send request"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Sending…"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Sent"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Settings"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Show EU consumers a withdrawal notice + form in their customer area, letting them request cancellation/refund of recent orders. Notifies you and the customer, and logs each request."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Show the notice for orders placed within this many days. The statutory window is usually 14 days, but you may extend it (e.g. 16–17) when goods are shipped and the clock starts on delivery."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Show the notice to customers who have no country on file"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Some checkout customers never have a country collected. When enabled, the notice is still shown to them. Customers with a known non-EU country are always excluded."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Something went wrong. Please try again."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Status"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Submitted"
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Success message"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "SureCart EU Helper"
+msgstr ""
+
+#: src/Diagnostics.php
+msgid "SureCart EU Helper debug: log in as the customer you want to test."
+msgstr ""
+
+#: surecart-eu-helper.php
+msgid "SureCart EU Helper requires the SureCart plugin to be installed and active."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Sync checks SureCart for refunds and cancellations. Fully refunded or cancelled orders are marked resolved. A partial refund is flagged for review instead of resolved — it can't be matched to a specific request, so set the status manually. SureCart does not always report refunds, so set status manually when needed."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Sync complete. %d request(s) marked resolved."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Sync found a partial refund for this order in SureCart. It was not resolved automatically because a partial refund can't be matched to a specific request — review and set the status manually."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Sync statuses"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Thank you. We have received your request and will follow up with you by email."
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Thank you. Your withdrawal request has been received and a confirmation has been emailed to you."
+msgstr ""
+
+#: blocks/withdrawal-form/editor.js
+msgid "Thank you. Your withdrawal request has been received…"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "This block only appears for eligible EU consumers with recent orders. Visitors who do not qualify will not see it."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php
+msgid "This confirms that we have received your request to withdraw from the following order(s). Our team will process it and follow up with you."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php
+msgid "This feature is not available."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/EmailRenderer.php
+msgid "This message was sent automatically by SureCart EU Helper."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Too many attempts. Please wait a few minutes and try again."
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Tried to re-send, but WordPress reported the email could not be sent. This usually means the site has no working email/SMTP setup. See the \"Emails sent\" column below."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Try again"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Unverified request. Order number given: %1$s. Details: %2$s"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "View my requests"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "We could not match that order, so please describe what you would like to withdraw from."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "We couldn't match that order. You can still tell us what you'd like to withdraw from below."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php
+msgid "We received your withdrawal request — %s"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Where withdrawal requests are sent."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Where withdrawal requests are sent. Leave blank to use your SureCart store email (shown as the placeholder)."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Module.php
+msgid "Who sees the withdrawal notice, and for which orders."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Withdraw %1$d × %2$s"
+msgid_plural "Withdraw %1$d × %2$s"
+msgstr[0] ""
+msgstr[1] ""
+
+#: blocks/withdrawal-form/editor.js src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Withdraw from a purchase"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php
+msgid "Withdraw from contract"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/MerchantEmail.php
+msgid "Withdraw: entire order"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Withdrawal Log"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Withdrawal Requests"
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js
+msgid "Withdrawal text"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "Withdrawing"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Log/LogListTable.php
+msgid "WordPress could not send this email. This usually means the site has no working mail/SMTP setup (common on staging sites). The withdrawal request itself was still recorded."
+msgstr ""
+
+#: src/Admin/SettingsPage.php src/Modules/RightOfWithdrawal/Module.php
+msgid "You are not allowed to do that."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/WithdrawalController.php
+msgid "You are not eligible for this request, or you have already requested these orders."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "You are not eligible for this request. This feature is available to EU customers with recent orders."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "You are withdrawing:"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "You have submitted a withdrawal request. You can review its status below."
+msgstr ""
+
+#: blocks/right-of-withdrawal/editor.js blocks/right-of-withdrawal/render.php
+msgid "You have the right to withdraw from your purchase within 14 days of receiving your order."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "You requested to withdraw:"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Your email"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Your name"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Email/CustomerEmail.php
+msgid "Your note:"
+msgstr ""
+
+#: src/Admin/SettingsPage.php
+msgid "Your responsibility"
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Rest/GuestController.php
+msgid "Your session expired. Please reload the page and try again."
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Your session has expired. Please refresh the page and try again."
+msgstr ""
+
+#: src/Modules/RightOfWithdrawal/Form/PublicForm.php
+msgid "Your withdrawal request"
+msgstr ""
+
+#: blocks/right-of-withdrawal/render.php
+msgid "Your withdrawal requests"
+msgstr ""
+

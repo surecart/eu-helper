@@ -1,0 +1,1080 @@
+/**
+ * SureCart-style settings app shell for EU Helper.
+ *
+ * Mirrors SureCart's settings structure — a top header bar, a left module
+ * navigation, and a content panel of cards — using SureCart's design-token
+ * values plus the store's brand colour (injected as --sceu-primary). Renders
+ * full-bleed inside the WP admin content area (the page output is not wrapped
+ * in .wrap), the same way SureCart's settings app fills the screen.
+ */
+
+/* Match SureCart: tint the whole admin content column and hide the WP footer. */
+body.toplevel_page_sceu-settings #wpcontent {
+	background: #f8fafb;
+}
+
+body.toplevel_page_sceu-settings #wpfooter {
+	display: none;
+}
+
+/* Also applied to the in_admin_header brand bar (rendered outside .sceu-app). */
+.sceu-app,
+.sceu-app__bar--global {
+	/* SureCart design tokens (values from the SureCart component library). */
+	--sceu-primary: #388051;
+	--sceu-primary-text: #ffffff;
+	--sceu-primary-soft: rgba(56, 128, 81, 0.1);
+	--sceu-border: #dce0e6;
+	--sceu-line: #eef0f2;
+	--sceu-bg: #f8fafb;
+	--sceu-surface: #ffffff;
+	--sceu-gray-200: #e5e7eb;
+	--sceu-gray-400: #9ca3af;
+	--sceu-gray-500: #6b7280;
+	--sceu-gray-700: #374151;
+	--sceu-gray-900: #002e33;
+	/* SureCart content text + field-label colours (measured from SureCart). */
+	--sceu-text: #45505f;
+	--sceu-label: #4b5563;
+	--sceu-radius: 6px;
+	--sceu-radius-lg: 8px;
+
+	/*
+	 * Re-theme @wordpress/components (toggles, checkboxes, radios, primary
+	 * buttons, focus rings, token fields) from the WP-admin
+	 */
+	--wp-admin-theme-color: var(--sceu-primary);
+	--wp-admin-theme-color-darker-10: #2f6c45;
+	--wp-admin-theme-color-darker-20: #285d3b;
+	--wp-admin-theme-color-darker-10: color-mix(
+		in srgb,
+		var(--sceu-primary) 88%,
+		#000
+	);
+	--wp-admin-theme-color-darker-20: color-mix(
+		in srgb,
+		var(--sceu-primary) 78%,
+		#000
+	);
+}
+
+.sceu-app {
+	/* Fill the admin content area edge-to-edge. */
+	margin: 0 0 0 -20px;
+	background: var(--sceu-bg);
+	min-height: calc(100vh - 32px);
+	color: var(--sceu-text);
+	font-size: 14px;
+	line-height: 1.5;
+	clear: both; /* Drop below WP's floated Screen Options tab. */
+}
+
+@media screen and (max-width: 782px) {
+	.sceu-app {
+		margin-left: -10px;
+	}
+}
+
+/* ---- Skeleton loader (shown until the React app mounts) ---- */
+.sceu-skel {
+	background: linear-gradient(
+		90deg,
+		var(--sceu-gray-200) 25%,
+		var(--sceu-line) 37%,
+		var(--sceu-gray-200) 63%
+	);
+	background-size: 400% 100%;
+	border-radius: var(--sceu-radius);
+	animation: sceu-skel-shimmer 1.4s ease infinite;
+}
+
+@keyframes sceu-skel-shimmer {
+	0% {
+		background-position: 100% 50%;
+	}
+	100% {
+		background-position: 0 50%;
+	}
+}
+
+.sceu-skel__bar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 56px;
+	padding: 0 24px;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-skel__badge {
+	width: 26px;
+	height: 26px;
+	flex: none;
+}
+
+.sceu-skel__title {
+	width: 180px;
+	height: 14px;
+}
+
+.sceu-skel__body {
+	display: flex;
+	align-items: stretch;
+}
+
+.sceu-skel__nav {
+	width: 248px;
+	flex: none;
+	padding: 18px 12px;
+	border-right: 1px solid var(--sceu-gray-200);
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.sceu-skel__nav-item {
+	height: 20px;
+	border-radius: var(--sceu-radius);
+}
+
+.sceu-skel__content {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 28px 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.sceu-skel__heading {
+	width: 240px;
+	height: 22px;
+	margin-bottom: 8px;
+}
+
+.sceu-skel__text {
+	width: 100%;
+	max-width: 520px;
+	height: 12px;
+}
+
+.sceu-skel__text--short {
+	max-width: 360px;
+}
+
+.sceu-skel__card {
+	height: 88px;
+	margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sceu-skel {
+		animation: none;
+	}
+}
+
+/* ---- Header bar ---- */
+.sceu-app__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	height: 56px;
+	padding: 0 24px;
+	background: var(--sceu-surface);
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+/* Rendered via in_admin_header; flush-left to match the shell below. Sticks just
+   under the WP admin bar while the page scrolls. */
+.sceu-app__bar--global {
+	margin: 0 0 0 -20px;
+	position: sticky;
+	top: var(--wp-admin--admin-bar--height, 32px);
+	z-index: 100;
+}
+
+@media screen and (max-width: 782px) {
+	.sceu-app__bar--global {
+		margin-left: -10px;
+	}
+}
+
+.sceu-app__brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.sceu-app__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	font-size: 16px;
+	color: var(--sceu-primary-text);
+	background: var(--sceu-primary);
+	border-radius: var(--sceu-radius);
+	flex: none;
+}
+
+/* Breadcrumb text: identical font-size + line-height so every item shares one
+   baseline and lines up exactly next to the badge (align-items: center alone
+   only centres the boxes, not differently-sized text within them). */
+.sceu-app__name {
+	font-weight: 600;
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--sceu-gray-900);
+}
+
+.sceu-app__sep {
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--sceu-gray-400);
+}
+
+.sceu-app__crumb {
+	font-size: 14px;
+	line-height: 1.4;
+	color: var(--sceu-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Version, shown as a bordered pill to mirror SureCart's header actions. */
+.sceu-app__meta {
+	color: var(--sceu-gray-500);
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
+	flex: none;
+	padding: 6px 10px;
+	background: #fff;
+	border: 1px solid var(--sceu-gray-200);
+	border-radius: var(--sceu-radius);
+}
+
+/* ---- Icons (inline SVG, line style — matches SureCart's nav glyphs) ---- */
+.sceu-app__badge .sceu-icon {
+	width: 16px;
+	height: 16px;
+}
+
+/* Dashicon badge glyph (React app), sized to the badge. */
+.sceu-app__badge .dashicons {
+	width: 16px;
+	height: 16px;
+	font-size: 16px;
+	line-height: 16px;
+}
+
+.sceu-nav__icon {
+	display: inline-flex;
+	flex: none;
+}
+
+.sceu-nav__icon .sceu-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.sceu-panel__title .sceu-icon {
+	width: 1.05em;
+	height: 1.05em;
+	color: var(--sceu-primary);
+}
+
+.sceu-icon {
+	display: block;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.7;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* ---- Body: nav + content ---- */
+/* flex-start (not stretch) lets the nav keep its own viewport-tall height so it
+   can stick while the taller content column scrolls. */
+.sceu-app__body {
+	display: flex;
+	align-items: flex-start;
+}
+
+.sceu-app__nav {
+	width: 248px;
+	flex: none;
+	background: var(--sceu-surface);
+	border-right: 1px solid var(--sceu-gray-200);
+	padding: 14px 12px;
+	/* Stick below the sticky header (admin bar + 56px header). */
+	position: sticky;
+	top: calc(var(--wp-admin--admin-bar--height, 32px) + 56px);
+	height: calc(100vh - var(--wp-admin--admin-bar--height, 32px) - 56px);
+	overflow-y: auto;
+}
+
+.sceu-nav__item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px 12px;
+	margin-bottom: 2px;
+	border-radius: var(--sceu-radius);
+	text-decoration: none;
+	font-size: 14px;
+	font-weight: 400;
+	color: #45505f;
+}
+
+/* Hover previews the active treatment — green text + icon (no filled box). */
+.sceu-nav__item:hover {
+	color: var(--sceu-primary);
+}
+
+.sceu-nav__item:hover .dashicons {
+	color: var(--sceu-primary);
+}
+
+/* Drop WP's default link focus ring on click; keyboard users keep :focus-visible. */
+.sceu-nav__item:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.sceu-nav__item:focus-visible {
+	outline: 2px solid var(--sceu-primary);
+	outline-offset: -2px;
+}
+
+/* Active item: colour change only (matches SureCart — no filled box). */
+.sceu-nav__item.is-active {
+	color: var(--sceu-primary);
+}
+
+.sceu-nav__item.is-active .dashicons {
+	color: var(--sceu-primary);
+}
+
+.sceu-nav__item .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	flex: none;
+}
+
+.sceu-app__content {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 28px 24px;
+}
+
+/* Centered content column, matching SureCart's settings width. */
+.sceu-app__inner {
+	max-width: 768px;
+	margin: 0 auto;
+	width: 100%;
+}
+
+/* ---- Panel (one per module) ---- */
+.sceu-panel[hidden] {
+	display: none;
+}
+
+.sceu-panel__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1em;
+	padding-bottom: 0.9em;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-panel__title {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.sceu-panel__title .dashicons {
+	width: 1.1em;
+	height: 1.1em;
+	font-size: 1.1em;
+	color: var(--sceu-primary);
+}
+
+/* ---- Plugin-level Uninstall section (always visible, below the panels) ---- */
+.sceu-uninstall {
+	margin-top: 2.5em;
+	padding-top: 0.5em;
+	border-top: 1px solid var(--sceu-gray-200);
+}
+
+/* ---- Sub-section heading (SureCart groups settings into titled cards) ---- */
+.sceu-section__head {
+	margin: 1.75em 0 0.6em;
+}
+
+.sceu-section__title {
+	margin: 0;
+	padding: 0;
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--sceu-text);
+}
+
+.sceu-section__desc {
+	margin: 0.25em 0 0;
+	color: var(--sceu-text);
+	font-size: 1em;
+	line-height: 1.5;
+}
+
+/* ---- Enable-module switch row (its own compact card) ---- */
+.sceu-card--compact {
+	padding: 1em 1.5em;
+}
+
+.sceu-panel__title {
+	margin: 0;
+	padding: 0;
+	font-size: 1.3em;
+	font-weight: 600;
+	color: var(--sceu-gray-900);
+}
+
+.sceu-panel__desc {
+	margin: 1em 0 1.5em;
+	color: var(--sceu-text);
+	max-width: 70ch;
+}
+
+/* ---- Responsibility note ---- */
+.sceu-card__note {
+	display: block;
+	max-width: 100%;
+	background: #fcf6e6;
+	border: 1px solid #f0d999;
+	border-radius: var(--sceu-radius);
+	padding: 0.85em 1em;
+	margin: 0 0 1.25em;
+	font-size: 0.9em;
+	line-height: 1.5;
+	color: #6b5a20;
+}
+
+/* ---- Card ---- */
+.sceu-card {
+	max-width: 100%;
+	background: var(--sceu-surface);
+	border: 1px solid var(--sceu-gray-200);
+	border-radius: var(--sceu-radius-lg);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	padding: 1.5em;
+}
+
+/* ---- Fields (stacked: label over control) ---- */
+.sceu-field {
+	margin: 0 0 1.25em;
+}
+
+.sceu-field:last-child {
+	margin-bottom: 0;
+}
+
+.sceu-field__label {
+	display: block;
+	font-weight: 500;
+	color: var(--sceu-label);
+	margin: 0 0 0.4em;
+}
+
+.sceu-field__help {
+	margin: 0.45em 0 0;
+	color: var(--sceu-gray-500);
+	font-size: 0.875em;
+	line-height: 1.5;
+}
+
+.sceu-app .sceu-field__control input[type="text"],
+.sceu-app .sceu-field__control input[type="email"],
+.sceu-app .sceu-field__control input[type="search"],
+.sceu-app .sceu-field__control input[type="url"],
+.sceu-app .sceu-field__control input[type="password"],
+.sceu-app .sceu-field__control select,
+.sceu-app .sceu-field__control textarea {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 30em;
+	min-height: 2.6em;
+	padding: 0.45em 0.7em;
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
+	background: #fff;
+	color: var(--sceu-gray-700);
+	font-size: 1em;
+	box-shadow: none;
+}
+
+.sceu-app .sceu-field__control input[type="number"] {
+	box-sizing: border-box;
+	width: 7em;
+	min-height: 2.6em;
+	padding: 0.45em 0.7em;
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
+	background: #fff;
+	color: var(--sceu-gray-700);
+	font-size: 1em;
+}
+
+.sceu-app .sceu-field__control input:focus,
+.sceu-app .sceu-field__control select:focus,
+.sceu-app .sceu-field__control textarea:focus {
+	border-color: var(--sceu-primary);
+	box-shadow: 0 0 0 1px var(--sceu-primary);
+	outline: none;
+}
+
+.sceu-field--radio .sceu-field__control label {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin: 0 0 0.5em;
+	color: var(--sceu-text);
+}
+
+/* ---- Toggle switch ---- */
+.sceu-switch__input {
+	position: absolute;
+	opacity: 0;
+	width: 1px;
+	height: 1px;
+}
+
+.sceu-switch__track {
+	position: relative;
+	display: inline-block;
+	width: 2.6em;
+	height: 1.5em;
+	background: var(--sceu-gray-200);
+	border-radius: 999px;
+	transition: background 0.15s ease;
+	flex: none;
+}
+
+.sceu-switch__thumb {
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: calc(1.5em - 4px);
+	height: calc(1.5em - 4px);
+	background: #fff;
+	border-radius: 50%;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+	transition: transform 0.15s ease;
+}
+
+.sceu-switch__input:checked + .sceu-switch__track {
+	background: var(--sceu-primary);
+}
+
+.sceu-switch__input:checked + .sceu-switch__track .sceu-switch__thumb {
+	transform: translateX(1.1em);
+}
+
+.sceu-switch__input:focus-visible + .sceu-switch__track {
+	box-shadow: 0 0 0 2px var(--sceu-primary);
+}
+
+/* ---- Toggle field (SureCart layout: switch left, label + help to the right,
+   the whole row is the <label> so clicking the text flips the switch) ---- */
+.sceu-toggle {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75em;
+	margin: 0;
+	cursor: pointer;
+}
+
+/* Nudge the pill so it centres on the first line of the label text. */
+.sceu-toggle .sceu-switch__track {
+	margin-top: 0.1em;
+}
+
+.sceu-toggle__body {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+	min-width: 0;
+}
+
+/* Match the regular field label exactly, so a toggle's label is visually
+   identical to every other field label on the page. */
+.sceu-toggle__label {
+	font-weight: 500;
+	color: var(--sceu-label);
+	line-height: 1.4;
+}
+
+.sceu-toggle .sceu-field__help {
+	margin: 0;
+}
+
+/* ---- Primary button ---- */
+.sceu-btn--primary {
+	display: inline-flex;
+	align-items: center;
+	font: inherit;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 0.55em 1.3em;
+	border: none;
+	border-radius: var(--sceu-radius);
+	background: var(--sceu-primary);
+	color: var(--sceu-primary-text);
+	text-decoration: none;
+}
+
+.sceu-btn--primary:hover {
+	filter: brightness(0.95);
+	color: var(--sceu-primary-text);
+	text-decoration: none;
+}
+
+.sceu-btn--primary:focus-visible {
+	outline: 2px solid var(--sceu-primary);
+	outline-offset: 2px;
+}
+
+.sceu-btn--secondary {
+	display: inline-flex;
+	align-items: center;
+	font: inherit;
+	font-weight: 500;
+	cursor: pointer;
+	padding: 0.45em 1em;
+	border: 1px solid var(--sceu-border);
+	border-radius: var(--sceu-radius);
+	background: #fff;
+	color: var(--sceu-gray-700);
+	text-decoration: none;
+}
+
+.sceu-btn--secondary:hover {
+	background: #f6f7f8;
+	color: var(--sceu-gray-900);
+}
+
+/* ---- Collection checklist (exclusions) ---- */
+.sceu-checklist {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.sceu-checklist__item {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	padding: 0.3em 0;
+}
+
+.sceu-checklist__item label {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin: 0;
+	color: var(--sceu-text);
+}
+
+.sceu-checklist__count {
+	color: var(--sceu-gray-500);
+	font-size: 0.85em;
+}
+
+.sceu-refresh-row {
+	margin: 1.1em 0 0;
+}
+
+/* Keep WP admin notices tidy inside the content column. */
+.sceu-app__content .notice {
+	margin: 0 0 1.25em;
+	max-width: 100%;
+}
+
+/* ==========================================================================
+   Shared styles for full-width list-table pages (Withdrawal Log, E-Invoicing)
+   that reuse the .sceu-app shell. Any admin page that adds the `sceu-fullbleed`
+   body class + wraps its content in `.sceu-app .sceu-app--page` gets the same
+   tint, cards, buttons, notice banner, and a clean WP_List_Table.
+   ========================================================================== */
+
+body.sceu-fullbleed #wpcontent {
+	background: #f8fafb;
+}
+
+body.sceu-fullbleed #wpfooter {
+	display: none;
+}
+
+/* List-table pages use the full content width (the 768px settings column would
+   cramp the table). */
+.sceu-app--page .sceu-app__inner--wide {
+	max-width: none;
+}
+
+/* Content already sits below the Screen Options strip, so trim the top padding. */
+.sceu-app--page .sceu-app__content {
+	padding-top: 12px;
+}
+
+.sceu-app--page .sceu-panel__head {
+	margin-bottom: 1.5em;
+}
+
+/* Action result banner (success / error). */
+.sceu-notice {
+	position: relative;
+	border: 1px solid;
+	border-radius: var(--sceu-radius);
+	padding: 0.85em 2.6em 0.85em 1em;
+	margin: 0 0 1.25em;
+	font-size: 0.95em;
+	line-height: 1.5;
+}
+
+.sceu-notice__dismiss {
+	position: absolute;
+	top: 0.5em;
+	right: 0.5em;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6em;
+	height: 1.6em;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font-size: 1.1em;
+	line-height: 1;
+	cursor: pointer;
+	border-radius: var(--sceu-radius);
+	opacity: 0.6;
+}
+
+.sceu-notice__dismiss:hover,
+.sceu-notice__dismiss:focus {
+	opacity: 1;
+	background: rgba(0, 0, 0, 0.06);
+}
+
+.sceu-notice--success {
+	background: #edf7ed;
+	border-color: #b7e0c0;
+	color: #137333;
+}
+
+.sceu-notice--info {
+	background: #eef4fb;
+	border-color: #bcd4ef;
+	color: #1a5dab;
+}
+
+.sceu-notice--warning {
+	background: #fcf6e6;
+	border-color: #f0d999;
+	color: #6b5a20;
+}
+
+.sceu-notice--error {
+	background: #fdeded;
+	border-color: #f0bcbc;
+	color: #a50e0e;
+}
+
+/* WP_List_Table, cleaned up to live inside a .sceu-card--table. */
+.sceu-card--table {
+	padding: 0;
+	overflow: hidden;
+}
+
+.sceu-app .wp-list-table {
+	border: 0;
+	margin: 0;
+	box-shadow: none;
+	background: transparent;
+	/* Let columns size to their content instead of WP's even "fixed" split. */
+	table-layout: auto;
+}
+
+.sceu-app .wp-list-table thead th,
+.sceu-app .wp-list-table tfoot th {
+	background: #f9fafb;
+	color: var(--sceu-text);
+	font-weight: 600;
+	border-bottom: 1px solid var(--sceu-gray-200);
+	border-top: 0;
+	padding: 12px 16px;
+}
+
+/* The header/footer select-all cell is a <td id="cb">, not a <th> — match the
+   band background + border so it doesn't show as a white notch. */
+.sceu-app .wp-list-table thead td.check-column,
+.sceu-app .wp-list-table tfoot td.check-column {
+	background: #f9fafb;
+	border-top: 0;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-app .wp-list-table tbody td {
+	padding: 14px 16px;
+	border-top: 1px solid var(--sceu-line);
+	color: var(--sceu-text);
+	font-size: 0.95em;
+	line-height: 1.45;
+	vertical-align: top;
+}
+
+/* The body checkbox cell is a <th>, not a <td> — give it the row separator too. */
+.sceu-app .wp-list-table tbody th.check-column {
+	border-top: 1px solid var(--sceu-line);
+	vertical-align: top;
+}
+
+.sceu-app .wp-list-table tbody tr:first-child td,
+.sceu-app .wp-list-table tbody tr:first-child th.check-column {
+	border-top: 0;
+}
+
+/* Clean white rows (override WP's "striped" greys) so each entry reads clearly
+   against the card; only the header band is tinted. */
+.sceu-app .wp-list-table tbody tr,
+.sceu-app .wp-list-table.striped > tbody > :nth-child(odd) {
+	background: #fff;
+}
+
+.sceu-app .wp-list-table tbody tr:hover,
+.sceu-app .wp-list-table.striped > tbody > :nth-child(odd):hover {
+	background: #f6f8fa;
+}
+
+.sceu-app .wp-list-table .no-items td {
+	padding: 2.5em 16px;
+	text-align: center;
+	color: var(--sceu-gray-500);
+}
+
+.sceu-app .wp-list-table .description {
+	color: var(--sceu-gray-500);
+}
+
+/* Show the top bulk-actions control; the redundant top pager is hidden below. */
+.sceu-app .tablenav.top {
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	border-bottom: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-app .tablenav.top:empty,
+.sceu-app .tablenav.top .tablenav-pages {
+	display: none;
+}
+
+.sceu-app .tablenav.bottom {
+	height: auto;
+	min-height: 0;
+	margin: 0;
+	padding: 10px 16px;
+	display: flex;
+	align-items: center;
+	border-top: 1px solid var(--sceu-gray-200);
+}
+
+.sceu-app .tablenav.bottom br.clear {
+	display: none;
+}
+
+.sceu-app .tablenav .tablenav-pages {
+	margin: 0;
+	float: none;
+}
+
+/* WP convention: bulk actions on the left, item count / pager on the right. */
+.sceu-app .tablenav.bottom .tablenav-pages {
+	margin-left: auto;
+}
+
+.sceu-app .tablenav .displaying-num {
+	margin: 0;
+	color: var(--sceu-gray-500);
+}
+
+.sceu-app .wp-list-table .row-actions {
+	visibility: hidden;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.sceu-app .wp-list-table tr:hover .row-actions,
+.sceu-app .wp-list-table .row-actions:focus-within {
+	visibility: visible;
+}
+
+.sceu-app .wp-list-table .row-actions a {
+	color: var(--sceu-primary);
+}
+
+.sceu-app .wp-list-table .row-actions .delete a,
+.sceu-app .wp-list-table .row-actions span.delete a {
+	color: #a50e0e;
+}
+
+.sceu-app .wp-list-table details summary {
+	cursor: pointer;
+	color: var(--sceu-primary);
+	font-size: 0.85em;
+}
+
+/* A simple toolbar row of secondary actions above a table (e.g. Sync / Export). */
+.sceu-toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.6em;
+	margin: 0 0 0.75em;
+}
+
+/* React settings app: bottom Save bar — give it breathing room from the card
+   above so it doesn't sit flush against the panel. */
+.sceu-app__actions {
+	margin-top: 20px;
+	display: flex;
+	justify-content: flex-start;
+}
+
+/* Center the spinner with the label (the WP Spinner's own margins offset it). */
+.sceu-app__actions .components-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.sceu-app__actions .components-button .components-spinner {
+	margin: 0;
+	flex: 0 0 auto;
+}
+
+/* Float the save/result toast bottom-right of the viewport. */
+.sceu-app__snackbars {
+	position: fixed;
+	right: 16px;
+	bottom: 16px;
+	z-index: 100000;
+}
+
+/* Right-align the snackbar(s) within the fixed container so they hug the edge. */
+.sceu-app__snackbars .components-snackbar {
+	margin-left: auto;
+}
+
+/* ==========================================================================
+   Responsive: settings shell on tablet/phone (WP's 782px admin breakpoint).
+   The 248px side nav would cramp the content column on narrow screens, so the
+   body stacks and the nav becomes a horizontal, scrollable tab strip that
+   sticks just under the header instead of running down the side.
+   ========================================================================== */
+@media screen and (max-width: 782px) {
+	/* stretch (not flex-start) so the nav strip + content fill the full width. */
+	.sceu-app__body {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	/* WP's mobile admin bar is a fixed 46px bar; pin the header just below it.
+	   (Use an explicit value rather than --wp-admin--admin-bar--height, which
+	   isn't reliably updated to 46px at this breakpoint, so the header doesn't
+	   slip under the admin bar when both are on screen.) */
+	.sceu-app__bar--global {
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		display: flex;
+		flex-direction: row;
+		width: 100%;
+		height: auto;
+		gap: 4px;
+		padding: 8px 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		/* Sit directly beneath the sticky header (46px admin bar + 56px header). */
+		top: 102px;
+		z-index: 99;
+	}
+
+	/* Tabs keep their width and don't wrap; the strip scrolls horizontally. */
+	.sceu-app__nav .sceu-nav__item {
+		flex: none;
+		margin-bottom: 0;
+		white-space: nowrap;
+	}
+
+	.sceu-app__content {
+		padding: 20px 16px;
+	}
+
+	.sceu-app__bar {
+		padding: 0 16px;
+	}
+
+	/* Skeleton mirrors the stacked layout so nothing jumps when React mounts. */
+	.sceu-skel__body {
+		flex-direction: column;
+	}
+
+	.sceu-skel__nav {
+		flex-direction: row;
+		width: auto;
+		padding: 12px;
+		border-right: 0;
+		border-bottom: 1px solid var(--sceu-gray-200);
+	}
+
+	.sceu-skel__nav-item {
+		width: 120px;
+		flex: none;
+	}
+}
+
+/* At <=600px WordPress switches the admin bar to position:absolute and removes
+   the page's top padding (html.wp-toolbar padding-top: 0), so the bar overlaps
+   the top of the content and scrolls away with the page. A header pinned at
+   top:0 would sit *under* the higher-z-index admin bar and hide the brand, and
+   the bar is glued to the content-flow top so margin/padding can't separate
+   them. So at this size we drop the header out of the sticky flow and offset it
+   by the bar height — it rides down with the bar and scrolls off cleanly — and
+   pin only the tab strip, which reaches the top long after the bar is gone and
+   so never collides with it. */
+@media screen and (max-width: 600px) {
+	.sceu-app__bar--global {
+		position: relative;
+		top: 46px;
+	}
+
+	.sceu-app__nav {
+		top: 0;
+	}
+}

@@ -27,6 +27,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Build the block editor scripts so the QA zip matches what the release ships.
+      - name: Build blocks
+        run: |
+          npm ci
+          npm run build
+
       - name: Read plugin version (for the PR comment)
         id: meta
         run: |
@@ -39,8 +50,8 @@ jobs:
       # the same layout the release ships.
       - name: Stage plugin
         run: |
-          mkdir -p build/surecart-eu-helper
-          rsync -a --exclude-from='.distignore' --exclude 'build' ./ build/surecart-eu-helper/
+          mkdir -p .release/surecart-eu-helper
+          rsync -a --exclude-from='.distignore' --exclude '.release' ./ .release/surecart-eu-helper/
 
       # Upload the FOLDER (not a zip). GitHub wraps the artifact in a single zip
       # named after the artifact, so the download is `surecart-eu-helper.zip`,
@@ -51,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: surecart-eu-helper
-          path: build/surecart-eu-helper
+          path: .release/surecart-eu-helper
           if-no-files-found: error
           retention-days: 14
 

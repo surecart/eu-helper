@@ -46,8 +46,7 @@ class CustomerEmail {
 		) . '</p>';
 		$lines[] = '<p>' . esc_html__( 'This confirms that we have received your request to withdraw from the following order(s). Our team will process it and follow up with you.', 'surecart-eu-helper' ) . '</p>';
 		$lines[] = self::orders_table( $ctx['orders'] ?? array() );
-		$lines[] = '<p><strong>' . esc_html__( 'Request reference:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['request_id'] ?? '' ) ) . '<br />';
-		$lines[] = '<strong>' . esc_html__( 'Received at:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['timestamp'] ?? '' ) ) . '</p>';
+		$lines[] = '<p><strong>' . esc_html__( 'Received at:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['timestamp'] ?? '' ) ) . '</p>';
 
 		if ( ! empty( $ctx['reason'] ) ) {
 			$lines[] = '<p><strong>' . esc_html__( 'Your note:', 'surecart-eu-helper' ) . '</strong><br />' . nl2br( esc_html( (string) $ctx['reason'] ) ) . '</p>';
@@ -82,19 +81,43 @@ class CustomerEmail {
 		$rows = '';
 		foreach ( $orders as $order ) {
 			$ref   = (string) ( $order['number'] ?? $order['id'] ?? '' );
-			$when  = ! empty( $order['created_at'] ) ? date_i18n( get_option( 'date_format' ), (int) $order['created_at'] ) : '';
-			$total = (string) ( $order['total_display'] ?? '' );
+			$items = self::items_text( $order );
 			$rows .= '<tr>'
-				. '<td style="padding:6px 10px;border:1px solid #e2e2e2;">' . esc_html( $ref ) . '</td>'
-				. '<td style="padding:6px 10px;border:1px solid #e2e2e2;">' . esc_html( $when ) . '</td>'
-				. '<td style="padding:6px 10px;border:1px solid #e2e2e2;">' . esc_html( $total ) . '</td>'
+				. '<td style="padding:6px 10px;border:1px solid #e2e2e2;vertical-align:top;">' . esc_html( $ref ) . '</td>'
+				. '<td style="padding:6px 10px;border:1px solid #e2e2e2;vertical-align:top;">' . esc_html( $items ) . '</td>'
 				. '</tr>';
 		}
 		return '<table style="border-collapse:collapse;margin:16px 0;">'
 			. '<thead><tr>'
 			. '<th style="padding:6px 10px;border:1px solid #e2e2e2;text-align:left;">' . esc_html__( 'Order', 'surecart-eu-helper' ) . '</th>'
-			. '<th style="padding:6px 10px;border:1px solid #e2e2e2;text-align:left;">' . esc_html__( 'Date', 'surecart-eu-helper' ) . '</th>'
-			. '<th style="padding:6px 10px;border:1px solid #e2e2e2;text-align:left;">' . esc_html__( 'Total', 'surecart-eu-helper' ) . '</th>'
+			. '<th style="padding:6px 10px;border:1px solid #e2e2e2;text-align:left;">' . esc_html__( 'Withdrawing', 'surecart-eu-helper' ) . '</th>'
 			. '</tr></thead><tbody>' . $rows . '</tbody></table>';
+	}
+
+	/**
+	 * Human summary of what's being withdrawn from an order: "2 × Item A,
+	 * Item B" or "Entire order" when no specific items were chosen.
+	 *
+	 * @param array<string, mixed> $order Selected order (with line_items).
+	 * @return string
+	 */
+	private static function items_text( array $order ): string {
+		$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
+		if ( empty( $lines ) ) {
+			return __( 'Entire order', 'surecart-eu-helper' );
+		}
+		$parts = array();
+		foreach ( $lines as $line ) {
+			$name = (string) ( $line['name'] ?? '' );
+			if ( '' === $name ) {
+				continue;
+			}
+			$qty     = (int) ( $line['quantity'] ?? 1 );
+			if ( $qty < 1 ) {
+				$qty = 1;
+			}
+			$parts[] = $qty . ' × ' . $name;
+		}
+		return $parts ? implode( ', ', $parts ) : __( 'Entire order', 'surecart-eu-helper' );
 	}
 }

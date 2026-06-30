@@ -41,7 +41,6 @@ class MerchantEmail {
 
 		$lines[] = '<p><strong>' . esc_html__( 'Customer:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['customer_name'] ?? '' ) ) . '<br />';
 		$lines[] = '<strong>' . esc_html__( 'Email:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['customer_email'] ?? '' ) ) . '<br />';
-		$lines[] = '<strong>' . esc_html__( 'Request reference:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['request_id'] ?? '' ) ) . '<br />';
 		$lines[] = '<strong>' . esc_html__( 'Received at:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['timestamp'] ?? '' ) ) . '<br />';
 		$lines[] = '<strong>' . esc_html__( 'IP address:', 'surecart-eu-helper' ) . '</strong> ' . esc_html( (string) ( $ctx['ip_address'] ?? '' ) ) . '</p>';
 
@@ -83,9 +82,9 @@ class MerchantEmail {
 			$id    = (string) ( $order['id'] ?? '' );
 			$when  = ! empty( $order['created_at'] ) ? date_i18n( get_option( 'date_format' ), (int) $order['created_at'] ) : '';
 			$total = (string) ( $order['total_display'] ?? '' );
-			$url   = sceu_order_admin_url( $id );
+			$url   = \SureCartEuHelper\Admin\AdminUrl::order( $id );
 
-			$meta = array_filter( array( $when, $total, (string) ( $order['summary'] ?? '' ) ) );
+			$meta = array_filter( array( $when, $total ) );
 
 			$out .= '<div style="border:1px solid #e2e2e2;border-radius:6px;padding:12px 14px;margin-bottom:10px;">'
 				. '<div style="font-weight:600;margin-bottom:4px;">' . sprintf(
@@ -94,10 +93,50 @@ class MerchantEmail {
 					esc_html( $ref )
 				) . '</div>'
 				. ( $meta ? '<div style="color:#555;font-size:13px;margin-bottom:10px;">' . esc_html( implode( ' · ', $meta ) ) . '</div>' : '' )
+				. self::items_block( $order )
 				. '<a href="' . esc_url( $url ) . '" style="display:inline-block;background:#2271b1;color:#fff;text-decoration:none;padding:8px 14px;border-radius:4px;font-size:14px;">'
 				. esc_html__( 'Open order in SureCart', 'surecart-eu-helper' ) . '</a>'
 				. '</div>';
 		}
 		return $out;
+	}
+
+	/**
+	 * Render the specific items + quantities to withdraw from an order, or a
+	 * "whole order" note when no item detail was selected.
+	 *
+	 * @param array<string, mixed> $order Selected order (with line_items).
+	 * @return string
+	 */
+	private static function items_block( array $order ): string {
+		$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
+
+		if ( empty( $lines ) ) {
+			return '<div style="font-size:13px;margin-bottom:10px;"><strong>'
+				. esc_html__( 'Withdraw: entire order', 'surecart-eu-helper' ) . '</strong></div>';
+		}
+
+		$rows = '';
+		foreach ( $lines as $line ) {
+			$name = (string) ( $line['name'] ?? '' );
+			if ( '' === $name ) {
+				continue;
+			}
+			$qty   = (int) ( $line['quantity'] ?? 1 );
+			$rows .= '<li>' . esc_html(
+				sprintf(
+					/* translators: 1: quantity, 2: item name. */
+					_n( 'Withdraw %1$d × %2$s', 'Withdraw %1$d × %2$s', $qty, 'surecart-eu-helper' ),
+					$qty,
+					$name
+				)
+			) . '</li>';
+		}
+
+		if ( '' === $rows ) {
+			return '';
+		}
+
+		return '<ul style="margin:0 0 10px;padding-left:18px;font-size:13px;color:#333;">' . $rows . '</ul>';
 	}
 }

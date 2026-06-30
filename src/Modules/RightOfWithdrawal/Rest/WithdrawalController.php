@@ -42,8 +42,28 @@ class WithdrawalController {
 				'permission_callback' => array( $this, 'permission' ),
 				'args'                => array(
 					'order_ids' => array(
-						'required' => true,
+						'required' => false,
 						'type'     => 'array',
+						'items'    => array( 'type' => 'string' ),
+					),
+					'items'     => array(
+						'required' => false,
+						'type'     => 'array',
+					),
+					'email'     => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_email',
+					),
+					'name'      => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'reason'    => array(
+						'required'          => false,
+						'type'              => 'string',
+						'sanitize_callback' => 'sanitize_textarea_field',
 					),
 				),
 			)
@@ -51,15 +71,25 @@ class WithdrawalController {
 	}
 
 	/**
-	 * Only logged-in users with a resolvable SureCart customer may submit. The
-	 * cookie nonce (X-WP-Nonce) is validated by the REST infrastructure.
+	 * Only logged-in users with a resolvable SureCart customer may submit.
 	 *
+	 * The cookie auth scheme already enforces the X-WP-Nonce, but we verify it
+	 * explicitly so the CSRF guarantee does not silently depend on which auth
+	 * scheme handled the request (mirroring the guest endpoints' explicit check).
+	 *
+	 * @param \WP_REST_Request $request Request.
 	 * @return bool
 	 */
-	public function permission(): bool {
+	public function permission( \WP_REST_Request $request ): bool {
 		if ( ! is_user_logged_in() ) {
 			return false;
 		}
+
+		$nonce = (string) ( $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' ) );
+		if ( ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return false;
+		}
+
 		return ( new CustomerContext() )->is_customer();
 	}
 
@@ -108,17 +138,12 @@ class WithdrawalController {
 			return new \WP_Error( 'sceu_not_eligible', __( 'You are not eligible for this request, or you have already requested these orders.', 'surecart-eu-helper' ), array( 'status' => 403 ) );
 		}
 
-		// Intersect submitted ids with the server's eligible set.
-		$submitted = array_map( 'strval', (array) $request->get_param( 'order_ids' ) );
-		$selected  = array();
-		foreach ( $eligible_orders as $order ) {
-			if ( in_array( (string) $order['id'], $submitted, true ) ) {
-				$selected[] = $order;
-			}
-		}
-
-		if ( empty( $selected ) ) {
-			return new \WP_Error( 'sceu_no_selection', __( 'Please select at least one valid order.', 'surecart-eu-helper' ), array( 'status' => 400 ) );
+		// Validate the submitted selection (items + whole orders) against the
+		// server's withdrawable set, clamping quantities to what's still
+		// available. Never trust the client.
+		$selected = $this->resolve_selection( $request, $eligible_orders );
+		if ( empty( $selected['orders'] ) ) {
+			return new \WP_Error( 'sceu_no_selection', __( 'Please select at least one valid item.', 'surecart-eu-helper' ), array( 'status' => 400 ) );
 		}
 
 		// Confirmation delivery always goes to the verified account email — never a
@@ -135,7 +160,7 @@ class WithdrawalController {
 
 		$reason = sanitize_textarea_field( (string) $request->get_param( 'reason' ) );
 
-		$request_id = $this->generate_request_id();
+		$request_id = Withdrawals::generate_request_id();
 		$timestamp  = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) );
 
 		$ctx = array(
@@ -145,11 +170,12 @@ class WithdrawalController {
 			'customer_id'    => (string) $customer->customer_id(),
 			'customer_name'  => $name,
 			'customer_email' => $email,
-			'ip_address'     => $this->ip_address(),
+			'ip_address'     => (string) \sceu_client_ip(),
 			'reason'         => $reason,
-			'orders'         => $selected,
-			'order_ids'      => wp_list_pluck( $selected, 'id' ),
-			'merchant_email' => $this->merchant_email(),
+			'orders'         => $selected['orders'],
+			'order_ids'      => wp_list_pluck( $selected['orders'], 'id' ),
+			'items'          => $selected['items'],
+			'merchant_email' => Withdrawals::merchant_recipient(),
 			'store_name'     => MerchantInfo::store_name(),
 		);
 
@@ -179,7 +205,8 @@ class WithdrawalController {
 				'payload'        => array(
 					'request_id'     => $request_id,
 					'reason'         => $reason,
-					'orders'         => $selected,
+					'orders'         => $selected['orders'],
+					'items'          => $selected['items'],
 					'merchant_to'    => $ctx['merchant_email'],
 					// Email the customer typed in the form, for support reference only.
 					// The confirmation was delivered to the verified account email above.
@@ -207,7 +234,19 @@ class WithdrawalController {
 						static function ( $order ) {
 							return (string) ( $order['number'] ?: $order['id'] );
 						},
-						$selected
+						$selected['orders']
+					),
+					'details'     => array_map(
+						static function ( $order ) {
+							$ref     = (string) ( $order['number'] ?: $order['id'] );
+							$summary = Withdrawals::items_summary( $order );
+							return '' !== $summary
+								/* translators: 1: order reference, 2: items + quantities. */
+								? sprintf( __( 'Order %1$s — %2$s', 'surecart-eu-helper' ), $ref, $summary )
+								/* translators: %s: order reference. */
+								: sprintf( __( 'Order %s', 'surecart-eu-helper' ), $ref );
+						},
+						$selected['orders']
 					),
 				),
 			),
@@ -216,41 +255,118 @@ class WithdrawalController {
 	}
 
 	/**
-	 * Effective merchant email: the configured value, else the resolved default.
+	 * Validate the submitted selection against the withdrawable set.
 	 *
-	 * @return string
+	 * Supports partial withdrawal: `items` is an array of
+	 * { order_id, line_item_id, quantity }; quantities are clamped to each
+	 * item's remaining amount. `order_ids` covers whole-order withdrawals for
+	 * orders that have no line-item detail. Anything not currently withdrawable
+	 * is silently dropped.
+	 *
+	 * @param \WP_REST_Request                 $request         Request.
+	 * @param array<int, array<string, mixed>> $eligible_orders Withdrawable orders.
+	 * @return array{orders: array<int, array<string,mixed>>, items: array<int, array<string,mixed>>}
 	 */
-	private function merchant_email(): string {
-		$configured = sanitize_email( (string) Settings::get( 'right_of_withdrawal', 'merchant_email', '' ) );
-		if ( '' !== $configured && is_email( $configured ) ) {
-			return $configured;
+	private function resolve_selection( \WP_REST_Request $request, array $eligible_orders ): array {
+		// Index withdrawable orders and their remaining line items.
+		$index = array();
+		foreach ( $eligible_orders as $order ) {
+			$lines = array();
+			foreach ( (array) ( $order['line_items'] ?? array() ) as $li ) {
+				$lines[ (string) $li['id'] ] = $li;
+			}
+			$index[ (string) $order['id'] ] = array(
+				'order' => $order,
+				'lines' => $lines,
+				'whole' => ! empty( $order['whole_order'] ) || empty( $lines ),
+			);
 		}
-		return MerchantInfo::notification_email();
-	}
 
-	/**
-	 * Generate a human-friendly request reference.
-	 *
-	 * @return string
-	 */
-	private function generate_request_id(): string {
-		$suffix = strtoupper( substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 6 ) );
-		return 'WD-' . gmdate( 'Ymd' ) . '-' . $suffix;
-	}
+		$chosen = array(); // order_id => array( order, whole, items[ line_id => row ] ).
 
-	/**
-	 * Best-effort client IP for the audit log.
-	 *
-	 * @return string
-	 */
-	private function ip_address(): string {
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-		/**
-		 * Filter the recorded client IP (e.g. to read a trusted proxy header).
-		 *
-		 * @param string $ip Default REMOTE_ADDR.
-		 */
-		$ip = (string) apply_filters( 'sceu_request_ip', $ip );
-		return ( $ip && filter_var( $ip, FILTER_VALIDATE_IP ) ) ? $ip : '';
+		// Itemised selections.
+		foreach ( (array) $request->get_param( 'items' ) as $it ) {
+			if ( ! is_array( $it ) ) {
+				continue;
+			}
+			$oid = (string) ( $it['order_id'] ?? '' );
+			$lid = (string) ( $it['line_item_id'] ?? '' );
+			$qty = (int) ( $it['quantity'] ?? 0 );
+			if ( '' === $oid || '' === $lid || $qty < 1 ) {
+				continue;
+			}
+			if ( ! isset( $index[ $oid ] ) || $index[ $oid ]['whole'] ) {
+				continue;
+			}
+			if ( ! isset( $index[ $oid ]['lines'][ $lid ] ) ) {
+				continue;
+			}
+			$line      = $index[ $oid ]['lines'][ $lid ];
+			$remaining = (int) ( $line['remaining'] ?? $line['quantity'] ?? 0 );
+			if ( $remaining < 1 ) {
+				continue;
+			}
+			$qty = min( $qty, $remaining );
+
+			if ( ! isset( $chosen[ $oid ] ) ) {
+				$chosen[ $oid ] = array(
+					'order' => $index[ $oid ]['order'],
+					'whole' => false,
+					'items' => array(),
+				);
+			}
+			$chosen[ $oid ]['items'][ $lid ] = array(
+				'id'           => $lid,
+				'name'         => (string) ( $line['name'] ?? '' ),
+				'quantity'     => $qty,
+				// Original purchased quantity, so the log/merchant email can show
+				// "2 of 3" and make partial vs full withdrawals explicit.
+				'purchased'    => (int) ( $line['quantity'] ?? $qty ),
+				'unit_display' => (string) ( $line['unit_display'] ?? '' ),
+			);
+		}
+
+		// Whole-order selections (orders with no line-item detail).
+		foreach ( array_map( 'strval', (array) $request->get_param( 'order_ids' ) ) as $oid ) {
+			if ( ! isset( $index[ $oid ] ) || ! $index[ $oid ]['whole'] ) {
+				continue;
+			}
+			$chosen[ $oid ] = array(
+				'order' => $index[ $oid ]['order'],
+				'whole' => true,
+				'items' => array(),
+			);
+		}
+
+		$orders     = array();
+		$flat_items = array();
+		foreach ( $chosen as $oid => $c ) {
+			$order = $c['order'];
+			$items = array_values( $c['items'] );
+			$orders[] = array(
+				'id'            => (string) $order['id'],
+				'number'        => (string) ( $order['number'] ?? '' ),
+				'total_display' => (string) ( $order['total_display'] ?? '' ),
+				'whole_order'   => $c['whole'],
+				// True only when the selection covers EVERY line item in the
+				// order at its full purchased quantity (so the Partial / Full
+				// label can't mislabel a single line item as the whole order).
+				'covers_entire_order' => Withdrawals::covers_entire_order( $order, $c['items'] ),
+				'line_items'    => $items,
+			);
+			foreach ( $items as $li ) {
+				$flat_items[] = array(
+					'order_id'     => (string) $order['id'],
+					'line_item_id' => (string) $li['id'],
+					'quantity'     => (int) $li['quantity'],
+					'name'         => (string) $li['name'],
+				);
+			}
+		}
+
+		return array(
+			'orders' => $orders,
+			'items'  => $flat_items,
+		);
 	}
 }

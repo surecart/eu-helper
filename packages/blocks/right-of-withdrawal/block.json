@@ -1,0 +1,42 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "surecart-eu-helper/right-of-withdrawal",
+	"title": "EU Right of Withdrawal",
+	"category": "surecart-customer-dashboard",
+	"description": "Shows EU consumers a withdrawal notice + button in their customer area. Renders only for eligible logged-in SureCart customers.",
+	"textdomain": "surecart-eu-helper",
+	"keywords": ["surecart", "eu", "withdrawal", "refund", "consumer"],
+	"supports": {
+		"html": false,
+		"color": {
+			"text": true,
+			"background": true
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"attributes": {
+		"heading": { "type": "string", "default": "" },
+		"headingLevel": { "type": "string", "default": "h3" },
+		"colorScheme": { "type": "string", "default": "auto" },
+		"container": { "type": "string", "default": "card" },
+		"intro": { "type": "string", "default": "" },
+		"buttonLabel": { "type": "string", "default": "" },
+		"modalTitle": { "type": "string", "default": "" },
+		"confirmButtonLabel": { "type": "string", "default": "" },
+		"confirmationMessage": { "type": "string", "default": "" }
+	},
+	"version": "1.5.8",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"viewScriptModule": "file:./view.js",
+	"render": "file:./render.php"
+}

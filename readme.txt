@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.5.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,40 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.5.8 =
+* **Excluded-products search fixed + polished.** The individual "Excluded products" search now works reliably — its lookup endpoint is always registered (it previously returned a 404 on some setups, which showed up as "No matching products" for every term). The field also gains a loading spinner while searching, a clear (×) button to reset it, and a distinct error message if the lookup ever fails, so a real failure is no longer mistaken for an empty result.
+* **Optional spam protection for the public form.** A new **Spam protection** setting (off by default) lets you screen the logged-out Withdrawal Request Form with **reCAPTCHA v3**, reusing the keys you've already set under SureCart → Settings → Spam Protection & Security — no separate keys to manage. It has no effect until those keys are configured, and the form's honeypot, nonce, and per-IP rate limiting always apply regardless. (reCAPTCHA mitigates bots/floods; it complements, but doesn't replace, the server-side order match-verification.)
+* **Dark mode fixes.** With SureCart's dark theme active, the Right of Withdrawal UI now renders correctly throughout. The notice heading and description stay readable instead of showing low-contrast dark text; the "Request a withdrawal" modal follows the dark theme instead of opening as a bright white panel; and the form fields, labels, order list, and the public withdrawal form are all readable — field labels and inputs no longer pick up the theme's light-mode colours (dark text on dark, or stray white input boxes). Stores using the light theme — or the block's explicit Light/Dark colour scheme — are unaffected.
+
+= 1.5.7 =
+* **Admin UI polish.** The Withdrawal Requests screen now uses the same SureCart-style shell as the Settings page — header bar, store brand colour, styled Sync/Export buttons, clean full-width table with natural column widths, and on-brand status banners — instead of the plain WordPress admin look. Rows are tighter: "Delete permanently" is now a hover action under the request's date rather than a column. The settings tabs also remember which module you were on after saving, and "Settings" moves to the bottom of the EU Helper menu (below the module pages).
+
+= 1.5.6 =
+* **Withdrawal email polish.** The confirmation/notification emails now show the **quantity** for every withdrawn item (the customer email previously hid "1 ×"). The footer is attributed to your store ("sent automatically by {Store}") instead of the plugin name, and the internal "Request reference" line — an opaque ID that wasn't shown anywhere in the admin — has been removed from both emails. Orders are identified by their order number, as before.
+
+= 1.5.5 =
+* **Settings redesigned as a SureCart-style app.** The EU Helper settings now have a SureCart-style header bar and a left module navigation (one entry per module — Right of Withdrawal today, Peppol and others to come), with content cards, the store brand colour, and SureCart's design tokens — so it feels like a native part of SureCart. The Withdrawal Log remains its own submenu and only appears when the Right of Withdrawal module is enabled.
+* The settings UI now loads even when a module is disabled (the enable toggle only governs front-end behaviour); active nav items match SureCart (colour change, not a filled box); sub-sections use a titled, divided layout; and the WordPress admin footer is hidden to match SureCart.
+
+= 1.3.0 =
+* **Public withdrawal form (block + shortcode).** A new front-end form lets any customer start a withdrawal without logging in — handy when shoppers expect a self-serve form. Add it with the **Withdrawal Request Form** block, or the `[sceu_withdrawal_form]` shortcode on non-block sites. The customer enters their email + order number; if they match a real order, they see its items and can withdraw specific items/quantities (exclusions still apply). If no order matches, they get a free-text box to describe what they'd like to withdraw from, which is sent to you to handle.
+* Security: the form is unauthenticated, so it's defended with a logged-out nonce, a per-IP rate limit, and a honeypot. The order's contents are only shown when the submitted email matches the order, and which field was wrong is never revealed. Order lookups run server-side with your existing SureCart token — credentials are never exposed to the browser.
+
+= 1.2.0 =
+* **Excluded products & collections.** Some goods are excluded from the statutory right of withdrawal (e.g. perishable, made-to-order, sealed hygiene, or digital items). Under **EU Helper → Settings** you can now exclude whole **product collections** (the scalable way to exclude many products at once) and/or search and add **individual products**. Excluded items never appear in the withdrawal form; the rest of an order stays withdrawable, and an order whose items are all excluded disappears. Enforced on the server too, never trusting the browser.
+* Performance: the customer-facing form does **no** extra SureCart API calls for exclusions — the excluded set is precomputed and cached. Collections are resolved to their member products in the background (on save, on a schedule, and via a manual "Refresh excluded product list" button), never during a customer page load.
+* This remains a merchant-configured policy tool: some legal exclusions are conditional (e.g. sealed goods only once unsealed), which the plugin cannot detect — you decide which products/collections are never offered for withdrawal.
+
+= 1.1.0 =
+* **Partial withdrawal.** Customers can now withdraw specific items — and specific quantities — from an order, instead of only whole orders. Selecting an order reveals its line items, each with a quantity stepper and a product thumbnail so items are easy to tell apart. Orders without retrievable line-item detail continue to work as a whole-order withdrawal.
+* **Per-item remaining tracking.** Once items/quantities have been requested, only the not-yet-requested quantities remain selectable; an order keeps appearing until nothing is left to withdraw.
+* **Itemised throughout.** The review step, the customer confirmation email, the merchant notification, the on-dashboard request history, and the admin Withdrawal Log all show the exact items and quantities. The log's "Withdrawing" column shows each item as "2 of 3 × Product" with a Partial / Full order badge, and the CSV export gains a matching column.
+* **Accessibility.** Quantity steppers carry product-specific labels, disable at the available minimum/maximum, and announce each change to screen readers.
+* **Durable log + GDPR delete.** The log is append-only for normal use (status changes manage workflow); an admin-only "Delete permanently" action is available for GDPR erasure / test cleanup, which also re-enables re-requesting of the affected order(s).
+* **Customer request list.** "Your withdrawal requests" is consistently newest-first, and finished requests age off the dashboard after a grace period (default 30 days, filter `sceu_request_history_days`); pending requests stay until handled.
+* **Clearer "Emails sent" log column.** Each email now reads "Customer: Sent" / "Customer: Not sent" with an explanatory tooltip, so a staging site with no working mail setup is not mistaken for a failure of the request itself.
+* **Resend notifications.** Each log entry has a per-recipient "Resend" / "Try again" link for the customer and merchant emails. The re-sent email is rebuilt from the stored request, so its "Received at" timestamp still reflects when the withdrawal was originally requested; the log updates to show the new delivery result.
 
 = 1.0.4 =
 * Publish a downloadable release ZIP via GitHub Actions on each GitHub Release.
