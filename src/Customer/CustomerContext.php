@@ -297,7 +297,12 @@ class CustomerContext {
 	}
 
 	/**
-	 * Determine whether a tax identifier represents a real VAT/tax number.
+	 * Determine whether a tax identifier represents a business.
+	 *
+	 * An invalid EU VAT counts as consumer — SureCart taxes such orders as
+	 * consumer orders, and we mirror that call. `valid_eu_vat` only applies to
+	 * `number_type` `eu_vat`; other types (gb_vat, au_abn, …) and identifiers
+	 * without the flag count as business on presence of a number alone.
 	 *
 	 * @param mixed $tax Expanded tax_identifier object/array, an id string, or null.
 	 * @return bool
@@ -308,11 +313,23 @@ class CustomerContext {
 		}
 		if ( is_object( $tax ) ) {
 			$number = $tax->number ?? ( $tax->value ?? null );
-			return ! empty( $number );
+			if ( empty( $number ) ) {
+				return false;
+			}
+			if ( 'eu_vat' === ( $tax->number_type ?? '' ) && isset( $tax->valid_eu_vat ) ) {
+				return (bool) $tax->valid_eu_vat;
+			}
+			return true;
 		}
 		if ( is_array( $tax ) ) {
 			$number = $tax['number'] ?? ( $tax['value'] ?? null );
-			return ! empty( $number );
+			if ( empty( $number ) ) {
+				return false;
+			}
+			if ( 'eu_vat' === ( $tax['number_type'] ?? '' ) && isset( $tax['valid_eu_vat'] ) ) {
+				return (bool) $tax['valid_eu_vat'];
+			}
+			return true;
 		}
 		// A bare id string still means a tax identifier exists.
 		return is_string( $tax ) && '' !== $tax;
@@ -360,7 +377,7 @@ class CustomerContext {
 
 	/**
 	 * Whether any of the customer's orders within the look-back window carries a
-	 * VAT/tax identifier on its checkout. This is the verified, per-purchase VAT,
+	 * valid VAT on its checkout. This is the verified, per-purchase VAT,
 	 * which the customer-level tax_identifier does not reliably mirror — so it is
 	 * the authoritative source for the "is a business?" question. Reuses the
 	 * already-fetched, transient-cached recent orders (no extra API calls).
