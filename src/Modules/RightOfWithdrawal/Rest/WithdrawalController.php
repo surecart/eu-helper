@@ -130,7 +130,7 @@ class WithdrawalController {
 			$customer->is_eu(),
 			$customer->has_country(),
 			count( $eligible_orders ),
-			$customer->has_vat(),
+			Withdrawals::is_vat_business( $customer, $lookback ),
 			$apply_to,
 			$include_unknown
 		);
