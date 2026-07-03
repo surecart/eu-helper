@@ -403,7 +403,7 @@ class GuestController {
 					'customer_email_sent' => (bool) $customer_sent,
 					'merchant_email_sent' => (bool) $merchant_sent,
 				),
-				'status'         => Withdrawals::STATUS_RECEIVED,
+				'status'         => $verified ? Withdrawals::STATUS_RECEIVED : Withdrawals::STATUS_UNVERIFIED,
 			)
 		);
 	}
