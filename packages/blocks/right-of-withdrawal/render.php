@@ -35,7 +35,7 @@ if ( ! $sceu_customer->is_customer() ) {
 if ( ! $sceu_customer->is_eu() && ! ( $sceu_include_unknown && ! $sceu_customer->has_country() ) ) {
 	return '';
 }
-if ( 'non_vat' === $sceu_apply_to && $sceu_customer->has_vat() ) {
+if ( 'non_vat' === $sceu_apply_to && \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::is_vat_business( $sceu_customer, $sceu_lookback ) ) {
 	return '';
 }
 

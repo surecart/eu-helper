@@ -282,6 +282,26 @@ class LogListTable extends \WP_List_Table {
 
 		$out = '<strong>' . esc_html( $label ) . '</strong>';
 
+		// Unverified guest request: its email + order number never matched a real
+		// order, so it must not be actionable like a verified one. Flag it
+		// unmistakably (right here in the Status column, not only in Reason) and
+		// gate it — the merchant verifies who it is ("Verify & accept" → Pending
+		// review) or declines it; there is no one-click "Mark resolved".
+		if ( \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_UNVERIFIED === $status ) {
+			$tip  = __( 'This request came from the public form but its email and order number did not match a real order. Verify who it is (check the email/order in SureCart) before accepting it. It cannot be resolved until you accept it.', 'surecart-eu-helper' );
+			$out .= ' <span title="' . esc_attr( $tip ) . '" style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:#fce8e6;color:#a50e0e;margin-left:6px;">'
+				. esc_html__( 'Identity not verified', 'surecart-eu-helper' ) . '</span>';
+
+			$confirm = esc_js( __( 'This request was never verified against a real order. Only accept it once you have confirmed who it is. Accept it into your pending queue?', 'surecart-eu-helper' ) );
+			$links   = array(
+				$this->status_link( $id, \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_RECEIVED, __( 'Verify & accept', 'surecart-eu-helper' ), $confirm ),
+				$this->status_link( $id, \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_REJECTED, __( 'Mark declined', 'surecart-eu-helper' ) ),
+			);
+
+			$out .= '<div style="margin-top:4px;font-size:12px;">' . implode( ' | ', $links ) . '</div>';
+			return $out;
+		}
+
 		// A partial/mixed refund the Sync detected but won't auto-resolve. Only
 		// meaningful while the request is still pending; a resolved/declined
 		// request has already been actioned, so the prompt would be noise.
@@ -303,11 +323,7 @@ class LogListTable extends \WP_List_Table {
 
 		$links = array();
 		foreach ( $actions as $new_status => $text ) {
-			$url     = wp_nonce_url(
-				admin_url( 'admin-post.php?action=sceu_set_status&id=' . $id . '&status=' . $new_status ),
-				'sceu_set_status_' . $id
-			);
-			$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html( $text ) . '</a>';
+			$links[] = $this->status_link( $id, $new_status, $text );
 		}
 
 		if ( $links ) {
@@ -317,5 +333,25 @@ class LogListTable extends \WP_List_Table {
 		// Permanent delete moved to a hover row-action under the Date column to
 		// keep this row compact (see column_default 'created_at').
 		return $out;
+	}
+
+	/**
+	 * Build one nonce-protected status-change link, optionally guarded by a
+	 * JavaScript confirm() prompt (used to add friction to actioning an
+	 * unverified request).
+	 *
+	 * @param int    $id         Row id.
+	 * @param string $new_status Target status.
+	 * @param string $text       Link text.
+	 * @param string $confirm    Optional already-escaped (esc_js) confirm message.
+	 * @return string
+	 */
+	private function status_link( int $id, string $new_status, string $text, string $confirm = '' ): string {
+		$url     = wp_nonce_url(
+			admin_url( 'admin-post.php?action=sceu_set_status&id=' . $id . '&status=' . $new_status ),
+			'sceu_set_status_' . $id
+		);
+		$onclick = '' !== $confirm ? ' onclick="return confirm(\'' . $confirm . '\');"' : '';
+		return '<a href="' . esc_url( $url ) . '"' . $onclick . '>' . esc_html( $text ) . '</a>';
 	}
 }

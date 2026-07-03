@@ -146,7 +146,7 @@ class LogActions {
 		$allowed = array( Withdrawals::STATUS_RECEIVED, Withdrawals::STATUS_RESOLVED, Withdrawals::STATUS_REJECTED );
 		$row     = ( $id && in_array( $status, $allowed, true ) ) ? LogTable::find( $id ) : null;
 
-		if ( $row ) {
+		if ( $row && $this->transition_allowed( $id, $status ) ) {
 			$current  = (string) ( $row['status'] ?? '' );
 			$blocking = Withdrawals::blocking_statuses();
 			// Reactivating (non-live → live) re-adds the request's units, so
@@ -163,6 +163,30 @@ class LogActions {
 
 		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&updated=1' ) );
 		exit;
+	}
+
+	/**
+	 * Authoritative state-machine guard for a status change (not just a UI hint):
+	 * an unverified request must be explicitly accepted before it can be resolved,
+	 * so it can never jump straight to "resolved" — only to `received` (verified &
+	 * accepted) or `rejected` (declined). Every other transition is allowed.
+	 *
+	 * @param int    $id     Row id.
+	 * @param string $target Target status (already validated against the allow-list).
+	 * @return bool
+	 */
+	private function transition_allowed( int $id, string $target ): bool {
+		$row = LogTable::find( $id );
+		if ( ! $row ) {
+			return false;
+		}
+
+		$current = (string) ( $row['status'] ?? '' );
+		if ( Withdrawals::STATUS_UNVERIFIED === $current ) {
+			return in_array( $target, array( Withdrawals::STATUS_RECEIVED, Withdrawals::STATUS_REJECTED ), true );
+		}
+
+		return true;
 	}
 
 	/**

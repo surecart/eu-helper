@@ -56,7 +56,8 @@ class Diagnostics {
 		$withdrawable = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::withdrawable_orders( $customer, $lookback );
 		$requests     = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::requests_for_display( get_current_user_id() );
 
-		$vat_ok    = ( 'non_vat' !== $apply_to ) || ! $customer->has_vat();
+		$is_vat_business = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::is_vat_business( $customer, $lookback );
+		$vat_ok          = ( 'non_vat' !== $apply_to ) || ! $is_vat_business;
 		$module_on = Settings::is_module_enabled( 'right_of_withdrawal' );
 		$base_ok   = $customer->is_customer() && $customer->is_eu() && $vat_ok;
 		$shows     = $module_on && $base_ok && ( ! empty( $withdrawable ) || ! empty( $requests ) );
@@ -67,6 +68,7 @@ class Diagnostics {
 		$rows[] = array( 'recent orders in window', $this->format( count( $all_orders ) ) );
 		$rows[] = array( 'withdrawable (after exclusions)', $this->format( count( $withdrawable ) ) );
 		$rows[] = array( 'existing requests', $this->format( count( $requests ) ) );
+		$rows[] = array( 'treated as VAT business', $this->format( $is_vat_business ) );
 		$rows[] = array( 'vat check passes', $this->format( $vat_ok ) );
 		$rows[] = array( '=> block displays', $this->format( $shows ) );
 
