@@ -190,6 +190,7 @@ wp_interactivity_state(
 			'submit'           => $sceu_confirm,
 			'sending'          => __( 'Sending…', 'surecart-eu-helper' ),
 			'selectOne'        => __( 'Please select at least one order.', 'surecart-eu-helper' ),
+			'chooseQuantity'   => __( 'Please choose a quantity to withdraw.', 'surecart-eu-helper' ),
 			'error'            => __( 'Something went wrong. Please try again.', 'surecart-eu-helper' ),
 			'notEligible'      => __( 'You are not eligible for this request. This feature is available to EU customers with recent orders.', 'surecart-eu-helper' ),
 			'invalidNonce'     => __( 'Your session has expired. Please refresh the page and try again.', 'surecart-eu-helper' ),

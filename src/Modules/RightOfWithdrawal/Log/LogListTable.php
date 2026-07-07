@@ -67,7 +67,8 @@ class LogListTable extends \WP_List_Table {
 	 */
 	protected function get_bulk_actions(): array {
 		return array(
-			'delete' => __( 'Delete permanently', 'surecart-eu-helper' ),
+			'anonymize' => __( 'Anonymize (remove personal data)', 'surecart-eu-helper' ),
+			'delete'    => __( 'Delete permanently', 'surecart-eu-helper' ),
 		);
 	}
 
@@ -113,20 +114,40 @@ class LogListTable extends \WP_List_Table {
 			case 'created_at':
 				$out = esc_html( $item['created_at'] ?? '' );
 				$id  = (int) ( $item['id'] ?? 0 );
-				// Permanent delete lives here as a hover row-action (keeps the row
-				// compact) — GDPR erasure / test cleanup; re-enables re-requesting.
+				// Anonymize + permanent delete live here as hover row-actions (keeps
+				// the row compact). Anonymize strips personal data but keeps the
+				// transactional record; delete is full GDPR erasure and re-enables
+				// re-requesting. An already-anonymised row only offers delete.
 				if ( $id && current_user_can( 'manage_options' ) ) {
+					$actions = array();
+
+					if ( ! LogTable::is_anonymized( $item ) ) {
+						$anon_url  = wp_nonce_url(
+							admin_url( 'admin-post.php?action=sceu_anonymize_log&id=' . $id ),
+							'sceu_anonymize_log_' . $id
+						);
+						$anon_msg  = esc_js( __( 'Remove the personal data (name, email, IP address, reason) from this request? The order, items, date, and status are kept as the transactional record. This cannot be undone.', 'surecart-eu-helper' ) );
+						$actions[] = '<span class="anonymize">'
+							. '<a href="' . esc_url( $anon_url ) . '" onclick="return confirm(\'' . $anon_msg . '\');">'
+							. esc_html__( 'Anonymize', 'surecart-eu-helper' ) . '</a></span>';
+					}
+
 					$delete_url = wp_nonce_url(
 						admin_url( 'admin-post.php?action=sceu_delete_log&id=' . $id ),
 						'sceu_delete_log_' . $id
 					);
-					$confirm = esc_js( __( 'Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone.', 'surecart-eu-helper' ) );
-					$out    .= '<div class="row-actions"><span class="delete">'
+					$confirm    = esc_js( __( 'Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone.', 'surecart-eu-helper' ) );
+					$actions[]  = '<span class="delete">'
 						. '<a href="' . esc_url( $delete_url ) . '" onclick="return confirm(\'' . $confirm . '\');">'
-						. esc_html__( 'Delete permanently', 'surecart-eu-helper' ) . '</a></span></div>';
+						. esc_html__( 'Delete permanently', 'surecart-eu-helper' ) . '</a></span>';
+
+					$out .= '<div class="row-actions">' . implode( ' | ', $actions ) . '</div>';
 				}
 				return $out;
 			case 'customer_name':
+				if ( LogTable::is_anonymized( $item ) ) {
+					return '<span style="color:#777;font-style:italic;">' . esc_html__( 'Anonymized', 'surecart-eu-helper' ) . '</span>';
+				}
 				return $this->customer_link( $item, (string) ( $item['customer_name'] ?? '' ) );
 			case 'customer_email':
 				return $this->customer_link( $item, (string) ( $item['customer_email'] ?? '' ) );

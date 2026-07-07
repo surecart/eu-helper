@@ -214,9 +214,20 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 }
 
 /* ---- Form ---- */
+/* Only ever holds validation/submit errors (cleared to empty otherwise), so it
+   reads as danger. Same red pair as the "rejected" badge for consistency. */
 .sceu-form__status {
 	min-height: 1.2em;
 	margin: 0.5em 0;
+	color: #a50e0e;
+	font-weight: 500;
+}
+
+.sceu-row--scheme-dark .sceu-form__status,
+.sceu-modal--dark .sceu-form__status,
+body.surecart-theme-dark .sceu-row--scheme-auto .sceu-form__status,
+body.surecart-theme-dark .sceu-modal--auto .sceu-form__status {
+	color: #f08a8a;
 }
 
 .sceu-field {
@@ -262,6 +273,49 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	color: var(--sceu-text, currentColor);
 	background: transparent;
 	border-color: var(--sceu-field-border);
+}
+
+/* Themes style bare `button` and `input[type=number]` at 0,1,1 — their padding,
+   min-height and borders inflate the stepper and split it apart. Scope the joined
+   control's geometry at 0,2,0+ so it wins and the segments stay flush + uniform.
+   Mirrors SureCart's sc-quantity-select: fixed-width pill, the input flexes to
+   fill (so the +/- buttons keep a fixed width and can never be pushed out), and
+   the dividers live on the buttons. */
+.sceu-row .sceu-step,
+.sceu-row .sceu-item__input {
+	height: 100%;
+	min-height: 0;
+	border: 0;
+	box-sizing: border-box;
+}
+
+.sceu-row .sceu-step {
+	flex: none;
+	padding: 0;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+/* Dividers between the segments (on the buttons, like SureCart). */
+.sceu-row .sceu-step:first-child {
+	border-right: 1px solid var(--sceu-field-border);
+}
+
+.sceu-row .sceu-step:last-child {
+	border-left: 1px solid var(--sceu-field-border);
+}
+
+.sceu-row .sceu-item__input {
+	flex: 1;
+	min-width: 0;
+	padding: 0 0.25em;
+}
+
+/* The container shows the focus ring (:focus-within); drop the input's own
+   outline so themes don't paint a second dotted box inside the pill. */
+.sceu-row .sceu-item__input:focus {
+	outline: none;
+	box-shadow: none;
 }
 
 .sceu-orders {
@@ -334,18 +388,29 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	opacity: 0.7;
 }
 
+/* Quantity selector: one joined, fixed-height segmented control (SureCart-style)
+   — a bordered pill with ghost +/- buttons flanking a centred number, divided by
+   thin rules, instead of three detached boxes. */
 .sceu-item__qty {
-	display: flex;
-	align-items: center;
-	gap: 4px;
+	display: inline-flex;
+	align-items: stretch;
 	flex: none;
+	width: 104px;
+	height: 32px;
+	border: 1px solid var(--sceu-field-border);
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+/* Focus ring on the whole control when the number input is focused. */
+.sceu-item__qty:focus-within {
+	border-color: var(--sceu-primary, #2271b1);
+	box-shadow: 0 0 0 1px var(--sceu-primary, #2271b1);
 }
 
 .sceu-step {
-	width: 30px;
-	height: 30px;
-	border: 1px solid var(--sceu-field-border);
-	border-radius: 6px;
+	width: 32px;
+	flex: none;
 	background: transparent;
 	color: var(--sceu-text);
 	font-size: 16px;
@@ -354,6 +419,10 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.sceu-step:hover:not(:disabled) {
+	background: rgba(127, 127, 127, 0.12);
 }
 
 .sceu-step:disabled {
@@ -389,17 +458,21 @@ body.surecart-theme-dark .sceu-modal--auto .sceu-badge--rejected {
 }
 
 .sceu-item__input {
-	width: 3em;
-	height: 30px;
+	flex: 1;
+	min-width: 0;
 	box-sizing: border-box;
 	text-align: center;
-	padding: 0 0.25em;
-	border: 1px solid var(--sceu-field-border);
-	border-radius: 6px;
 	font: inherit;
 	line-height: normal;
 	color: inherit;
 	background: transparent;
+	/* Middle segment: no border/radius of its own — the container supplies the
+	   pill outline and the +/- buttons carry the dividers. */
+	border: 0;
+	border-radius: 0;
+	/* The container shows the focus ring (:focus-within), so suppress the
+	   input's own outline to avoid a double ring. */
+	outline: none;
 	/* Hide the browser's native number spinners — the +/- buttons control it,
 	   and the injected arrows broke the horizontal centering on hover. */
 	-moz-appearance: textfield;

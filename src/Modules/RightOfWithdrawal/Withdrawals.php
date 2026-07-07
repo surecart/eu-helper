@@ -109,6 +109,48 @@ class Withdrawals {
 	}
 
 	/**
+	 * Whether re-activating a declined request would over-withdraw any line item.
+	 *
+	 * A declined ("rejected") request's quantities don't count against
+	 * availability, so the customer may have re-requested the same units in the
+	 * meantime. Resetting the declined request back to "pending" would then put
+	 * the same physical unit into two pending requests. This compares the row's
+	 * own per-item quantities against what's already blocked (received/resolved,
+	 * which excludes this still-rejected row) and the originally purchased
+	 * quantity recorded in the payload. Computed from stored data only — no
+	 * SureCart calls. Returns false for legacy/whole-order rows that carry no
+	 * per-item purchased quantity (nothing to compare).
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return bool
+	 */
+	public static function reactivation_would_overdraw( array $row ): bool {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) || empty( $payload['orders'] ) || ! is_array( $payload['orders'] ) ) {
+			return false;
+		}
+
+		$already = self::requested_quantities( (int) ( $row['user_id'] ?? 0 ) )['items'];
+
+		foreach ( $payload['orders'] as $order ) {
+			$lines = isset( $order['line_items'] ) && is_array( $order['line_items'] ) ? $order['line_items'] : array();
+			foreach ( $lines as $line ) {
+				$lid       = (string) ( $line['id'] ?? '' );
+				$qty       = (int) ( $line['quantity'] ?? 0 );
+				$purchased = (int) ( $line['purchased'] ?? 0 );
+				if ( '' === $lid || $qty < 1 || $purchased < 1 ) {
+					continue;
+				}
+				if ( ( $already[ $lid ] ?? 0 ) + $qty > $purchased ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Orders the customer can still withdraw from. Recent orders, minus refunded/
 	 * cancelled ones, with each line item annotated with the quantity still
 	 * available ("remaining" = purchased − already requested). Items with nothing
@@ -268,8 +310,15 @@ class Withdrawals {
 	}
 
 	/**
-	 * Build a "2× Item A, Item B" summary of the items withdrawn from one logged
-	 * order (its line_items carry the requested quantity). Empty for whole-order.
+	 * Build a "2× Item A, 1× Item B" summary of the items withdrawn from one
+	 * logged order (its line_items carry the requested quantity). Empty for
+	 * whole-order.
+	 *
+	 * The quantity is shown for every item — including "1×" — because this string
+	 * reproduces the content of the withdrawal declaration on customer-facing
+	 * surfaces (the confirmation screen, the dashboard log, and the buyer email).
+	 * Under § 356a BGB the confirmation must reflect what was declared, so the
+	 * quantity is part of the record and is never dropped.
 	 *
 	 * @param array<string, mixed> $order Logged order entry.
 	 * @return string
@@ -285,8 +334,8 @@ class Withdrawals {
 			if ( '' === $name ) {
 				continue;
 			}
-			$qty     = (int) ( $line['quantity'] ?? 1 );
-			$parts[] = ( $qty > 1 ) ? ( $qty . "\u{00D7} " . $name ) : $name;
+			$qty     = max( 1, (int) ( $line['quantity'] ?? 1 ) );
+			$parts[] = $qty . "\u{00D7} " . $name;
 		}
 		return implode( ', ', array_slice( $parts, 0, 8 ) );
 	}
