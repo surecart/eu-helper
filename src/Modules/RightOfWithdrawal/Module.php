@@ -7,10 +7,13 @@
 
 namespace SureCartEuHelper\Modules\RightOfWithdrawal;
 
+use SureCartEuHelper\Settings;
 use SureCartEuHelper\Modules\ModuleInterface;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Rest\WithdrawalController;
-use SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Exclusions;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Form\PublicForm;
 use SureCartEuHelper\Modules\RightOfWithdrawal\Log\LogTable;
+use SureCartEuHelper\Modules\RightOfWithdrawal\Admin\LogActions;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -55,6 +58,7 @@ class Module implements ModuleInterface {
 		return array(
 			array(
 				'key'     => 'lookback_days',
+				'section'     => 'eligibility',
 				'type'    => 'number',
 				'label'   => __( 'Look-back window (days)', 'surecart-eu-helper' ),
 				'default' => 14,
@@ -63,6 +67,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'apply_to',
+				'section'     => 'eligibility',
 				'type'    => 'radio',
 				'label'   => __( 'Apply to', 'surecart-eu-helper' ),
 				'default' => 'all',
@@ -80,6 +85,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'include_unknown_country',
+				'section'            => 'eligibility',
 				'type'           => 'toggle',
 				'label'          => __( 'Customers without a country', 'surecart-eu-helper' ),
 				'checkbox_label' => __( 'Show the notice to customers who have no country on file', 'surecart-eu-helper' ),
@@ -88,6 +94,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'     => 'merchant_email',
+				'section'     => 'notifications',
 				'type'    => 'email',
 				'label'   => __( 'Merchant notification email', 'surecart-eu-helper' ),
 				'default' => '',
@@ -95,6 +102,7 @@ class Module implements ModuleInterface {
 			),
 			array(
 				'key'            => 'form_display',
+				'section'            => 'form',
 				'type'           => 'radio',
 				'label'          => __( 'Form display', 'surecart-eu-helper' ),
 				'default'        => 'modal',
@@ -109,6 +117,61 @@ class Module implements ModuleInterface {
 					),
 				),
 			),
+			array(
+				'key'   => 'excluded_collection_ids',
+				'section'   => 'exclusions',
+				'type'  => 'collection_exclusions',
+				'label' => __( 'Excluded collections', 'surecart-eu-helper' ),
+				'help'  => __( 'Products in these collections are never offered for withdrawal. This is the easiest way to exclude many products at once (e.g. a "Digital downloads" or "Perishables" collection).', 'surecart-eu-helper' ),
+			),
+			array(
+				'key'   => 'excluded_product_ids',
+				'section'   => 'exclusions',
+				'type'  => 'product_exclusions',
+				'label' => __( 'Excluded products', 'surecart-eu-helper' ),
+				'help'  => __( 'Search and add individual products to exclude. Use this for one-off exclusions on top of any excluded collections.', 'surecart-eu-helper' ),
+			),
+			array(
+				'key'            => 'recaptcha_enabled',
+				'section'        => 'security',
+				'type'           => 'toggle',
+				'label'          => __( 'Spam protection (reCAPTCHA v3)', 'surecart-eu-helper' ),
+				'checkbox_label' => __( 'Protect the public Withdrawal Request Form with reCAPTCHA v3', 'surecart-eu-helper' ),
+				'default'        => false,
+				'help'           => __( 'Reuses your SureCart reCAPTCHA v3 keys (SureCart → Settings → Spam Protection & Security) to screen the logged-out withdrawal form against bots. It has no effect until those keys are configured in SureCart. The form always uses a honeypot, a nonce, and per-IP rate limiting regardless of this setting.', 'surecart-eu-helper' ),
+			),
+		);
+	}
+
+	/**
+	 * Ordered settings sub-sections, each rendered as its own card with a
+	 * heading + description (mirroring SureCart's settings layout). Fields are
+	 * grouped by their `section` key.
+	 *
+	 * @return array<string, array{title:string,description:string}>
+	 */
+	public function settings_sections(): array {
+		return array(
+			'eligibility'   => array(
+				'title'       => __( 'Eligibility', 'surecart-eu-helper' ),
+				'description' => __( 'Who sees the withdrawal notice, and for which orders.', 'surecart-eu-helper' ),
+			),
+			'notifications' => array(
+				'title'       => __( 'Notifications', 'surecart-eu-helper' ),
+				'description' => __( 'Where withdrawal requests are sent.', 'surecart-eu-helper' ),
+			),
+			'form'          => array(
+				'title'       => __( 'Customer form', 'surecart-eu-helper' ),
+				'description' => __( 'How the withdrawal form appears to customers.', 'surecart-eu-helper' ),
+			),
+			'exclusions'    => array(
+				'title'       => __( 'Product exclusions', 'surecart-eu-helper' ),
+				'description' => __( 'Products that are never offered for withdrawal — for example perishable, made-to-order, or digital goods.', 'surecart-eu-helper' ),
+			),
+			'security'      => array(
+				'title'       => __( 'Spam protection', 'surecart-eu-helper' ),
+				'description' => __( 'Optional bot protection for the public (logged-out) Withdrawal Request Form, reusing SureCart\'s reCAPTCHA.', 'surecart-eu-helper' ),
+			),
 		);
 	}
 
@@ -117,180 +180,103 @@ class Module implements ModuleInterface {
 	 */
 	public function boot(): void {
 		add_action( 'init', array( $this, 'register_block' ) );
+		add_shortcode( 'sceu_withdrawal_form', array( $this, 'render_shortcode' ) );
 		add_action(
 			'rest_api_init',
 			function () {
 				( new WithdrawalController() )->register_routes();
+				( new \SureCartEuHelper\Modules\RightOfWithdrawal\Rest\GuestController() )->register_routes();
 			}
 		);
-		add_action( 'admin_post_sceu_export_log', array( $this, 'export_csv' ) );
-		add_action( 'admin_post_sceu_set_status', array( $this, 'set_status' ) );
-		add_action( 'admin_post_sceu_sync_log', array( $this, 'sync_log' ) );
+		// When the excluded-collection set changes, rebuild the cached membership.
+		add_action( 'update_option_' . Settings::OPTION, array( $this, 'on_settings_updated' ), 10, 2 );
+
+		// Admin-post handlers for the request log live in their own controller.
+		( new LogActions() )->register();
+
+		// Keep this module's schema current on plugin upgrade (the central
+		// `sceu_upgrade` hook fires once per version bump).
+		add_action( 'sceu_upgrade', array( LogTable::class, 'maybe_create' ) );
+
+		// Background rebuild of the collection→product-id exclusion cache, so the
+		// customer-facing path never resolves collections inline.
+		add_action( Exclusions::CRON_HOOK, array( Exclusions::class, 'rebuild_cache' ) );
 	}
 
 	/**
-	 * Admin action: change a request's status.
+	 * Rebuild the exclusion cache when the excluded-collection set changes.
 	 *
+	 * @param mixed $old Old option value.
+	 * @param mixed $new New option value.
 	 * @return void
 	 */
-	public function set_status(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
-		}
-		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0;
-		check_admin_referer( 'sceu_set_status_' . $id );
+	public function on_settings_updated( $old, $new ): void {
+		$extract = static function ( $value ): array {
+			$ids = ( is_array( $value ) && isset( $value['right_of_withdrawal']['excluded_collection_ids'] ) )
+				? (array) $value['right_of_withdrawal']['excluded_collection_ids']
+				: array();
+			$ids = array_map( 'strval', $ids );
+			sort( $ids );
+			return $ids;
+		};
 
-		$status  = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
-		$allowed = array( Withdrawals::STATUS_RECEIVED, Withdrawals::STATUS_RESOLVED, Withdrawals::STATUS_REJECTED );
-		if ( $id && in_array( $status, $allowed, true ) ) {
-			LogTable::update_status( $id, $status );
+		if ( $extract( $old ) !== $extract( $new ) ) {
+			Exclusions::flush_cache();
+			Exclusions::rebuild_cache();
 		}
-
-		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&updated=1' ) );
-		exit;
 	}
 
 	/**
-	 * Admin action: best-effort sync of pending requests against SureCart.
+	 * Register every built block by scanning the compiled `build/blocks/` output.
 	 *
-	 * For each pending request, if every order it covers now looks
-	 * refunded/cancelled in SureCart, mark the request resolved. SureCart does
-	 * not always surface refunds on the order, so this is a convenience, not a
-	 * guarantee — the merchant can always set status manually.
-	 *
-	 * @return void
-	 */
-	public function sync_log(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
-		}
-		check_admin_referer( 'sceu_sync_log' );
-
-		$synced = 0;
-		foreach ( LogTable::rows_by_status( Withdrawals::STATUS_RECEIVED ) as $row ) {
-			$ids = json_decode( (string) ( $row['order_ids'] ?? '[]' ), true );
-			if ( ! is_array( $ids ) || empty( $ids ) ) {
-				continue;
-			}
-			$all_done = true;
-			foreach ( $ids as $order_id ) {
-				if ( ! $this->order_looks_refunded( (string) $order_id ) ) {
-					$all_done = false;
-					break;
-				}
-			}
-			if ( $all_done ) {
-				LogTable::update_status( (int) $row['id'], Withdrawals::STATUS_RESOLVED );
-				++$synced;
-			}
-		}
-
-		wp_safe_redirect( admin_url( 'admin.php?page=sceu-withdrawal-log&synced=' . $synced ) );
-		exit;
-	}
-
-	/**
-	 * Best-effort: does this order appear refunded/cancelled in SureCart?
-	 *
-	 * @param string $order_id Order id.
-	 * @return bool
-	 */
-	private function order_looks_refunded( string $order_id ): bool {
-		if ( '' === $order_id || ! class_exists( '\SureCart\Models\Order' ) ) {
-			return false;
-		}
-		try {
-			$order = \SureCart\Models\Order::with( array( 'checkout' ) )->find( $order_id );
-		} catch ( \Throwable $e ) {
-			return false;
-		}
-		if ( is_wp_error( $order ) || empty( $order ) || ! is_object( $order ) ) {
-			return false;
-		}
-
-		$status = strtolower( (string) ( $order->status ?? '' ) );
-		if ( in_array( $status, array( 'canceled', 'cancelled', 'refunded' ), true ) ) {
-			return true;
-		}
-
-		$checkout = $order->checkout ?? null;
-		$refunded = is_object( $checkout ) ? ( $checkout->refunded_amount ?? 0 ) : 0;
-		return is_numeric( $refunded ) && (int) $refunded > 0;
-	}
-
-	/**
-	 * Register the block.
-	 *
-	 * All assets are declared in block.json with `file:./` paths and registered
-	 * by core from the block's directory: editor.js (+ editor.asset.php for its
-	 * wp-* deps and translations), editor.css (editor-only), view.css (front-end
-	 * + editor preview), and view.js (Interactivity API script module). Core
-	 * also auto-enqueues view.css only when the block actually renders content.
+	 * Block sources live in `packages/blocks/<name>/` and are compiled by
+	 * @wordpress/scripts into `build/blocks/<name>/` (block.json + index.js +
+	 * generated index.asset.php for wp-* deps/translations, the extracted
+	 * stylesheets, and any view module). Each compiled `block.json` declares its
+	 * own assets with `file:./` paths, which core registers from that directory;
+	 * adding a new block therefore needs no change here — drop a folder in the
+	 * source tree and it is discovered automatically.
 	 *
 	 * @return void
 	 */
 	public function register_block(): void {
-		register_block_type( SCEU_DIR . 'blocks/right-of-withdrawal' );
+		// Register the shared form style/script handles first so the withdrawal-form
+		// block.json can reference the `sceu-withdrawal-form` style handle for both
+		// its editor preview and front-end render.
+		PublicForm::register_assets();
+
+		$blocks_dir = SCEU_DIR . 'build/blocks';
+		if ( ! is_dir( $blocks_dir ) ) {
+			return; // Not built yet (e.g. a source clone without `npm run build`).
+		}
+
+		foreach ( (array) glob( $blocks_dir . '/*', GLOB_ONLYDIR ) as $dir ) {
+			if ( is_file( $dir . '/block.json' ) ) {
+				register_block_type( $dir );
+			}
+		}
 	}
 
 	/**
-	 * Stream the log as a CSV download.
+	 * Render the public withdrawal form via shortcode (for non-block-editor
+	 * sites). Shares one renderer with the block so markup + assets match.
 	 *
-	 * @return void
-	 */
-	public function export_csv(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'surecart-eu-helper' ) );
-		}
-		check_admin_referer( 'sceu_export_log' );
-
-		$rows = LogTable::all_rows();
-
-		nocache_headers();
-		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename=withdrawal-requests-' . gmdate( 'Ymd-His' ) . '.csv' );
-
-		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, array( 'id', 'created_at', 'user_id', 'customer_id', 'customer_name', 'customer_email', 'ip_address', 'order_ids', 'reason', 'status' ) );
-		foreach ( $rows as $row ) {
-			$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
-			$reason  = is_array( $payload ) ? (string) ( $payload['reason'] ?? '' ) : '';
-			fputcsv(
-				$out,
-				array_map(
-					array( $this, 'csv_safe' ),
-					array(
-						$row['id'] ?? '',
-						$row['created_at'] ?? '',
-						$row['user_id'] ?? '',
-						$row['customer_id'] ?? '',
-						$row['customer_name'] ?? '',
-						$row['customer_email'] ?? '',
-						$row['ip_address'] ?? '',
-						$row['order_ids'] ?? '',
-						$reason,
-						$row['status'] ?? '',
-					)
-				)
-			);
-		}
-		fclose( $out );
-		exit;
-	}
-
-	/**
-	 * Neutralise CSV formula injection: a cell starting with = + - @ (or a
-	 * control char) is prefixed with a single quote so spreadsheet apps treat
-	 * it as text, not a formula.
-	 *
-	 * @param mixed $value Cell value.
+	 * @param array<string, mixed>|string $atts Shortcode attributes.
 	 * @return string
 	 */
-	public function csv_safe( $value ): string {
-		$value = (string) $value;
-		if ( '' !== $value && in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
-			return "'" . $value;
-		}
-		return $value;
+	public function render_shortcode( $atts ): string {
+		$atts = shortcode_atts(
+			array(
+				'heading'         => '',
+				'intro'           => '',
+				'submit_label'    => '',
+				'confirm_label'   => '',
+				'success_message' => '',
+			),
+			is_array( $atts ) ? $atts : array(),
+			'sceu_withdrawal_form'
+		);
+
+		return PublicForm::render( $atts );
 	}
 }

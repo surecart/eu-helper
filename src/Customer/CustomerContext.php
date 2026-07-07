@@ -297,7 +297,12 @@ class CustomerContext {
 	}
 
 	/**
-	 * Determine whether a tax identifier represents a real VAT/tax number.
+	 * Determine whether a tax identifier represents a business.
+	 *
+	 * An invalid EU VAT counts as consumer — SureCart taxes such orders as
+	 * consumer orders, and we mirror that call. `valid_eu_vat` only applies to
+	 * `number_type` `eu_vat`; other types (gb_vat, au_abn, …) and identifiers
+	 * without the flag count as business on presence of a number alone.
 	 *
 	 * @param mixed $tax Expanded tax_identifier object/array, an id string, or null.
 	 * @return bool
@@ -308,11 +313,23 @@ class CustomerContext {
 		}
 		if ( is_object( $tax ) ) {
 			$number = $tax->number ?? ( $tax->value ?? null );
-			return ! empty( $number );
+			if ( empty( $number ) ) {
+				return false;
+			}
+			if ( 'eu_vat' === ( $tax->number_type ?? '' ) && isset( $tax->valid_eu_vat ) ) {
+				return (bool) $tax->valid_eu_vat;
+			}
+			return true;
 		}
 		if ( is_array( $tax ) ) {
 			$number = $tax['number'] ?? ( $tax['value'] ?? null );
-			return ! empty( $number );
+			if ( empty( $number ) ) {
+				return false;
+			}
+			if ( 'eu_vat' === ( $tax['number_type'] ?? '' ) && isset( $tax['valid_eu_vat'] ) ) {
+				return (bool) $tax['valid_eu_vat'];
+			}
+			return true;
 		}
 		// A bare id string still means a tax identifier exists.
 		return is_string( $tax ) && '' !== $tax;
@@ -356,6 +373,25 @@ class CustomerContext {
 	public function has_vat(): bool {
 		$customer = $this->customer();
 		return $customer ? (bool) $customer['has_vat'] : false;
+	}
+
+	/**
+	 * Whether any of the customer's orders within the look-back window carries a
+	 * valid VAT on its checkout. This is the verified, per-purchase VAT,
+	 * which the customer-level tax_identifier does not reliably mirror — so it is
+	 * the authoritative source for the "is a business?" question. Reuses the
+	 * already-fetched, transient-cached recent orders (no extra API calls).
+	 *
+	 * @param int $days Look-back window in days.
+	 * @return bool
+	 */
+	public function has_vat_on_recent_orders( int $days ): bool {
+		foreach ( $this->recent_orders( $days ) as $order ) {
+			if ( ! empty( $order['has_vat'] ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -430,12 +466,16 @@ class CustomerContext {
 	private function query_orders_since( string $customer_id, int $since ): array {
 		// Try richer expansions first, but never let an unsupported `expand`
 		// silently disable the feature: on error, retry with less, then none.
+		// `checkout.tax_identifier` rides along on every checkout-bearing variant:
+		// the verified per-purchase VAT lives there (the customer-level tax id is
+		// not reliably kept in sync), and we need it to answer has_vat() correctly
+		// for the `non_vat` audience rule — at no extra API cost.
 		$expansions = array(
 			// Richest: reach the product name via line_item.price.product.
-			array( 'checkout', 'checkout.line_items', 'line_item.price', 'price.product' ),
-			array( 'checkout', 'checkout.line_items', 'line_item.price' ),
-			array( 'checkout', 'checkout.line_items' ),
-			array( 'checkout' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items', 'line_item.price', 'price.product' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items', 'line_item.price' ),
+			array( 'checkout', 'checkout.tax_identifier', 'checkout.line_items' ),
+			array( 'checkout', 'checkout.tax_identifier' ),
 			array(),
 		);
 
@@ -523,6 +563,21 @@ class CustomerContext {
 	}
 
 	/**
+	 * Public entry point to normalise an arbitrary SureCart order object into the
+	 * flat shape the withdrawal form uses (id, number, line_items with product_id,
+	 * etc.). Used by the guest (public-form) lookup, which fetches an order by
+	 * number rather than through the logged-in customer. The normalisation helpers
+	 * are stateless with respect to the customer, so this is safe to call on any
+	 * order.
+	 *
+	 * @param mixed $order Order model object.
+	 * @return array<string, mixed>|null
+	 */
+	public function normalize_order_object( $order ): ?array {
+		return $this->normalise_order( $order );
+	}
+
+	/**
 	 * Normalise a single order object into a flat array for the form.
 	 *
 	 * @param mixed $order Order model.
@@ -556,9 +611,117 @@ class CustomerContext {
 			'created_at'    => (int) $created,
 			'status'        => (string) ( $order->status ?? '' ),
 			'refunded'      => is_numeric( $refunded_amount ) && (int) $refunded_amount > 0,
+			'has_vat'       => is_object( $checkout ) ? $this->extract_has_vat( $checkout->tax_identifier ?? null ) : false,
 			'total_display' => $this->format_money( $amount, (string) $currency ),
 			'summary'       => $this->extract_line_summary( $order ),
+			'line_items'    => $this->normalise_line_items( $order, (string) $currency ),
 		);
+	}
+
+	/**
+	 * Normalise an order's line items for partial withdrawal: each carries an id,
+	 * display name, purchased quantity, and a per-unit price string. Returns an
+	 * empty array when no line-item detail is available (the order is then
+	 * offered as a whole-order withdrawal).
+	 *
+	 * @param mixed  $order    Order model.
+	 * @param string $currency Order currency code.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function normalise_line_items( $order, string $currency ): array {
+		$items = $this->line_items_for( $order );
+		if ( empty( $items ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $items as $line ) {
+			$id = (string) ( $this->prop( $line, 'id' ) ?? '' );
+			if ( '' === $id ) {
+				continue;
+			}
+
+			$name = $this->line_item_name( $line );
+			if ( '' === $name ) {
+				$name = __( 'Item', 'surecart-eu-helper' );
+			}
+
+			$qty = (int) ( $this->prop( $line, 'quantity' ) ?? 1 );
+			if ( $qty < 1 ) {
+				$qty = 1;
+			}
+
+			// Per-unit amount: the price amount, else the line subtotal/total ÷ qty.
+			$price = $this->prop( $line, 'price' );
+			$unit  = $this->prop( $price, 'amount' );
+			if ( ! is_numeric( $unit ) ) {
+				$line_total = $this->prop( $line, 'subtotal_amount' );
+				if ( ! is_numeric( $line_total ) ) {
+					$line_total = $this->prop( $line, 'total_amount' );
+				}
+				$unit = ( is_numeric( $line_total ) && $qty > 0 ) ? ( (float) $line_total / $qty ) : null;
+			}
+
+			$product = $this->prop( $price, 'product' );
+			$image   = $this->extract_product_image( $product );
+
+			// Product id rides along on the expand we already do (price.product);
+			// captured here so product-level exclusions cost no extra API calls.
+			$product_id = (string) ( $this->prop( $product, 'id' ) ?? '' );
+
+			$out[] = array(
+				'id'           => $id,
+				'product_id'   => $product_id,
+				'name'         => $name,
+				'quantity'     => $qty,
+				'unit_display' => ( null !== $unit ) ? $this->format_money( $unit, $currency ) : '',
+				'image'        => $image['src'],
+				'image_alt'    => '' !== $image['alt'] ? $image['alt'] : $name,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Pull a small product thumbnail for the line-item list, tolerating shapes.
+	 * SureCart's product exposes `line_item_image` (a thumbnail built for exactly
+	 * this), then `preview_image`, then `image_url`. Returns src + alt (empty when
+	 * the product has no image).
+	 *
+	 * @param mixed $product Product model/array.
+	 * @return array{src: string, alt: string}
+	 */
+	private function extract_product_image( $product ): array {
+		$empty = array(
+			'src' => '',
+			'alt' => '',
+		);
+		if ( empty( $product ) ) {
+			return $empty;
+		}
+
+		foreach ( array( 'line_item_image', 'preview_image' ) as $key ) {
+			$img = $this->prop( $product, $key );
+			$src = $this->prop( $img, 'src' );
+			if ( is_string( $src ) && '' !== $src ) {
+				$alt = $this->prop( $img, 'alt' );
+				return array(
+					'src' => $src,
+					'alt' => is_string( $alt ) ? $alt : '',
+				);
+			}
+		}
+
+		$url = $this->prop( $product, 'image_url' );
+		if ( is_string( $url ) && '' !== $url ) {
+			return array(
+				'src' => $url,
+				'alt' => '',
+			);
+		}
+
+		return $empty;
 	}
 
 	/**
@@ -746,16 +909,17 @@ class CustomerContext {
 	 */
 	public function debug(): array {
 		return array(
-			'logged_in'    => is_user_logged_in(),
-			'user_id'      => get_current_user_id(),
-			'mode'         => $this->mode(),
-			'customer_id'  => $this->customer_id(),
-			'name'         => $this->customer_name(),
-			'email'        => $this->customer_email(),
-			'country_code' => $this->country_code(),
-			'is_eu'        => $this->is_eu(),
-			'has_vat'      => $this->has_vat(),
-			'orders_14d'   => count( $this->recent_orders( 14 ) ),
+			'logged_in'          => is_user_logged_in(),
+			'user_id'            => get_current_user_id(),
+			'mode'               => $this->mode(),
+			'customer_id'        => $this->customer_id(),
+			'name'               => $this->customer_name(),
+			'email'              => $this->customer_email(),
+			'country_code'       => $this->country_code(),
+			'is_eu'              => $this->is_eu(),
+			'has_vat'            => $this->has_vat(),
+			'has_vat_orders_14d' => $this->has_vat_on_recent_orders( 14 ),
+			'orders_14d'         => count( $this->recent_orders( 14 ) ),
 		);
 	}
 }

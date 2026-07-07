@@ -34,14 +34,24 @@ class EmailRenderer {
 	 * @return string
 	 */
 	public static function wrap( string $title, string $inner ): string {
-		$store = esc_html( MerchantInfo::store_name() );
+		$store_name = MerchantInfo::store_name();
+		$store      = esc_html( $store_name );
+
+		// Customer-facing footer: attribute to the store, not the plugin.
+		$footer = '' !== $store_name
+			? sprintf(
+				/* translators: %s: store name. */
+				__( 'This message was sent automatically by %s.', 'surecart-eu-helper' ),
+				$store_name
+			)
+			: __( 'This message was sent automatically.', 'surecart-eu-helper' );
 
 		$html  = '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;line-height:1.5;">';
 		$html .= '<div style="padding:18px 0;border-bottom:2px solid #111;font-size:18px;font-weight:700;">' . $store . '</div>';
 		$html .= '<h2 style="font-size:20px;margin:20px 0 12px;">' . esc_html( $title ) . '</h2>';
 		$html .= '<div>' . $inner . '</div>';
 		$html .= '<div style="margin-top:24px;padding-top:14px;border-top:1px solid #e2e2e2;color:#777;font-size:12px;">';
-		$html .= esc_html__( 'This message was sent automatically by SureCart EU Helper.', 'surecart-eu-helper' );
+		$html .= esc_html( $footer );
 		$html .= '</div></div>';
 
 		return $html;

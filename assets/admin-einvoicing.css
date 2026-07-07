@@ -1,0 +1,127 @@
+/**
+ * E-Invoicing document-log page — page-specific styles only. The full-bleed
+ * shell, cards, buttons, notice banner, and clean WP_List_Table are shared from
+ * admin-settings.css (loaded alongside this file). Here: the Tools layout and
+ * the manual order picker.
+ */
+
+/* ---- Tools card ---- */
+.sceu-einv-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 0.75em;
+}
+
+.sceu-einv-tools .sceu-field {
+	margin: 0;
+	flex: 1 1 360px;
+}
+
+.sceu-einv-tools__sep {
+	height: 1px;
+	background: var( --sceu-gray-200 );
+	margin: 1.25em 0;
+}
+
+.sceu-einv-tools__row {
+	display: flex;
+	align-items: center;
+	gap: 0.85em;
+	flex-wrap: wrap;
+}
+
+.sceu-einv-tools__row .description {
+	color: var( --sceu-gray-500 );
+	font-size: 0.875em;
+}
+
+/* ---- Order picker (autocomplete) ---- */
+.sceu-orderpicker {
+	position: relative;
+}
+
+.sceu-orderpicker__results {
+	position: absolute;
+	z-index: 20;
+	left: 0;
+	right: 0;
+	top: calc( 100% + 2px );
+	margin: 0;
+	padding: 4px;
+	list-style: none;
+	background: #fff;
+	border: 1px solid var( --sceu-border );
+	border-radius: var( --sceu-radius );
+	box-shadow: 0 6px 20px rgba( 0, 0, 0, 0.12 );
+	max-height: 320px;
+	overflow-y: auto;
+}
+
+.sceu-orderpicker__results[hidden] {
+	display: none;
+}
+
+.sceu-orderpicker__option {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75em;
+	padding: 0.55em 0.7em;
+	border-radius: var( --sceu-radius );
+	cursor: pointer;
+	color: var( --sceu-text );
+}
+
+.sceu-orderpicker__option:hover,
+.sceu-orderpicker__option.is-active {
+	background: var( --sceu-primary-soft );
+}
+
+.sceu-orderpicker__option-main {
+	min-width: 0;
+}
+
+.sceu-orderpicker__option-number {
+	font-weight: 600;
+}
+
+.sceu-orderpicker__option-meta {
+	color: var( --sceu-gray-500 );
+	font-size: 0.85em;
+	white-space: nowrap;
+}
+
+.sceu-orderpicker__empty {
+	padding: 0.6em 0.7em;
+	color: var( --sceu-gray-500 );
+}
+
+/* The chosen order, shown as a removable chip. */
+.sceu-orderpicker__selected {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75em;
+	padding: 0.5em 0.7em;
+	border: 1px solid var( --sceu-border );
+	border-radius: var( --sceu-radius );
+	background: #f9fafb;
+}
+
+.sceu-orderpicker__selected[hidden] {
+	display: none;
+}
+
+.sceu-orderpicker__clear {
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	color: var( --sceu-gray-500 );
+	font-size: 1.1em;
+	line-height: 1;
+	padding: 0 0.2em;
+}
+
+.sceu-orderpicker__clear:hover {
+	color: var( --sceu-gray-900 );
+}

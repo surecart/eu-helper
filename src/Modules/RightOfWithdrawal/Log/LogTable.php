@@ -129,19 +129,6 @@ class LogTable {
 	}
 
 	/**
-	 * All rows (for CSV export).
-	 *
-	 * @return array<int, array<string, mixed>>
-	 */
-	public static function all_rows(): array {
-		global $wpdb;
-		$table = self::table_name();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL
-		$rows = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY created_at DESC", ARRAY_A );
-		return is_array( $rows ) ? $rows : array();
-	}
-
-	/**
 	 * Fetch a single row by id.
 	 *
 	 * @param int $id Row id.
@@ -186,27 +173,6 @@ class LogTable {
 	}
 
 	/**
-	 * Order ids a user has already submitted requests for, in the given
-	 * statuses (defaults to the "blocks re-requesting" set).
-	 *
-	 * @param int      $user_id  User id.
-	 * @param string[] $statuses Statuses that count as "already requested".
-	 * @return string[] Flat list of order ids.
-	 */
-	public static function requested_order_ids( int $user_id, array $statuses = array( 'received', 'resolved' ) ): array {
-		$ids = array();
-		foreach ( self::rows_for_user( $user_id, $statuses ) as $row ) {
-			$decoded = json_decode( (string) ( $row['order_ids'] ?? '[]' ), true );
-			if ( is_array( $decoded ) ) {
-				foreach ( $decoded as $id ) {
-					$ids[] = (string) $id;
-				}
-			}
-		}
-		return array_values( array_unique( $ids ) );
-	}
-
-	/**
 	 * All rows with a given status (across users), newest first.
 	 *
 	 * @param string $status Status.
@@ -232,7 +198,107 @@ class LogTable {
 	 */
 	public static function update_status( int $id, string $status ): bool {
 		global $wpdb;
+		// `false !== ...` (not a bool cast): $wpdb->update() returns 0 when the row
+		// matched but the value was unchanged, which is success, not failure.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		return (bool) $wpdb->update( self::table_name(), array( 'status' => $status ), array( 'id' => $id ) );
+		return false !== $wpdb->update(
+			self::table_name(),
+			array( 'status' => $status ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Replace a row's JSON payload (e.g. to record the outcome of re-sending
+	 * notification emails). The caller is responsible for passing the complete,
+	 * merged payload.
+	 *
+	 * @param int                  $id      Row id.
+	 * @param array<string, mixed> $payload Full payload to store.
+	 * @return bool
+	 */
+	public static function update_payload( int $id, array $payload ): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (bool) $wpdb->update(
+			self::table_name(),
+			array( 'payload' => wp_json_encode( $payload ) ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Anonymise a row: strip the personal data the log itself stores — the
+	 * customer name, email, IP address, and the free-text reason — while
+	 * preserving the transactional record (which order and items were withdrawn,
+	 * the timestamp, and the request's status).
+	 *
+	 * This is the data-minimisation counterpart to {@see self::delete()}. A
+	 * withdrawal that became a transaction can generate commercial/tax records
+	 * that may need to be retained, so a merchant can remove the personal data
+	 * without destroying the audit trail; hard delete remains available for full
+	 * GDPR erasure. The pseudonymous foreign keys (user_id, customer_id,
+	 * order_ids) are kept as the transactional linkage. Idempotent.
+	 *
+	 * @param int $id Row id.
+	 * @return bool True on success (incl. an already-anonymised row).
+	 */
+	public static function anonymize( int $id ): bool {
+		global $wpdb;
+
+		$row = self::find( $id );
+		if ( null === $row ) {
+			return false;
+		}
+
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		if ( ! is_array( $payload ) ) {
+			$payload = array();
+		}
+		$payload['reason']        = '';
+		$payload['anonymized']    = true;
+		$payload['anonymized_at'] = current_time( 'mysql' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return false !== $wpdb->update(
+			self::table_name(),
+			array(
+				'customer_name'  => '',
+				'customer_email' => '',
+				'ip_address'     => '',
+				'payload'        => wp_json_encode( $payload ),
+			),
+			array( 'id' => $id ),
+			array( '%s', '%s', '%s', '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Whether a row has been anonymised (its personal data stripped).
+	 *
+	 * @param array<string, mixed> $row Log row (ARRAY_A).
+	 * @return bool
+	 */
+	public static function is_anonymized( array $row ): bool {
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		return is_array( $payload ) && ! empty( $payload['anonymized'] );
+	}
+
+	/**
+	 * Permanently delete a row (for GDPR erasure / test cleanup). The log is
+	 * otherwise append-only; this is not part of the normal workflow.
+	 *
+	 * @param int $id Row id.
+	 * @return bool
+	 */
+	public static function delete( int $id ): bool {
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return (bool) $wpdb->delete( self::table_name(), array( 'id' => $id ), array( '%d' ) );
 	}
 }

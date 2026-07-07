@@ -3,7 +3,7 @@ Contributors: wpcrafter
 Requires at least: 6.6
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -90,6 +90,39 @@ fields render on the settings page automatically, and `boot()` runs only when
 the module is enabled.
 
 == Changelog ==
+
+= 1.6.0 =
+This is a major feature release building on the initial Right of Withdrawal module — partial withdrawals, a public self-serve form, product/collection exclusions, a SureCart-style settings app, and a series of compliance and correctness fixes.
+
+**Partial withdrawal**
+
+* Customers can withdraw specific items — and specific quantities — from an order, not only whole orders. Selecting an order reveals its line items, each with a quantity control and a product thumbnail. Orders without retrievable line-item detail fall back to a whole-order withdrawal (a store can opt to withhold those via the `sceu_offer_order_without_line_items` filter).
+* Per-item remaining tracking: once items/quantities have been requested, only the not-yet-requested quantities remain selectable, and an order keeps appearing until nothing is left to withdraw.
+* Itemised throughout — the review step, the customer confirmation email, the merchant notification, the on-dashboard request history, and the admin Withdrawal Log all show the exact items and quantities (including "1 ×", as § 356a BGB requires). The log's "Withdrawing" column shows each item as "2 of 3 × Product" with a Partial / Full order badge, and the CSV export gains a matching column.
+* The quantity picker is a single accessible segmented control: steppers carry product-specific labels, disable at the available minimum/maximum, and announce each change to screen readers.
+
+**Public withdrawal form (block + shortcode)**
+
+* A new front-end form lets any customer start a withdrawal without logging in. Add it with the **Withdrawal Request Form** block or the `[sceu_withdrawal_form]` shortcode. The customer enters their email + order number; on a match they see the order's items and can withdraw specific items/quantities (exclusions still apply). If no order matches, they get a free-text box describing what they'd like to withdraw, which is sent to you.
+* The form is unauthenticated, so it's defended with a logged-out nonce, a per-IP rate limit, and a honeypot; order lookups run server-side with your existing SureCart token, and which field was wrong is never revealed. An optional **Spam protection** setting (off by default) adds **reCAPTCHA v3**, reusing the keys under SureCart → Settings → Spam Protection & Security.
+* Inline, accessible per-field errors (required / invalid email / required order number), with distinct messages for expired sessions and rate-limiting, and the email is prefilled for logged-in visitors (still editable). A leading "#" pasted from an invoice (e.g. "#TEST-0010") is stripped before matching. Verified guest requests are linked to their SureCart customer and show the real customer name.
+
+**Excluded products & collections**
+
+* Under **EU Helper → Settings** you can exclude whole **product collections** and/or search and add **individual products**; excluded items never appear in the withdrawal form, while the rest of an order stays withdrawable. Enforced server-side, never trusting the browser. The customer-facing form makes no extra SureCart API calls — the excluded set is precomputed and cached, refreshed in the background and via a manual "Refresh excluded product list" button.
+
+**Settings & admin experience**
+
+* The settings screen is a SureCart-style app: header bar, left module navigation, content cards, the store brand colour, and SureCart's design tokens, with full dark-theme support. The Withdrawal Requests screen uses the same shell — styled Sync/Export buttons, a clean full-width table, on-brand status banners, and Screen Options + bulk actions.
+* Withdrawal emails show the quantity for every item, attribute the footer to your store, and drop the internal reference line.
+
+**Compliance & correctness fixes**
+
+* **Availability is protected end-to-end.** Reactivating a request — resetting it to *pending* or reversing a *declined* one — re-checks the order's remaining quantities first and is refused (with an explanatory notice) if the same units are already covered by another request, so the same physical item can't be refunded twice. Enforced per order, so it also covers guest requests.
+* **Unverified guest submissions are held out of the actionable queue.** A public-form submission whose email and order number never matched a real order is flagged **"Identity not verified"** and offers only *Verify & accept* or *Mark declined* — never a one-click resolve — and carries no order detail, so it can't block a genuine re-request.
+* **Partial refunds are detected during sync.** Sync reads authoritative charge totals and classifies each order as not / partially / fully refunded; a partial or mixed refund leaves the status untouched and flags the row **"Refund detected — review"**, since a refunded amount can't be attributed automatically to one of several requests on the same order.
+* **More accurate consumer-vs-business detection.** An order with an *invalid* EU VAT number is treated as a consumer order (matching how SureCart taxes it), and a valid VAT captured on a recent checkout counts as a business signal even when the customer record hasn't caught up — so the "consumers only" audience rule shows and hides the button correctly.
+* **GDPR tooling.** Alongside permanent deletion (which re-enables re-requesting of the affected orders), you can **anonymize** a request — stripping name, email, IP, and reason while keeping the transactional record — as a bulk or per-row action.
 
 = 1.0.4 =
 * Publish a downloadable release ZIP via GitHub Actions on each GitHub Release.

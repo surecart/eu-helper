@@ -69,10 +69,37 @@ class Plugin {
 		$this->registry->register_modules();
 		$this->registry->boot_enabled();
 
-		if ( is_admin() ) {
-			( new SettingsPage( $this->registry ) )->register();
-		}
+		// Not gated by is_admin(): it wires a REST route, and REST is not an admin context.
+		( new SettingsPage( $this->registry ) )->register();
 
 		( new Diagnostics() )->register();
+
+		$this->maybe_upgrade();
+	}
+
+	/**
+	 * Fire a one-time upgrade routine when the stored version changes.
+	 *
+	 * Enabled modules hook `sceu_upgrade` (in their boot()) to bring their own
+	 * schema up to date, giving a single, decoupled migration path instead of
+	 * relying on plugin re-activation. Runs at most once per version bump.
+	 *
+	 * @return void
+	 */
+	private function maybe_upgrade(): void {
+		$stored = (string) get_option( 'sceu_version', '' );
+		if ( SCEU_VERSION === $stored ) {
+			return;
+		}
+
+		/**
+		 * Fires once when the plugin version changes (fresh install or upgrade).
+		 *
+		 * @param string $stored  Previously stored version ('' on first run).
+		 * @param string $current Current plugin version.
+		 */
+		do_action( 'sceu_upgrade', $stored, SCEU_VERSION );
+
+		update_option( 'sceu_version', SCEU_VERSION );
 	}
 }

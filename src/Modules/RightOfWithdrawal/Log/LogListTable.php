@@ -38,14 +38,37 @@ class LogListTable extends \WP_List_Table {
 	 */
 	public function get_columns(): array {
 		return array(
+			'cb'             => '<input type="checkbox" />',
 			'created_at'     => __( 'Date', 'surecart-eu-helper' ),
 			'customer_name'  => __( 'Customer', 'surecart-eu-helper' ),
 			'customer_email' => __( 'Email', 'surecart-eu-helper' ),
-			'order_ids'      => __( 'Orders', 'surecart-eu-helper' ),
+			'order_ids'      => __( 'Withdrawing', 'surecart-eu-helper' ),
 			'reason'         => __( 'Reason', 'surecart-eu-helper' ),
 			'emails'         => __( 'Emails sent', 'surecart-eu-helper' ),
 			'ip_address'     => __( 'IP address', 'surecart-eu-helper' ),
 			'status'         => __( 'Status', 'surecart-eu-helper' ),
+		);
+	}
+
+	/**
+	 * Row-selection checkbox (enables the bulk actions).
+	 *
+	 * @param array<string, mixed> $item Row.
+	 * @return string
+	 */
+	public function column_cb( $item ): string {
+		return sprintf( '<input type="checkbox" name="ids[]" value="%d" />', (int) ( $item['id'] ?? 0 ) );
+	}
+
+	/**
+	 * Bulk actions offered above/below the table.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function get_bulk_actions(): array {
+		return array(
+			'anonymize' => __( 'Anonymize (remove personal data)', 'surecart-eu-helper' ),
+			'delete'    => __( 'Delete permanently', 'surecart-eu-helper' ),
 		);
 	}
 
@@ -55,7 +78,8 @@ class LogListTable extends \WP_List_Table {
 	 * @return void
 	 */
 	public function prepare_items(): void {
-		$per_page     = 20;
+		// Honour the "Requests per page" Screen Option (per-user), default 20.
+		$per_page     = $this->get_items_per_page( 'sceu_log_per_page', 20 );
 		$current_page = $this->get_pagenum();
 		$total        = LogTable::count();
 
@@ -69,7 +93,13 @@ class LogListTable extends \WP_List_Table {
 			)
 		);
 
-		$this->_column_headers = array( $this->get_columns(), array(), array() );
+		// Columns / hidden (from Screen Options) / sortable / primary.
+		$this->_column_headers = array(
+			$this->get_columns(),
+			get_hidden_columns( $this->screen ),
+			array(),
+			'created_at',
+		);
 	}
 
 	/**
@@ -82,23 +112,82 @@ class LogListTable extends \WP_List_Table {
 	public function column_default( $item, $column_name ): string {
 		switch ( $column_name ) {
 			case 'created_at':
-				return esc_html( $item['created_at'] ?? '' );
+				$out = esc_html( $item['created_at'] ?? '' );
+				$id  = (int) ( $item['id'] ?? 0 );
+				// Anonymize + permanent delete live here as hover row-actions (keeps
+				// the row compact). Anonymize strips personal data but keeps the
+				// transactional record; delete is full GDPR erasure and re-enables
+				// re-requesting. An already-anonymised row only offers delete.
+				if ( $id && current_user_can( 'manage_options' ) ) {
+					$actions = array();
+
+					if ( ! LogTable::is_anonymized( $item ) ) {
+						$anon_url  = wp_nonce_url(
+							admin_url( 'admin-post.php?action=sceu_anonymize_log&id=' . $id ),
+							'sceu_anonymize_log_' . $id
+						);
+						$anon_msg  = esc_js( __( 'Remove the personal data (name, email, IP address, reason) from this request? The order, items, date, and status are kept as the transactional record. This cannot be undone.', 'surecart-eu-helper' ) );
+						$actions[] = '<span class="anonymize">'
+							. '<a href="' . esc_url( $anon_url ) . '" onclick="return confirm(\'' . $anon_msg . '\');">'
+							. esc_html__( 'Anonymize', 'surecart-eu-helper' ) . '</a></span>';
+					}
+
+					$delete_url = wp_nonce_url(
+						admin_url( 'admin-post.php?action=sceu_delete_log&id=' . $id ),
+						'sceu_delete_log_' . $id
+					);
+					$confirm    = esc_js( __( 'Permanently delete this request from the log? This removes the audit record and lets the customer request these items again. This cannot be undone.', 'surecart-eu-helper' ) );
+					$actions[]  = '<span class="delete">'
+						. '<a href="' . esc_url( $delete_url ) . '" onclick="return confirm(\'' . $confirm . '\');">'
+						. esc_html__( 'Delete permanently', 'surecart-eu-helper' ) . '</a></span>';
+
+					$out .= '<div class="row-actions">' . implode( ' | ', $actions ) . '</div>';
+				}
+				return $out;
 			case 'customer_name':
-				return esc_html( $item['customer_name'] ?? '' );
+				if ( LogTable::is_anonymized( $item ) ) {
+					return '<span style="color:#777;font-style:italic;">' . esc_html__( 'Anonymized', 'surecart-eu-helper' ) . '</span>';
+				}
+				return $this->customer_link( $item, (string) ( $item['customer_name'] ?? '' ) );
 			case 'customer_email':
-				return esc_html( $item['customer_email'] ?? '' );
+				return $this->customer_link( $item, (string) ( $item['customer_email'] ?? '' ) );
 			case 'ip_address':
 				return esc_html( $item['ip_address'] ?? '' );
 			case 'emails':
 				$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
 				$cust    = ! empty( $payload['customer_email_sent'] );
 				$merch   = ! empty( $payload['merchant_email_sent'] );
-				$mark    = function ( $ok, $label ) {
-					$icon = $ok ? '✓' : '✕';
-					$col  = $ok ? '#137333' : '#a50e0e';
-					return '<span style="color:' . $col . ';">' . $icon . '</span> ' . esc_html( $label );
+				$id      = (int) ( $item['id'] ?? 0 );
+				$mark    = function ( $ok, $label, $which ) use ( $id ) {
+					if ( $ok ) {
+						$icon   = '✓';
+						$col    = '#137333';
+						$status = __( 'Sent', 'surecart-eu-helper' );
+						$tip    = __( 'Email was handed off to your site successfully.', 'surecart-eu-helper' );
+					} else {
+						$icon   = '✕';
+						$col    = '#a50e0e';
+						$status = __( 'Not sent', 'surecart-eu-helper' );
+						$tip    = __( 'WordPress could not send this email. This usually means the site has no working mail/SMTP setup (common on staging sites). The withdrawal request itself was still recorded.', 'surecart-eu-helper' );
+					}
+					$out = '<span style="color:' . $col . ';" title="' . esc_attr( $tip ) . '">'
+						. $icon . ' ' . esc_html( $label ) . ': ' . esc_html( $status ) . '</span>';
+
+					// Per-recipient resend. The resent email carries the original
+					// request timestamp (not "now"), so it remains a faithful receipt.
+					if ( $id && current_user_can( 'manage_options' ) ) {
+						$url  = wp_nonce_url(
+							admin_url( 'admin-post.php?action=sceu_resend_emails&id=' . $id . '&which=' . $which ),
+							'sceu_resend_emails_' . $id
+						);
+						$out .= ' &middot; <a href="' . esc_url( $url ) . '" style="font-size:12px;">'
+							. esc_html( $ok ? __( 'Resend', 'surecart-eu-helper' ) : __( 'Try again', 'surecart-eu-helper' ) )
+							. '</a>';
+					}
+					return $out;
 				};
-				return $mark( $cust, __( 'Customer', 'surecart-eu-helper' ) ) . '<br />' . $mark( $merch, __( 'Merchant', 'surecart-eu-helper' ) );
+				return $mark( $cust, __( 'Customer', 'surecart-eu-helper' ), 'customer' )
+					. '<br />' . $mark( $merch, __( 'Merchant', 'surecart-eu-helper' ), 'merchant' );
 			case 'reason':
 				$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
 				$reason  = is_array( $payload ) ? trim( (string) ( $payload['reason'] ?? '' ) ) : '';
@@ -119,18 +208,86 @@ class LogListTable extends \WP_List_Table {
 			case 'status':
 				return $this->status_cell( $item );
 			case 'order_ids':
-				$ids = json_decode( (string) ( $item['order_ids'] ?? '[]' ), true );
-				if ( ! is_array( $ids ) || empty( $ids ) ) {
-					return '&mdash;';
-				}
-				$links = array();
-				foreach ( $ids as $id ) {
-					$links[] = '<a href="' . esc_url( sceu_order_admin_url( (string) $id ) ) . '">' . esc_html( (string) $id ) . '</a>';
-				}
-				return implode( '<br />', $links );
+				return $this->withdrawing_cell( $item );
 			default:
 				return '';
 		}
+	}
+
+	/**
+	 * Render a customer field (name or email), linked to the SureCart customer
+	 * record when the request came from a resolved customer. Guest/unverified
+	 * requests have no `customer_id`, so they render as plain text.
+	 *
+	 * @param array<string, mixed> $item Row.
+	 * @param string               $text Display text (name or email).
+	 * @return string
+	 */
+	private function customer_link( array $item, string $text ): string {
+		if ( '' === trim( $text ) ) {
+			return '&mdash;';
+		}
+
+		$customer_id = (string) ( $item['customer_id'] ?? '' );
+		if ( '' === $customer_id ) {
+			return esc_html( $text );
+		}
+
+		return '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::customer( $customer_id ) ) . '">'
+			. esc_html( $text ) . '</a>';
+	}
+
+	/**
+	 * "Withdrawing" column: for each order, a link to the order plus exactly what
+	 * to action — "Entire order", or the specific items as "2 of 3 × Product" —
+	 * with a Partial/Full badge so the merchant knows the action at a glance.
+	 *
+	 * @param array<string, mixed> $item Row.
+	 * @return string
+	 */
+	private function withdrawing_cell( array $item ): string {
+		$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
+		$orders  = ( is_array( $payload ) && ! empty( $payload['orders'] ) && is_array( $payload['orders'] ) )
+			? $payload['orders']
+			: array();
+
+		// Legacy rows without per-order detail: fall back to order-id links.
+		if ( empty( $orders ) ) {
+			$ids = json_decode( (string) ( $item['order_ids'] ?? '[]' ), true );
+			if ( ! is_array( $ids ) || empty( $ids ) ) {
+				return '&mdash;';
+			}
+			$links = array();
+			foreach ( $ids as $id ) {
+				$links[] = '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::order( (string) $id ) ) . '">' . esc_html( (string) $id ) . '</a>';
+			}
+			return implode( '<br />', $links );
+		}
+
+		$blocks = array();
+		foreach ( $orders as $order ) {
+			$id      = (string) ( $order['id'] ?? '' );
+			$ref     = (string) ( $order['number'] ?? '' );
+			$ref     = '' !== $ref ? $ref : $id;
+			$summary = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::merchant_items_summary( $order );
+			$partial = \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::is_partial( $order );
+
+			$badge_text = $partial ? __( 'Partial', 'surecart-eu-helper' ) : __( 'Full order', 'surecart-eu-helper' );
+			$badge_bg   = $partial ? '#fdf3dd' : '#e6f4ea';
+			$badge_fg   = $partial ? '#8a6d00' : '#137333';
+			$badge      = '<span style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:' . $badge_bg . ';color:' . $badge_fg . ';margin-left:6px;">' . esc_html( $badge_text ) . '</span>';
+
+			$blocks[] = '<div style="margin-bottom:8px;">'
+				. '<a href="' . esc_url( \SureCartEuHelper\Admin\AdminUrl::order( $id ) ) . '"><strong>' . sprintf(
+					/* translators: %s: order reference. */
+					esc_html__( 'Order %s', 'surecart-eu-helper' ),
+					esc_html( $ref )
+				) . '</strong></a>' . $badge
+				. '<div style="font-size:12px;color:#444;margin-top:2px;">' . esc_html( $summary ) . '</div>'
+				. '</div>';
+		}
+
+		return implode( '', $blocks );
 	}
 
 	/**
@@ -146,6 +303,38 @@ class LogListTable extends \WP_List_Table {
 
 		$out = '<strong>' . esc_html( $label ) . '</strong>';
 
+		// Unverified guest request: its email + order number never matched a real
+		// order, so it must not be actionable like a verified one. Flag it
+		// unmistakably (right here in the Status column, not only in Reason) and
+		// gate it — the merchant verifies who it is ("Verify & accept" → Pending
+		// review) or declines it; there is no one-click "Mark resolved".
+		if ( \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_UNVERIFIED === $status ) {
+			$tip  = __( 'This request came from the public form but its email and order number did not match a real order. Verify who it is (check the email/order in SureCart) before accepting it. It cannot be resolved until you accept it.', 'surecart-eu-helper' );
+			$out .= ' <span title="' . esc_attr( $tip ) . '" style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:#fce8e6;color:#a50e0e;margin-left:6px;">'
+				. esc_html__( 'Identity not verified', 'surecart-eu-helper' ) . '</span>';
+
+			$confirm = esc_js( __( 'This request was never verified against a real order. Only accept it once you have confirmed who it is. Accept it into your pending queue?', 'surecart-eu-helper' ) );
+			$links   = array(
+				$this->status_link( $id, \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_RECEIVED, __( 'Verify & accept', 'surecart-eu-helper' ), $confirm ),
+				$this->status_link( $id, \SureCartEuHelper\Modules\RightOfWithdrawal\Withdrawals::STATUS_REJECTED, __( 'Mark declined', 'surecart-eu-helper' ) ),
+			);
+
+			$out .= '<div style="margin-top:4px;font-size:12px;">' . implode( ' | ', $links ) . '</div>';
+			return $out;
+		}
+
+		// A partial/mixed refund the Sync detected but won't auto-resolve. Only
+		// meaningful while the request is still pending; a resolved/declined
+		// request has already been actioned, so the prompt would be noise.
+		if ( 'received' === $status ) {
+			$payload = json_decode( (string) ( $item['payload'] ?? '{}' ), true );
+			if ( is_array( $payload ) && ! empty( $payload['refund_review'] ) ) {
+				$tip  = __( 'Sync found a partial refund for this order in SureCart. It was not resolved automatically because a partial refund can\'t be matched to a specific request — review and set the status manually.', 'surecart-eu-helper' );
+				$out .= ' <span title="' . esc_attr( $tip ) . '" style="display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:#fdf3dd;color:#8a6d00;margin-left:6px;">'
+					. esc_html__( 'Refund detected — review', 'surecart-eu-helper' ) . '</span>';
+			}
+		}
+
 		$actions = array(
 			'resolved' => __( 'Mark resolved', 'surecart-eu-helper' ),
 			'rejected' => __( 'Mark declined', 'surecart-eu-helper' ),
@@ -155,17 +344,35 @@ class LogListTable extends \WP_List_Table {
 
 		$links = array();
 		foreach ( $actions as $new_status => $text ) {
-			$url     = wp_nonce_url(
-				admin_url( 'admin-post.php?action=sceu_set_status&id=' . $id . '&status=' . $new_status ),
-				'sceu_set_status_' . $id
-			);
-			$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html( $text ) . '</a>';
+			$links[] = $this->status_link( $id, $new_status, $text );
 		}
 
 		if ( $links ) {
 			$out .= '<div style="margin-top:4px;font-size:12px;">' . implode( ' | ', $links ) . '</div>';
 		}
 
+		// Permanent delete moved to a hover row-action under the Date column to
+		// keep this row compact (see column_default 'created_at').
 		return $out;
+	}
+
+	/**
+	 * Build one nonce-protected status-change link, optionally guarded by a
+	 * JavaScript confirm() prompt (used to add friction to actioning an
+	 * unverified request).
+	 *
+	 * @param int    $id         Row id.
+	 * @param string $new_status Target status.
+	 * @param string $text       Link text.
+	 * @param string $confirm    Optional already-escaped (esc_js) confirm message.
+	 * @return string
+	 */
+	private function status_link( int $id, string $new_status, string $text, string $confirm = '' ): string {
+		$url     = wp_nonce_url(
+			admin_url( 'admin-post.php?action=sceu_set_status&id=' . $id . '&status=' . $new_status ),
+			'sceu_set_status_' . $id
+		);
+		$onclick = '' !== $confirm ? ' onclick="return confirm(\'' . $confirm . '\');"' : '';
+		return '<a href="' . esc_url( $url ) . '"' . $onclick . '>' . esc_html( $text ) . '</a>';
 	}
 }
