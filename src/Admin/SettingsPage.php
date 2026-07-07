@@ -556,11 +556,12 @@ class SettingsPage {
 					</div>
 
 					<?php // phpcs:disable WordPress.Security.NonceVerification.Recommended ?>
-					<?php if ( isset( $_GET['updated'] ) ) : ?>
+					<?php if ( isset( $_GET['status_error'] ) && 'overclaim' === $_GET['status_error'] ) : ?>
+						<div class="sceu-notice sceu-notice--warning">
+							<?php echo esc_html__( "Couldn't reset this request to pending: those units are already covered by current pending or completed requests for the order, so reactivating it would claim more than was purchased. Resolve, decline, or delete the other request(s) first.", 'surecart-eu-helper' ); ?>
+						</div>
+					<?php elseif ( isset( $_GET['updated'] ) ) : ?>
 						<div class="sceu-notice sceu-notice--success"><?php echo esc_html__( 'Request status updated.', 'surecart-eu-helper' ); ?></div>
-					<?php endif; ?>
-					<?php if ( isset( $_GET['overdraw'] ) ) : ?>
-						<div class="sceu-notice sceu-notice--warning"><?php echo esc_html__( 'This request could not be reset to pending: the customer has since requested those items again, so re-activating it would withdraw more than was purchased. Delete this declined request instead.', 'surecart-eu-helper' ); ?></div>
 					<?php endif; ?>
 					<?php if ( isset( $_GET['anonymized'] ) && (int) $_GET['anonymized'] > 0 ) : ?>
 						<?php $sceu_anon = (int) $_GET['anonymized']; ?>
