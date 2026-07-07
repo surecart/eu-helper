@@ -367,8 +367,15 @@ class Withdrawals {
 	}
 
 	/**
-	 * Build a "2× Item A, Item B" summary of the items withdrawn from one logged
-	 * order (its line_items carry the requested quantity). Empty for whole-order.
+	 * Build a "2× Item A, 1× Item B" summary of the items withdrawn from one
+	 * logged order (its line_items carry the requested quantity). Empty for
+	 * whole-order.
+	 *
+	 * The quantity is shown for every item — including "1×" — because this string
+	 * reproduces the content of the withdrawal declaration on customer-facing
+	 * surfaces (the confirmation screen, the dashboard log, and the buyer email).
+	 * Under § 356a BGB the confirmation must reflect what was declared, so the
+	 * quantity is part of the record and is never dropped.
 	 *
 	 * @param array<string, mixed> $order Logged order entry.
 	 * @return string
@@ -384,8 +391,8 @@ class Withdrawals {
 			if ( '' === $name ) {
 				continue;
 			}
-			$qty     = (int) ( $line['quantity'] ?? 1 );
-			$parts[] = ( $qty > 1 ) ? ( $qty . "\u{00D7} " . $name ) : $name;
+			$qty     = max( 1, (int) ( $line['quantity'] ?? 1 ) );
+			$parts[] = $qty . "\u{00D7} " . $name;
 		}
 		return implode( ', ', array_slice( $parts, 0, 8 ) );
 	}

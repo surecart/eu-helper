@@ -132,6 +132,32 @@ function readSelection(root) {
 	return orders;
 }
 
+// True when the customer has ticked an order but left every quantity at 0. Lets
+// the form tell "you picked nothing" apart from "you picked an order but no
+// quantity" — two conditions that otherwise share one error message.
+function hasOrderWithoutQuantity(root) {
+	if (!root) {
+		return false;
+	}
+	const orderEls = Array.prototype.slice.call(
+		root.querySelectorAll('.sceu-orders__item')
+	);
+	return orderEls.some(function (orderEl) {
+		const cb = orderEl.querySelector('.sceu-orders__cb');
+		if (!cb || !cb.checked) {
+			return false;
+		}
+		// A checked whole-order row has no item steppers — that's a valid pick.
+		const inputs = orderEl.querySelectorAll('.sceu-item__input');
+		if (!inputs.length) {
+			return false;
+		}
+		return !Array.prototype.some.call(inputs, function (input) {
+			return (parseInt(input.value, 10) || 0) > 0;
+		});
+	});
+}
+
 // The block root for an action. Prefer the event's target (reliable in both
 // click and form-submit handlers); fall back to getElement(), which does not
 // resolve consistently inside a form-submit handler.
@@ -331,9 +357,12 @@ const { state, actions } = store('surecart-eu-helper', {
 		review(event) {
 			event.preventDefault();
 			const ctx = getContext();
-			const sel = readSelection(blockRoot(event));
+			const root = blockRoot(event);
+			const sel = readSelection(root);
 			if (!sel.length) {
-				ctx.status = state.i18n.selectOne;
+				ctx.status = hasOrderWithoutQuantity(root)
+					? state.i18n.chooseQuantity
+					: state.i18n.selectOne;
 				return;
 			}
 			// Render the review as a single text string (one order per line),
@@ -345,10 +374,10 @@ const { state, actions } = store('surecart-eu-helper', {
 					const itemsText = o.whole
 						? state.i18n.entireOrder
 						: o.items
+								// Always show the quantity (incl. "1×"): the review
+								// reproduces the declaration, so quantity is part of it.
 								.map(function (it) {
-									return it.qty > 1
-										? it.qty + '× ' + it.name
-										: it.name;
+									return it.qty + '× ' + it.name;
 								})
 								.join(', ');
 					return o.label + ' — ' + itemsText;
@@ -365,7 +394,8 @@ const { state, actions } = store('surecart-eu-helper', {
 		*submit(event) {
 			event.preventDefault();
 			const ctx = getContext();
-			const sel = readSelection(blockRoot(event));
+			const root = blockRoot(event);
+			const sel = readSelection(root);
 			const items = [];
 			const wholeOrderIds = [];
 			sel.forEach(function (o) {
@@ -382,7 +412,9 @@ const { state, actions } = store('surecart-eu-helper', {
 				});
 			});
 			if (!items.length && !wholeOrderIds.length) {
-				ctx.status = state.i18n.selectOne;
+				ctx.status = hasOrderWithoutQuantity(root)
+					? state.i18n.chooseQuantity
+					: state.i18n.selectOne;
 				return;
 			}
 			ctx.submitting = true;
